@@ -1,0 +1,91 @@
+<view class="keyboard-container">
+  <view class="keyboard-inner">
+    <!-- Row 1 -->
+    <view class="keyboard-row">
+      <block wx:for="{{layout[0]}}" wx:key="char">
+        <button 
+          class="key-btn {{utils.isKeyActive(item, nextKeyToPress) ? 'active-target' : ''}}"
+          hover-class="key-btn-hover"
+          catch:touchstart="handleKeyPress"
+          data-key="{{item}}"
+        >
+          <text class="key-main {{utils.isKeyActive(item, nextKeyToPress) ? 'text-white' : ''}}">{{utils.getKeyDisplay(item, visualMode, isShiftActive).main}}</text>
+          <text class="key-sub">{{utils.getKeyDisplay(item, visualMode, isShiftActive).sub}}</text>
+        </button>
+      </block>
+    </view>
+
+    <!-- Row 2 -->
+    <view class="keyboard-row">
+      <block wx:for="{{layout[1]}}" wx:key="char">
+        <button 
+          class="key-btn {{utils.isKeyActive(item, nextKeyToPress) ? 'active-target' : ''}}"
+          hover-class="key-btn-hover"
+          catch:touchstart="handleKeyPress"
+          data-key="{{item}}"
+        >
+          <text class="key-main {{utils.isKeyActive(item, nextKeyToPress) ? 'text-white' : ''}}">{{utils.getKeyDisplay(item, visualMode, isShiftActive).main}}</text>
+          <text class="key-sub">{{utils.getKeyDisplay(item, visualMode, isShiftActive).sub}}</text>
+        </button>
+      </block>
+    </view>
+
+    <!-- Row 3 -->
+    <view class="keyboard-row">
+      <!-- Shift Key -->
+      <view class="special-key shift-key {{isShiftActive ? 'shift-active' : ''}}">
+        <text class="icon-text">⇧</text>
+      </view>
+
+      <block wx:for="{{layout[2]}}" wx:key="char">
+        <button 
+          class="key-btn {{utils.isKeyActive(item, nextKeyToPress) ? 'active-target' : ''}}"
+          hover-class="key-btn-hover"
+          catch:touchstart="handleKeyPress"
+          data-key="{{item}}"
+        >
+          <text class="key-main {{utils.isKeyActive(item, nextKeyToPress) ? 'text-white' : ''}}">{{utils.getKeyDisplay(item, visualMode, isShiftActive).main}}</text>
+          <text class="key-sub">{{utils.getKeyDisplay(item, visualMode, isShiftActive).sub}}</text>
+        </button>
+      </block>
+
+      <!-- Backspace Placeholder -->
+      <view class="special-key backspace-key">
+         <text class="icon-text">⌫</text>
+      </view>
+    </view>
+
+    <!-- Space Row -->
+    <view class="keyboard-row space-row">
+      <button 
+        class="space-btn {{nextKeyToPress === 'SPACE' ? 'active-target space-pulse' : ''}}"
+        hover-class="key-btn-hover"
+        catch:touchstart="handleSpacePress"
+      >
+        SPACE
+      </button>
+    </view>
+  </view>
+</view>
+
+<wxs module="utils">
+module.exports = {
+  isKeyActive: function(k, nextKeyToPress) {
+    if (!nextKeyToPress) return false;
+    if (k.char === nextKeyToPress) return true;
+    if (k.shiftChar === nextKeyToPress) return true;
+    return false;
+  },
+  getKeyDisplay: function(k, visualMode, isShiftActive) {
+    if (visualMode === 'english') {
+      var label = isShiftActive ? (k.shiftChar || k.char.toUpperCase()) : k.char;
+      return { main: label, sub: k.korChar };
+    } else {
+      if (isShiftActive && k.shiftKorChar) {
+        return { main: k.shiftKorChar, sub: k.shiftChar };
+      }
+      return { main: k.korChar, sub: k.char.toUpperCase() };
+    }
+  }
+}
+</wxs>

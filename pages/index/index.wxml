@@ -1,0 +1,185 @@
+<wxs module="utils">
+module.exports = {
+  getCharClass: function(status, char) {
+    if (status === 'done') return 'text-green';
+    if (status === 'active') {
+       return char === ' ' ? 'space-active' : 'text-yellow';
+    }
+    return 'text-gray';
+  },
+  getDisplayChar: function(char) {
+    return char;
+  },
+  getKeyClass: function(isDone, isCurrent) {
+    if (isDone) return 'jamo-done';
+    if (isCurrent) return 'jamo-current';
+    return 'jamo-future';
+  }
+};
+</wxs>
+
+<view class="container" style="padding-top: {{safeArea.top}}px; padding-bottom: {{safeArea.bottom}}px">
+  
+  <!-- Decorative Background -->
+  <view class="deco-bg">
+     <!-- Top Right Shape -->
+     <view class="deco-shape top-right">
+        <view class="deco-grid">
+           <block wx:for="{{decoTop}}" wx:key="index">
+             <view class="deco-key"></view>
+           </block>
+        </view>
+     </view>
+      <!-- Bottom Left Shape -->
+      <view class="deco-shape bottom-left">
+        <view class="deco-grid">
+           <block wx:for="{{decoBottom}}" wx:key="index">
+             <view class="deco-key"></view>
+           </block>
+        </view>
+     </view>
+  </view>
+
+  <!-- Navbar -->
+  <view class="nav-bar">
+    <view wx:if="{{mode !== 'menu'}}" class="back-btn" bindtap="goBack">
+      <text class="back-icon">ᐸ</text> 
+    </view>
+    <view class="nav-title">{{mode === 'menu' ? '' : (mode === 'custom' ? '自定义' : '练习中')}}</view>
+  </view>
+
+  <!-- Menu Mode -->
+  <view wx:if="{{mode === 'menu'}}" class="menu-container fade-in">
+    <view class="header-section">
+      <view class="badge">PRACTICE MODE</view>
+      <view class="main-title">韩语打字练习</view>
+      <view class="sub-title">选择模式开始您的练习之旅</view>
+    </view>
+    
+    <view class="menu-list">
+      <button class="menu-item primary" bindtap="startBeginner">
+        <view class="menu-content">
+          <view class="menu-text">初级单词</view>
+          <view class="menu-sub">Beginner Words & Basics</view>
+        </view>
+        <view class="menu-icon">🐣</view>
+      </button>
+
+      <button class="menu-item secondary" bindtap="startSentences">
+        <view class="menu-content">
+          <view class="menu-text">常用短句</view>
+          <view class="menu-sub">Simple Sentences</view>
+        </view>
+        <view class="menu-icon">💬</view>
+      </button>
+
+      <button class="menu-item outline" bindtap="startCustom">
+        <view class="menu-content">
+          <view class="menu-text">自定义输入</view>
+          <view class="menu-sub">Custom Practice</view>
+        </view>
+        <view class="menu-icon">✍️</view>
+      </button>
+    </view>
+
+    <view class="footer">
+      <text>Practice makes perfect</text>
+    </view>
+  </view>
+
+  <!-- Custom Input Mode -->
+  <view wx:if="{{mode === 'custom'}}" class="custom-container fade-in">
+    <view class="card">
+      <view class="input-label">请输入韩语文本 / Enter Korean Text</view>
+      <textarea 
+        class="custom-textarea" 
+        bindinput="handleCustomInput" 
+        value="{{customInputText}}"
+        placeholder="在此输入..."
+        maxlength="100"
+      ></textarea>
+      <view class="error-msg" wx:if="{{errorMessage}}">{{errorMessage}}</view>
+      <button class="start-btn" bindtap="submitCustom">开始练习</button>
+    </view>
+  </view>
+
+  <!-- Typing Mode -->
+  <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in">
+    <!-- Top Info -->
+    <view class="status-bar">
+      <view class="progress-pill">
+        <text class="progress-text">{{currentItemIndex + 1}} / {{items.length}}</text>
+      </view>
+    </view>
+
+    <!-- Target Display -->
+    <view class="display-area">
+      <view class="translation">{{typingState.targetTranslation}}</view>
+      
+      <view class="text-scroll-wrapper">
+        <view class="fade-mask left"></view>
+        <view class="fade-mask right"></view>
+        
+        <scroll-view 
+          class="text-scroll" 
+          scroll-x="{{true}}" 
+          scroll-with-animation="{{true}}"
+          scroll-left="{{scrollLeft}}"
+          enable-flex="{{true}}"
+        >
+          <view class="scroll-content">
+             <!-- Extra padding at start to center first char -->
+             <view id="start-padding" class="start-padding"></view>
+             <block wx:for="{{displayNodes}}" wx:key="index">
+                <!-- Word -->
+                <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
+                   <block wx:for="{{item.chars}}" wx:key="idx" wx:for-item="charItem">
+                      <text id="char-{{charItem.globalIndex}}" class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}">{{utils.getDisplayChar(charItem.char)}}</text>
+                   </block>
+                </view>
+                <!-- Space -->
+                <view wx:else class="space-wrapper">
+                   <text id="char-{{item.char.globalIndex}}" class="char-block {{utils.getCharClass(item.char.status, item.char.char)}}">{{utils.getDisplayChar(item.char.char)}}</text>
+                </view>
+             </block>
+             <!-- Extra padding at end to allow last char to scroll to center -->
+             <view class="end-padding"></view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- Jamo Breakdown for Active Char -->
+      <view class="jamo-hint-container">
+        <view class="hint-content-wrapper">
+          <block wx:if="{{activeJamos.length > 0}}">
+            <view class="jamo-hint-box">
+              <block wx:for="{{activeJamos}}" wx:key="index">
+                <text class="jamo-char {{utils.getKeyClass(item.isDone, item.isCurrent)}}">{{item.char}}</text>
+              </block>
+            </view>
+          </block>
+          <block wx:else>
+            <view class="jamo-hint-placeholder">Done!</view>
+          </block>
+        </view>
+        
+        <!-- Keyboard Mode Toggle (Moved here) -->
+        <view class="mode-toggle" bindtap="toggleVisualMode">
+          <text>{{preferredKeyboardMode === 'korean' ? '한/A' : 'EN/A'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Keyboard -->
+    <view class="keyboard-wrapper">
+      <keyboard 
+        id="keyboard"
+        nextKeyToPress="{{typingState.nextKey}}"
+        isShiftActive="{{typingState.isShiftActive}}"
+        visualMode="{{preferredKeyboardMode}}"
+        bind:keyPress="onVirtualKeyPress"
+      />
+    </view>
+  </view>
+
+</view>
