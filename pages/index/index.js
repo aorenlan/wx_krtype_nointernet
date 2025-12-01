@@ -3,6 +3,7 @@ import { BEGINNER_WORDS } from '../../data/beginnerWords';
 import { COMMON_SENTENCES } from '../../data/commonSentences';
 
 const app = getApp();
+let interstitialAd = null;
 
 Page({
   data: {
@@ -37,7 +38,10 @@ Page({
     
     // Scroll Logic
     scrollLeft: 0,
-    rpxToPx: 0.5 // Default fallback
+    rpxToPx: 0.5, // Default fallback
+
+    // Ad Logic
+    isTopAdVisible: false
   },
 
   onLoad() {
@@ -50,6 +54,18 @@ Page({
       },
       rpxToPx
     });
+
+    // Initialize Interstitial Ad
+    if (wx.createInterstitialAd) {
+      interstitialAd = wx.createInterstitialAd({
+        adUnitId: 'adunit-539816ddda3566d2'
+      })
+      interstitialAd.onLoad(() => {})
+      interstitialAd.onError((err) => {
+        console.error('插屏广告加载失败', err)
+      })
+      interstitialAd.onClose(() => {})
+    }
   },
 
   // --- Menu Handlers ---
@@ -92,7 +108,37 @@ Page({
       korean: text,
       translation: '自定义练习'
     };
+
+    // Show Interstitial Ad Logic (2nd time per day)
+    const today = new Date().toISOString().split('T')[0];
+    const adKey = `custom_ad_count_${today}`;
+    const currentCount = wx.getStorageSync(adKey) || 0;
+    const newCount = currentCount + 1;
+    wx.setStorageSync(adKey, newCount);
+
+    if (newCount >= 2) {
+      if (interstitialAd) {
+        interstitialAd.show().catch((err) => {
+          console.error('插屏广告显示失败', err)
+        })
+      }
+    }
+
     this.startPractice([item], false);
+  },
+
+  // --- Ad Handlers ---
+  adLoad() {
+    console.log('原生模板广告加载成功')
+    this.setData({ isTopAdVisible: true })
+  },
+  adError(err) {
+    console.error('原生模板广告加载失败', err)
+    this.setData({ isTopAdVisible: false })
+  },
+  adClose() {
+    console.log('原生模板广告关闭')
+    this.setData({ isTopAdVisible: false })
   },
 
   // --- Practice Logic ---

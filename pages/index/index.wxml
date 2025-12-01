@@ -43,7 +43,9 @@ module.exports = {
   <!-- Navbar -->
   <view class="nav-bar">
     <view wx:if="{{mode !== 'menu'}}" class="back-btn" bindtap="goBack">
-      <text class="back-icon">ᐸ</text> 
+      <view class="back-icon-box">
+        <image class="back-icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMTUgMTggOSAxMiAxNSA2Ij48L3BvbHlsaW5lPjwvc3ZnPg=="></image>
+      </view>
     </view>
     <view class="nav-title">{{mode === 'menu' ? '' : (mode === 'custom' ? '自定义' : '练习中')}}</view>
   </view>
@@ -104,7 +106,12 @@ module.exports = {
   </view>
 
   <!-- Typing Mode -->
-  <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in">
+  <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in {{isTopAdVisible ? 'has-ad' : ''}}">
+    <!-- Custom Ad -->
+    <view class="ad-container">
+      <ad-custom unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
+    </view>
+
     <!-- Top Info -->
     <view class="status-bar">
       <view class="progress-pill">
