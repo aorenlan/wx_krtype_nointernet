@@ -108,36 +108,77 @@ Page({
         
         // Simple wrap logic
         const maxWidth = width - 80;
-        const words = korean.split(' ');
-        let lines = [];
-        let currentLine = words[0];
+        
+        // Helper to wrap text
+        const getWrappedLines = (text, maxWidth, fontSize) => {
+             ctx.font = fontSize;
+             const words = text.split(' ');
+             let lines = [];
+             let currentLine = "";
 
-        for (let i = 1; i < words.length; i++) {
-            const width = ctx.measureText(currentLine + " " + words[i]).width;
-            if (width < maxWidth) {
-                currentLine += " " + words[i];
-            } else {
-                lines.push(currentLine);
-                currentLine = words[i];
-            }
-        }
-        lines.push(currentLine);
+             for (let i = 0; i < words.length; i++) {
+                 const word = words[i];
+                 const space = currentLine.length > 0 ? " " : "";
+                 const testLine = currentLine + space + word;
+
+                 if (ctx.measureText(testLine).width <= maxWidth) {
+                     currentLine = testLine;
+                 } else {
+                     if (currentLine.length > 0) {
+                         lines.push(currentLine);
+                         currentLine = "";
+                     }
+                     
+                     // Handle long word (or Chinese chunk)
+                     if (ctx.measureText(word).width <= maxWidth) {
+                         currentLine = word;
+                     } else {
+                         let longWordLine = "";
+                         const chars = word.split('');
+                         for (let j = 0; j < chars.length; j++) {
+                             const char = chars[j];
+                             if (ctx.measureText(longWordLine + char).width > maxWidth) {
+                                 lines.push(longWordLine);
+                                 longWordLine = char;
+                             } else {
+                                 longWordLine += char;
+                             }
+                         }
+                         currentLine = longWordLine;
+                     }
+                 }
+             }
+             if (currentLine.length > 0) {
+                 lines.push(currentLine);
+             }
+             return lines;
+        };
         
-        // Handle very long single words (unlikely in normal Korean but possible)
-        // For simplicity, if lines > 3, we might cut off or just let it overflow (it's a share card)
+        const koreanLines = getWrappedLines(korean, maxWidth, 'bold 28px sans-serif');
+        const translationLines = getWrappedLines(translation, maxWidth, '18px sans-serif');
         
-        const lineHeight = 40;
-        const totalTextHeight = lines.length * lineHeight;
-        let startY = (height / 2) - (totalTextHeight / 2) - 20; // Shift up a bit
+        const koreanLineHeight = 40;
+        const translationLineHeight = 26;
+        const gap = 30;
         
-        lines.forEach((line, index) => {
-            ctx.fillText(line, width / 2, startY + (index * lineHeight));
+        const totalContentHeight = (koreanLines.length * koreanLineHeight) + gap + (translationLines.length * translationLineHeight);
+        let startY = (height / 2) - (totalContentHeight / 2) - 20; // Shift up a bit
+        
+        // Draw Korean
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        koreanLines.forEach((line, index) => {
+            ctx.fillText(line, width / 2, startY + (index * koreanLineHeight));
         });
 
-        // 4. Translation
+        // Draw Translation
         ctx.fillStyle = '#94a3b8'; // slate-400
         ctx.font = '18px sans-serif';
-        ctx.fillText(translation, width / 2, startY + totalTextHeight + 30);
+        const transStartY = startY + (koreanLines.length * koreanLineHeight) + gap;
+        
+        translationLines.forEach((line, index) => {
+            ctx.fillText(line, width / 2, transStartY + (index * translationLineHeight));
+        });
         
         // 5. Brand Footer
         ctx.fillStyle = '#3b82f6'; // blue-500
