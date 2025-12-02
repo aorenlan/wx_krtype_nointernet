@@ -45,7 +45,8 @@ Page({
     rpxToPx: 0.5, // Default fallback
 
     // Ad Logic
-    isTopAdVisible: false
+    isTopAdVisible: false,
+    shareImage: ''
   },
 
   onLoad() {
@@ -70,6 +71,92 @@ Page({
       })
       interstitialAd.onClose(() => {})
     }
+  },
+
+  // --- Canvas Helper ---
+  drawShareImage(korean, translation) {
+    const query = wx.createSelectorQuery();
+    query.select('#shareCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) return;
+        
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+        const width = res[0].width;
+        const height = res[0].height;
+        
+        const dpr = wx.getSystemInfoSync().pixelRatio;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        // 1. Background
+        ctx.fillStyle = '#0f172a'; // slate-900
+        ctx.fillRect(0, 0, width, height);
+        
+        // 2. Decorative Border
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(20, 20, width - 40, height - 40);
+        
+        // 3. Korean Text (Main)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Simple wrap logic
+        const maxWidth = width - 80;
+        const words = korean.split(' ');
+        let lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+            const width = ctx.measureText(currentLine + " " + words[i]).width;
+            if (width < maxWidth) {
+                currentLine += " " + words[i];
+            } else {
+                lines.push(currentLine);
+                currentLine = words[i];
+            }
+        }
+        lines.push(currentLine);
+        
+        // Handle very long single words (unlikely in normal Korean but possible)
+        // For simplicity, if lines > 3, we might cut off or just let it overflow (it's a share card)
+        
+        const lineHeight = 40;
+        const totalTextHeight = lines.length * lineHeight;
+        let startY = (height / 2) - (totalTextHeight / 2) - 20; // Shift up a bit
+        
+        lines.forEach((line, index) => {
+            ctx.fillText(line, width / 2, startY + (index * lineHeight));
+        });
+
+        // 4. Translation
+        ctx.fillStyle = '#94a3b8'; // slate-400
+        ctx.font = '18px sans-serif';
+        ctx.fillText(translation, width / 2, startY + totalTextHeight + 30);
+        
+        // 5. Brand Footer
+        ctx.fillStyle = '#3b82f6'; // blue-500
+        ctx.font = '14px sans-serif';
+        ctx.fillText('韩语打字练习', width / 2, height - 40);
+        
+        // 6. Save to Temp File
+        setTimeout(() => {
+            wx.canvasToTempFilePath({
+                canvas: canvas,
+                success: (res) => {
+                    this.setData({ shareImage: res.tempFilePath });
+                },
+                fail: (err) => {
+                    console.error('Canvas export failed', err);
+                }
+            });
+        }, 100);
+      });
   },
 
   // --- Menu Handlers ---
@@ -217,6 +304,9 @@ Page({
     this.setData({ typingState: initialState });
     this.updateDisplay(initialState);
     this.updateShiftState(initialState);
+    
+    // Generate Share Image
+    this.drawShareImage(item.korean, item.translation);
   },
 
   onVirtualKeyPress(e) {
@@ -425,10 +515,16 @@ Page({
   onShareAppMessage() {
     if (this.data.mode === 'typing' && this.data.items.length > 0) {
       const item = this.data.items[this.data.currentItemIndex];
-      return {
-        title: `${item.korean} \n${item.translation}`,
+      const shareObj = {
+        title: `快来和我一起学习❤！\n${item.korean}`,
         path: '/pages/index/index'
       };
+      
+      if (this.data.shareImage) {
+        shareObj.imageUrl = this.data.shareImage;
+      }
+      
+      return shareObj;
     }
     return {
       title: '韩语打字练习 - 3天告别卡顿',
