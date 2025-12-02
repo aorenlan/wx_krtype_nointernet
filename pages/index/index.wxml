@@ -55,10 +55,45 @@ module.exports = {
     <view class="header-section">
       <view class="badge">PRACTICE MODE</view>
       <view class="main-title">韩语打字练习</view>
-      <view class="sub-title">选择模式开始您的练习之旅</view>
+      <view class="sub-title-box">
+        <view class="slogan-line">
+          <text>3天告别</text>
+          <text class="highlight-red">韩语输入卡顿</text>
+          <text>！</text>
+        </view>
+        <view class="slogan-line">
+          <text>专治</text>
+          <text class="highlight-yellow">‘想打却不会拼’</text>
+          <text>的初学者</text>
+        </view>
+      </view>
     </view>
     
     <view class="menu-list">
+      <button class="menu-item accent" bindtap="startStarNicknames">
+        <view class="menu-content">
+          <view class="menu-text">🔥 明星专练</view>
+          <view class="menu-sub">Star Nicknames</view>
+        </view>
+        <view class="menu-icon">🌟</view>
+      </button>
+
+      <button class="menu-item success" bindtap="startSupportWords">
+        <view class="menu-content">
+          <view class="menu-text">🎤 应援弹幕</view>
+          <view class="menu-sub">Cheering Words</view>
+        </view>
+        <view class="menu-icon">📣</view>
+      </button>
+
+      <button class="menu-item warning" bindtap="startDrama">
+        <view class="menu-content">
+          <view class="menu-text">🎬 韩剧经典</view>
+          <view class="menu-sub">K-Drama Lines</view>
+        </view>
+        <view class="menu-icon">🎭</view>
+      </button>
+
       <button class="menu-item primary" bindtap="startBeginner">
         <view class="menu-content">
           <view class="menu-text">初级单词</view>
@@ -101,6 +136,17 @@ module.exports = {
         maxlength="100"
       ></textarea>
       <view class="error-msg" wx:if="{{errorMessage}}">{{errorMessage}}</view>
+      
+      <view class="count-control">
+        <view class="count-label">练习次数 / Repetitions</view>
+        <view class="stepper">
+          <view class="stepper-btn minus" bindtap="decreaseCount">-</view>
+          <view class="count-value">x{{practiceCount}}</view>
+          <view class="stepper-btn plus" bindtap="increaseCount">+</view>
+        </view>
+        <view class="count-hint">可修改练习次数</view>
+      </view>
+
       <button class="start-btn" bindtap="submitCustom">开始练习</button>
     </view>
   </view>
@@ -116,6 +162,20 @@ module.exports = {
     <view class="status-bar">
       <view class="progress-pill">
         <text class="progress-text">{{currentItemIndex + 1}} / {{items.length}}</text>
+      </view>
+
+      <view class="mini-controls">
+        <view class="icon-btn" bindtap="prevItem" hover-class="icon-hover">
+          <image class="icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNSAxOCA5IDEyIDE1IDYiPjwvcG9seWxpbmU+PC9zdmc+"></image>
+        </view>
+        
+        <button class="icon-btn share-btn-reset" open-type="share" hover-class="icon-hover">
+           <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxOCIgY3k9IjUiIHI9IjMiPjwvY2lyY2xlPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyI+PC9jaXJjbGU+PGNpcmNsZSBjeD0iMTgiIGN5PSIxOSIgcj0iMyI+PC9jaXJjbGU+PGxpbmUgeDE9IjguNTkiIHkxPSIxMy41MSIgeDI9IjE1LjQyIiB5Mj0iMTcuNDkiPjwvbGluZT48bGluZSB4MT0iMTUuNDEiIHkxPSI2LjUxIiB4Mj0iOC41OSIgeTI9IjEwLjQ5Ij48L2xpbmU+PC9zdmc+"></image>
+        </button>
+
+        <view class="icon-btn" bindtap="nextItem" hover-class="icon-hover">
+          <image class="icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI5IDE4IDE1IDEyIDkgNiI+PC9wb2x5bGluZT48L3N2Zz4="></image>
+        </view>
       </view>
     </view>
 

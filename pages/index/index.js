@@ -1,6 +1,9 @@
 import { decomposeKoreanStructure, validateInput } from '../../utils/hangul';
 import { BEGINNER_WORDS } from '../../data/beginnerWords';
 import { COMMON_SENTENCES } from '../../data/commonSentences';
+import { STAR_NICKNAMES } from '../../data/starNicknames';
+import { SUPPORT_WORDS } from '../../data/supportWords';
+import { DRAMA_LINES } from '../../data/dramaLines';
 
 const app = getApp();
 let interstitialAd = null;
@@ -14,6 +17,7 @@ Page({
     errorMessage: '',
     preferredKeyboardMode: 'korean',
     customInputText: '',
+    practiceCount: 1,
     
     // Typing State
     typingState: {
@@ -70,6 +74,18 @@ Page({
 
   // --- Menu Handlers ---
   
+  startStarNicknames() {
+    this.startPractice(STAR_NICKNAMES, true);
+  },
+
+  startSupportWords() {
+    this.startPractice(SUPPORT_WORDS, true);
+  },
+
+  startDrama() {
+    this.startPractice(DRAMA_LINES, true);
+  },
+
   startBeginner() {
     this.startPractice(BEGINNER_WORDS, true);
   },
@@ -79,7 +95,19 @@ Page({
   },
 
   startCustom() {
-    this.setData({ mode: 'custom', errorMessage: '', customInputText: '' });
+    this.setData({ mode: 'custom', errorMessage: '', customInputText: '', practiceCount: 1 });
+  },
+
+  increaseCount() {
+    if (this.data.practiceCount < 10) {
+      this.setData({ practiceCount: this.data.practiceCount + 1 });
+    }
+  },
+
+  decreaseCount() {
+    if (this.data.practiceCount > 1) {
+      this.setData({ practiceCount: this.data.practiceCount - 1 });
+    }
   },
 
   goBack() {
@@ -109,6 +137,8 @@ Page({
       translation: '自定义练习'
     };
 
+    const practiceItems = Array(this.data.practiceCount).fill(item);
+
     // Show Interstitial Ad Logic (2nd time per day)
     const today = new Date().toISOString().split('T')[0];
     const adKey = `custom_ad_count_${today}`;
@@ -116,7 +146,7 @@ Page({
     const newCount = currentCount + 1;
     wx.setStorageSync(adKey, newCount);
 
-    if (newCount >= 2) {
+    if (newCount >= 5) {
       if (interstitialAd) {
         interstitialAd.show().catch((err) => {
           console.error('插屏广告显示失败', err)
@@ -124,7 +154,7 @@ Page({
       }
     }
 
-    this.startPractice([item], false);
+    this.startPractice(practiceItems, false);
   },
 
   // --- Ad Handlers ---
@@ -368,6 +398,54 @@ Page({
         }
       });
     }
+  },
+
+  prevItem() {
+    const { currentItemIndex, items } = this.data;
+    if (currentItemIndex > 0) {
+      const prevIdx = currentItemIndex - 1;
+      this.setData({ currentItemIndex: prevIdx });
+      this.loadItem(items[prevIdx]);
+    } else {
+      wx.showToast({ title: '已经是第一个了', icon: 'none' });
+    }
+  },
+
+  nextItem() {
+    const { currentItemIndex, items } = this.data;
+    if (currentItemIndex < items.length - 1) {
+      const nextIdx = currentItemIndex + 1;
+      this.setData({ currentItemIndex: nextIdx });
+      this.loadItem(items[nextIdx]);
+    } else {
+      wx.showToast({ title: '已经是最后一个了', icon: 'none' });
+    }
+  },
+
+  onShareAppMessage() {
+    if (this.data.mode === 'typing' && this.data.items.length > 0) {
+      const item = this.data.items[this.data.currentItemIndex];
+      return {
+        title: `${item.korean} \n${item.translation}`,
+        path: '/pages/index/index'
+      };
+    }
+    return {
+      title: '韩语打字练习 - 3天告别卡顿',
+      path: '/pages/index/index'
+    };
+  },
+
+  onShareTimeline() {
+    if (this.data.mode === 'typing' && this.data.items.length > 0) {
+        const item = this.data.items[this.data.currentItemIndex];
+        return {
+          title: `${item.korean} - 韩语打字练习`,
+        };
+      }
+      return {
+        title: '韩语打字练习'
+      };
   },
 
   toggleVisualMode() {
