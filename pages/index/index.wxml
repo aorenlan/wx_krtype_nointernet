@@ -41,13 +41,15 @@ module.exports = {
   </view>
 
   <!-- Navbar -->
-  <view class="nav-bar">
-    <view wx:if="{{mode !== 'menu'}}" class="back-btn" bindtap="goBack">
-      <view class="back-icon-box">
-        <image class="back-icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMTUgMTggOSAxMiAxNSA2Ij48L3BvbHlsaW5lPjwvc3ZnPg=="></image>
+  <view class="nav-bar" style="height: {{navBar.totalHeight}}px; padding-top: {{navBar.paddingTop}}px; box-sizing: border-box;">
+    <view class="nav-content">
+      <view wx:if="{{mode !== 'menu'}}" class="back-btn" bindtap="goBack">
+        <view class="back-icon-box">
+          <image class="back-icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMTUgMTggOSAxMiAxNSA2Ij48L3BvbHlsaW5lPjwvc3ZnPg=="></image>
+        </view>
       </view>
+      <view class="nav-title">{{mode === 'menu' ? '' : (mode === 'custom' ? '自定义' : '练习中')}}</view>
     </view>
-    <view class="nav-title">{{mode === 'menu' ? '' : (mode === 'custom' ? '自定义' : '练习中')}}</view>
   </view>
 
   <!-- Menu Mode -->
@@ -110,13 +112,40 @@ module.exports = {
         <view class="menu-icon">💬</view>
       </button>
 
-      <button class="menu-item outline" bindtap="startCustom">
+      <button class="menu-item popular" bindtap="startPopular">
         <view class="menu-content">
-          <view class="menu-text">自定义输入</view>
-          <view class="menu-sub">Custom Practice</view>
+          <view class="menu-text">🎵 流行热曲</view>
+          <view class="menu-sub">K-Pop Hits</view>
         </view>
-        <view class="menu-icon">✍️</view>
+        <view class="menu-icon">🎧</view>
       </button>
+    </view>
+
+    <view class="action-grid">
+      <view class="custom-entry">
+        <button class="menu-item outline" bindtap="startCustom">
+          <view class="menu-content">
+            <view class="menu-text">自定义输入</view>
+            <view class="menu-sub">Custom</view>
+          </view>
+          <view class="menu-icon">✍️</view>
+        </button>
+      </view>
+
+      <view class="pc-entry">
+        <button class="menu-item outline pc-btn" bindtap="handleCopyPC">
+          <view class="menu-content centered">
+            <view class="menu-text small-text">
+              <view>在浏览器中使用</view>
+              <view>点击复制链接</view>
+            </view>
+            <view class="menu-sub pc-sub">需完整观看广告</view>
+          </view>
+          <view class="hand-guide-box">
+             <image class="hand-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBhdGggZD0iTTkgMTEuMjRWNy41QzkgNi4xMiAxMC4xMiA1IDExLjUgNVMxNCA2LjEyIDE0IDcuNXYzLjc0YzEuMjEtLjgxIDItMi4xOCAyLTMuNzRDMTYgNS4wMSAxMy45OSAzIDExLjUgM1M3IDUuMDEgNyA3LjVjMCAxLjU2Ljc5IDIuOTMgMiAzLjc0em05Ljg0IDQuNjNsLTQuNTQtMi4yNmMtLjE3LS4wNy0uMzUtLjExLS41NC0uMTFIMTN2LTZjMC0uODMtLjY3LTEuNS0xLjUtMS41UzEwIDYuNjcgMTAgNy41djEwLjc0bC0zLjQzLS43MmMtLjA4LS4wMS0uMTUtLjAzLS4yNC0uMDMtLjMxIDAtLjU5LjEzLS43OS4zM2wtLjc5LjggNC45NCA0Ljk0Yy4yNy4yNy42NS40NCAxLjA2LjQ0aDYuNzljLjc1IDAgMS4zMy0uNTUgMS40NC0xLjI4bC43NS01LjI3Yy4wMS0uMDcuMDItLjE0LjAyLS4yIDAtLjYyLS4zOC0xLjE2LS45MS0xLjM4eiIvPjwvc3ZnPg=="></image>
+          </view>
+        </button>
+      </view>
     </view>
 
     <view class="footer">
@@ -132,7 +161,7 @@ module.exports = {
         class="custom-textarea" 
         bindinput="handleCustomInput" 
         value="{{customInputText}}"
-        placeholder="在此输入..."
+        placeholder="请把需要练习的语句复制到此处"
         maxlength="100"
       ></textarea>
       <view class="error-msg" wx:if="{{errorMessage}}">{{errorMessage}}</view>
@@ -147,6 +176,10 @@ module.exports = {
         <view class="count-hint">可修改练习次数</view>
       </view>
 
+      <view class="sample-btn-box">
+        <view class="sample-btn" bindtap="fillSampleText">生成样例 (Generate Sample)</view>
+      </view>
+
       <button class="start-btn" bindtap="submitCustom">开始练习</button>
     </view>
   </view>
@@ -154,7 +187,7 @@ module.exports = {
   <!-- Typing Mode -->
   <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in {{isTopAdVisible ? 'has-ad' : ''}}">
     <!-- Custom Ad -->
-    <view class="ad-container">
+    <view class="ad-container" wx:if="{{!adsDisabled}}">
       <ad-custom unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
     </view>
 
@@ -181,7 +214,10 @@ module.exports = {
 
     <!-- Target Display -->
     <view class="display-area">
-      <view class="translation">{{typingState.targetTranslation}}</view>
+      <view class="translation-container">
+        <view class="translation">{{typingState.targetTranslation}}</view>
+
+      </view>
       
       <view class="text-scroll-wrapper">
         <view class="fade-mask left"></view>
@@ -193,6 +229,7 @@ module.exports = {
           scroll-with-animation="{{true}}"
           scroll-left="{{scrollLeft}}"
           enable-flex="{{true}}"
+          show-scrollbar="{{false}}"
         >
           <view class="scroll-content">
              <!-- Extra padding at start to center first char -->
@@ -201,7 +238,11 @@ module.exports = {
                 <!-- Word -->
                 <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
                    <block wx:for="{{item.chars}}" wx:key="idx" wx:for-item="charItem">
-                      <text id="char-{{charItem.globalIndex}}" class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}">{{utils.getDisplayChar(charItem.char)}}</text>
+                      <text 
+                        id="char-{{charItem.globalIndex}}" 
+                        class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}"
+                        style="{{charItem.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + charItem.progress + '%, #ffffff ' + charItem.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
+                      >{{utils.getDisplayChar(charItem.char)}}</text>
                    </block>
                 </view>
                 <!-- Space -->

@@ -4,9 +4,14 @@ import { COMMON_SENTENCES } from '../../data/commonSentences';
 import { STAR_NICKNAMES } from '../../data/starNicknames';
 import { SUPPORT_WORDS } from '../../data/supportWords';
 import { DRAMA_LINES } from '../../data/dramaLines';
+import { POPULAR_SONGS } from '../../data/popularSongs';
 
 const app = getApp();
 let interstitialAd = null;
+let videoAd = null;
+
+
+const DEFAULT_SAMPLE_TEXT = "연습은 완벽을 만듭니다. Fighting! 화이팅!";
 
 Page({
   data: {
@@ -46,32 +51,124 @@ Page({
 
     // Ad Logic
     isTopAdVisible: false,
-    shareImage: ''
+    shareImage: '',
+    adsDisabled: false
   },
 
   onLoad() {
     const sysInfo = wx.getSystemInfoSync();
     const rpxToPx = sysInfo.windowWidth / 750; // Calculate ratio
+    
+    const now = Date.now();
+    let firstInstallTime = wx.getStorageSync('firstInstallTime');
+    
+    // If no timestamp, treat as new install (start 30 min grace period)
+    if (!firstInstallTime) {
+      firstInstallTime = now;
+      wx.setStorageSync('firstInstallTime', firstInstallTime);
+    }
+
+    // Check 30-minute grace period
+    const GRACE_PERIOD = 30 * 60 * 1000;
+    const isInGracePeriod = (now - firstInstallTime) < GRACE_PERIOD;
+
+    // Check manual disable (cheat code) for today
+    const today = new Date().toISOString().split('T')[0];
+    const disabledDate = wx.getStorageSync('adsDisabledDate');
+    const isManuallyDisabled = disabledDate === today;
+
+    // Ads are disabled if in grace period OR manually disabled
+    const adsDisabled = isInGracePeriod || isManuallyDisabled;
+
+    // Precise Navbar Calculation
+    const menuButton = wx.getMenuButtonBoundingClientRect();
+    const statusBarHeight = sysInfo.statusBarHeight;
+    
+    // Default to standard if menuButton is missing
+    let navBarHeight = 44;
+    let navBarTop = statusBarHeight;
+    
+    if (menuButton && menuButton.top) {
+      // content height = capsule height + (gap above capsule * 2)
+      navBarHeight = (menuButton.top - statusBarHeight) * 2 + menuButton.height;
+      navBarTop = statusBarHeight;
+    }
+    
+    const totalNavHeight = navBarTop + navBarHeight;
+    
     this.setData({
       safeArea: {
-        top: sysInfo.safeArea.top,
+        top: totalNavHeight, // Main content starts after nav bar
         bottom: sysInfo.screenHeight - sysInfo.safeArea.bottom
       },
-      rpxToPx
+      navBar: {
+        height: navBarHeight,      // Content height
+        paddingTop: navBarTop,     // Status bar height
+        totalHeight: totalNavHeight // Total height to reserve
+      },
+      rpxToPx,
+      adsDisabled
     });
 
-    // Initialize Interstitial Ad
-    if (wx.createInterstitialAd) {
-      interstitialAd = wx.createInterstitialAd({
-        adUnitId: 'adunit-539816ddda3566d2'
+    // Helper to initialize Interstitial Ad
+    const initInterstitial = () => {
+      if (wx.createInterstitialAd && !interstitialAd) {
+        interstitialAd = wx.createInterstitialAd({
+          adUnitId: 'adunit-539816ddda3566d2'
+        })
+        interstitialAd.onLoad(() => {})
+        interstitialAd.onError((err) => {
+          console.error('插屏广告加载失败', err)
+        })
+        interstitialAd.onClose(() => {})
+      }
+    };
+
+    if (!adsDisabled) {
+      initInterstitial();
+    } else if (isInGracePeriod && !isManuallyDisabled) {
+      // If in grace period (and not manually disabled), schedule auto-enable
+      const timeRemaining = GRACE_PERIOD - (now - firstInstallTime);
+      console.log(`New user grace period active. Ads enabling in ${Math.ceil(timeRemaining/1000)}s`);
+      
+      setTimeout(() => {
+        console.log('Grace period expired. Enabling ads.');
+        this.setData({ adsDisabled: false }, () => {
+          // Refresh display if in typing mode to adjust layout
+          if (this.data.mode === 'typing') {
+            this.updateDisplay(this.data.typingState);
+          }
+        });
+        initInterstitial();
+      }, timeRemaining);
+    }
+
+    // Initialize Rewarded Video Ad
+    if (wx.createRewardedVideoAd) {
+      videoAd = wx.createRewardedVideoAd({
+        adUnitId: 'adunit-78856528510e4410'
       })
-      interstitialAd.onLoad(() => {})
-      interstitialAd.onError((err) => {
-        console.error('插屏广告加载失败', err)
+      videoAd.onLoad(() => {})
+      videoAd.onError((err) => {
+        console.error('激励视频光告加载失败', err)
       })
-      interstitialAd.onClose(() => {})
+      videoAd.onClose((res) => {
+        // Only show copy options if ad was fully watched
+        if (res && res.isEnded) {
+          this.showCopyActionSheet();
+        } else {
+          // User closed early
+          wx.showToast({
+            title: '完整观看视频才能获取地址哦',
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      })
     }
   },
+
+
 
   // --- Canvas Helper ---
   drawShareImage(korean, translation) {
@@ -202,6 +299,54 @@ Page({
 
   // --- Menu Handlers ---
   
+  handleCopyPC() {
+    if (videoAd) {
+      videoAd.show().catch(() => {
+        // Retry load
+        videoAd.load()
+          .then(() => videoAd.show())
+          .catch(err => {
+            console.error('激励视频 广告显示失败', err);
+            // If ad fails to load/show, inform user instead of bypassing
+            wx.showToast({
+              title: '广告加载失败，请稍后重试',
+              icon: 'none',
+              duration: 2000
+            });
+          })
+      })
+    } else {
+      // If ad component not supported/initialized, maybe just show? 
+      // Or strictly require it? Usually if !videoAd means API not supported.
+      // In that case, we can show it as fallback, or show "Upgrade WeChat".
+      // Assuming fallback for compatibility is okay if ad object doesn't exist.
+      this.showCopyActionSheet();
+    }
+  },
+
+  showCopyActionSheet() {
+    wx.showActionSheet({
+      itemList: ['复制国内版网址 (Faster)', '复制国际版网址 (Global)'],
+      success: (res) => {
+        let url = '';
+        if (res.tapIndex === 0) url = 'https://krtype.aorenlan.fun/';
+        if (res.tapIndex === 1) url = 'https://krtype-global.aorenlan.fun/';
+        
+        if (url) {
+          wx.setClipboardData({
+            data: url,
+            success: () => {
+              wx.showToast({
+                title: '复制成功',
+                icon: 'success'
+              });
+            }
+          });
+        }
+      }
+    })
+  },
+
   startStarNicknames() {
     this.startPractice(STAR_NICKNAMES, true);
   },
@@ -212,6 +357,10 @@ Page({
 
   startDrama() {
     this.startPractice(DRAMA_LINES, true);
+  },
+
+  startPopular() {
+    this.startPractice(POPULAR_SONGS, true);
   },
 
   startBeginner() {
@@ -248,9 +397,71 @@ Page({
     this.setData({ customInputText: e.detail.value, errorMessage: '' });
   },
 
+  fillSampleText() {
+    this.setData({ customInputText: DEFAULT_SAMPLE_TEXT, errorMessage: '' });
+  },
+
   submitCustom() {
     const text = this.data.customInputText.trim();
     if (!text) return;
+
+    const lowerText = text.toLowerCase();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Cheat code to disable ads for today
+    if (lowerText === 'closead') {
+      wx.setStorageSync('adsDisabledDate', today);
+      wx.removeStorageSync('adsDisabled'); // Remove legacy key
+      
+      this.setData({ 
+        adsDisabled: true,
+        isTopAdVisible: false,
+        customInputText: '',
+        errorMessage: ''
+      }, () => {
+        this.updateDisplay(this.data.typingState);
+      });
+      
+      wx.showToast({
+        title: '今日免广告',
+        icon: 'success'
+      });
+      return;
+    }
+
+    // Cheat code to enable ads
+    if (lowerText === 'openad') {
+      wx.removeStorageSync('adsDisabledDate');
+      wx.removeStorageSync('adsDisabled');
+      
+      // Also expire the grace period (set to 1 hour ago)
+      const expiredTime = Date.now() - (60 * 60 * 1000);
+      wx.setStorageSync('firstInstallTime', expiredTime);
+      
+      this.setData({ 
+        adsDisabled: false,
+        customInputText: '',
+        errorMessage: ''
+      });
+
+      // Re-initialize interstitial ad if missing
+      if (!interstitialAd && wx.createInterstitialAd) {
+        interstitialAd = wx.createInterstitialAd({
+          adUnitId: 'adunit-539816ddda3566d2'
+        })
+        interstitialAd.onLoad(() => {})
+        interstitialAd.onError((err) => {
+          console.error('插屏广告加载失败', err)
+        })
+        interstitialAd.onClose(() => {})
+      }
+
+      wx.showToast({
+        title: '广告已开启',
+        icon: 'success'
+      });
+      return;
+    }
 
     const validation = validateInput(text);
     if (!validation.valid) {
@@ -267,14 +478,10 @@ Page({
 
     const practiceItems = Array(this.data.practiceCount).fill(item);
 
-    // Show Interstitial Ad Logic (2nd time per day)
-    const today = new Date().toISOString().split('T')[0];
-    const adKey = `custom_ad_count_${today}`;
-    const currentCount = wx.getStorageSync(adKey) || 0;
-    const newCount = currentCount + 1;
-    wx.setStorageSync(adKey, newCount);
-
-    if (newCount >= 5) {
+    // Show Interstitial Ad Logic (Every time for custom input)
+    // Only show if ads are not disabled (respects grace period)
+    // AND if the text is NOT the default sample text
+    if (!this.data.adsDisabled && text !== DEFAULT_SAMPLE_TEXT) {
       if (interstitialAd) {
         interstitialAd.show().catch((err) => {
           console.error('插屏广告显示失败', err)
@@ -288,15 +495,21 @@ Page({
   // --- Ad Handlers ---
   adLoad() {
     console.log('原生模板广告加载成功')
-    this.setData({ isTopAdVisible: true })
+    this.setData({ isTopAdVisible: true }, () => {
+      this.updateDisplay(this.data.typingState);
+    })
   },
   adError(err) {
     console.error('原生模板广告加载失败', err)
-    this.setData({ isTopAdVisible: false })
+    this.setData({ isTopAdVisible: false }, () => {
+      this.updateDisplay(this.data.typingState);
+    })
   },
   adClose() {
     console.log('原生模板广告关闭')
-    this.setData({ isTopAdVisible: false })
+    this.setData({ isTopAdVisible: false }, () => {
+      this.updateDisplay(this.data.typingState);
+    })
   },
 
   // --- Practice Logic ---
@@ -315,7 +528,8 @@ Page({
     this.setData({
       items: itemsToUse,
       currentItemIndex: 0,
-      mode: 'typing'
+      mode: 'typing',
+      isTopAdVisible: false // Reset ad state
     });
 
     this.loadItem(itemsToUse[0]);
@@ -362,9 +576,25 @@ Page({
     const expectedKey = typingState.requiredKeys[typingState.currentKeyIndex];
     
     let normalizedKey = key;
-    // Assuming keyboard component sends 'SPACE' for space bar, which matches our hangul logic
     
-    if (normalizedKey === expectedKey) {
+    // Logic to handle case-insensitivity for keys that don't support Shift variants on this keyboard
+    // The keys q, w, e, r, t, o, p have Shift variants (Q, W, E, R, T, O, P) which map to different Hangul characters.
+    // For these, we must maintain strict case matching.
+    // For other keys (e.g. n, m, a...), the keyboard only emits lowercase, so we should allow case-insensitive match for English targets.
+    const strictKeys = ['q', 'w', 'e', 'r', 't', 'o', 'p'];
+    const isStrictKey = (k) => strictKeys.includes(k.toLowerCase());
+    
+    let isMatch = normalizedKey === expectedKey;
+    
+    if (!isMatch) {
+      if (!isStrictKey(expectedKey) && 
+          normalizedKey.toLowerCase() === expectedKey.toLowerCase()) {
+          isMatch = true;
+          normalizedKey = expectedKey; // Use expected key to keep state consistent
+      }
+    }
+    
+    if (isMatch) {
       // Correct
       const nextIndex = typingState.currentKeyIndex + 1;
       const isNowComplete = nextIndex >= typingState.requiredKeys.length;
@@ -447,9 +677,11 @@ Page({
       const start = keyCounter;
       const end = keyCounter + struct.keys.length;
       let status = 'future';
+      let progress = 0;
 
       if (currentKeyIndex >= end) {
         status = 'done';
+        progress = 100;
       } else if (currentKeyIndex >= start) {
         status = 'active';
         
@@ -462,11 +694,17 @@ Page({
             isCurrent: currentKeyIndex === kGlobalIndex
           };
         });
+        
+        // Calculate progress percentage for active char
+        const doneCount = currentKeyIndex - start;
+        const totalKeys = struct.keys.length;
+        progress = totalKeys > 0 ? Math.floor((doneCount / totalKeys) * 100) : 0;
       }
 
       displayChars.push({
         char: struct.char,
-        status: status
+        status: status,
+        progress: progress
       });
 
       keyCounter += struct.keys.length;
@@ -501,7 +739,8 @@ Page({
 
     // Calculate scrollLeft
     // Each char is 80rpx width + 4rpx margin-left + 4rpx margin-right = 88rpx total
-    const charWidthRpx = 88;
+    // If ad is visible, char is 50rpx + 8rpx = 58rpx
+    const charWidthRpx = this.data.isTopAdVisible ? 58 : 88;
     const charWidthPx = charWidthRpx * this.data.rpxToPx;
     const scrollLeft = activeCharIndex * charWidthPx;
 

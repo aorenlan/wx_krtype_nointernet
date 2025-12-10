@@ -74,6 +74,11 @@ module.exports = {
     if (!nextKeyToPress) return false;
     if (k.char === nextKeyToPress) return true;
     if (k.shiftChar === nextKeyToPress) return true;
+    
+    if (!k.shiftChar && k.char.toUpperCase() === nextKeyToPress.toUpperCase()) {
+      return true;
+    }
+    
     return false;
   },
   getKeyDisplay: function(k, visualMode, isShiftActive) {

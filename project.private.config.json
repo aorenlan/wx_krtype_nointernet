@@ -1,6 +1,6 @@
 {
-  "libVersion": "3.12.0",
-  "projectname": "krtype3",
+  "libVersion": "3.11.3",
+  "projectname": "wx_krtype_nointernet-main",
   "setting": {
     "urlCheck": false,
     "coverView": true,
