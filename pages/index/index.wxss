@@ -521,7 +521,8 @@
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  margin-bottom: 40px; /* Space for keyboard */
+  overflow: hidden;
+  min-height: 0;
 }
 
 .translation-container {
@@ -673,9 +674,10 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-top: 20px;
   position: relative;
   height: 60px; /* Ensure fixed height for alignment */
+  flex-shrink: 0;
+  margin-bottom: 10px;
   /* gap: 12px; Remove gap as we are using absolute positioning for the toggle */
 }
 
@@ -1121,6 +1123,7 @@
     box-sizing: border-box;
   }
 
+  /* Fixed Display Area to prevent keyboard jitter */
   .display-area {
     margin-bottom: 4px;
     padding: 0 10px;
@@ -1130,6 +1133,7 @@
     justify-content: flex-start; /* Strictly top aligned */
     min-height: 0; /* Allow shrinking */
     gap: 0;
+    overflow: hidden; /* Prevent content expansion affecting layout */
   }
 
   .translation-container {
@@ -1213,8 +1217,9 @@
   justify-content: space-between;
   width: 100%;
   gap: 8px;
-  min-height: 120px; /* Ensure enough height */
+  min-height: 80px; /* Reduced from 100px */
   margin-bottom: 20px;
+  flex-shrink: 0; /* Prevent resizing triggering layout shifts */
 }
 
 .nav-strip {
@@ -1249,7 +1254,7 @@
   min-width: 0;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 16px;
-  padding: 10px 0;
+  padding: 4px 0; /* Reduced from 10px 0 */
   position: relative; /* Ensure fade masks are positioned relative to this */
 }
 
@@ -1258,11 +1263,12 @@
   width: 100%;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: center; /* Center content */
-  padding: 10px;
+  align-items: center; /* Vertically center items in lines */
+  justify-content: center; /* Center lines horizontally */
+  align-content: center; /* Center content vertically in the container if height is fixed */
+  padding: 4px 8px; /* Reduced vertical padding */
   box-sizing: border-box;
-  gap: 4px; /* Reduced from 8px */
+  gap: 2px 4px; /* Reduced gaps */
   max-height: 240rpx; /* Limit height to approx 2-3 lines */
   /* overflow handled by scroll-view */
 }
@@ -1275,19 +1281,19 @@
 }
 
 .expanded-text-view .word-wrapper {
-  margin: 2px; /* Reduced from 4px */
+  margin: 0 2px; /* Reduced margin */
   display: inline-flex;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .expanded-text-view .char-block {
-  font-size: 50rpx; /* Default smaller size for expanded */
+  font-size: 44rpx; /* Reduced from 50rpx */
   width: auto;
-  min-width: 10rpx; /* Allow narrow chars like English 'i' */
+  min-width: 8rpx;
   height: auto;
-  margin: 0 1rpx;
-  padding: 0 1rpx;
+  margin: 0;
+  padding: 0;
 }
 
 /* Dynamic Font Sizes for Expanded View */

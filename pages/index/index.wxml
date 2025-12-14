@@ -318,26 +318,26 @@ module.exports = {
            <image class="nav-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI5IDE4IDE1IDEyIDkgNiI+PC9wb2x5bGluZT48L3N2Zz4="></image>
         </view>
       </view>
+    </view>
 
-      <!-- Jamo Breakdown for Active Char -->
-      <view class="jamo-hint-container">
-        <view class="hint-content-wrapper">
-          <block wx:if="{{activeJamos.length > 0}}">
-            <view class="jamo-hint-box">
-              <block wx:for="{{activeJamos}}" wx:key="index">
-                <text class="jamo-char {{utils.getKeyClass(item.isDone, item.isCurrent)}}">{{item.char}}</text>
-              </block>
-            </view>
-          </block>
-          <block wx:else>
-            <view class="jamo-hint-placeholder">Done!</view>
-          </block>
-        </view>
-        
-        <!-- Keyboard Mode Toggle (Moved here) -->
-        <view class="mode-toggle" bindtap="toggleVisualMode">
-          <text>{{preferredKeyboardMode === 'korean' ? '한/A' : 'EN/A'}}</text>
-        </view>
+    <!-- Jamo Breakdown for Active Char -->
+    <view class="jamo-hint-container">
+      <view class="hint-content-wrapper">
+        <block wx:if="{{activeJamos.length > 0}}">
+          <view class="jamo-hint-box">
+            <block wx:for="{{activeJamos}}" wx:key="index">
+              <text class="jamo-char {{utils.getKeyClass(item.isDone, item.isCurrent)}}">{{item.char}}</text>
+            </block>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="jamo-hint-placeholder">Done!</view>
+        </block>
+      </view>
+      
+      <!-- Keyboard Mode Toggle (Moved here) -->
+      <view class="mode-toggle" bindtap="toggleVisualMode">
+        <text>{{preferredKeyboardMode === 'korean' ? '한/A' : 'EN/A'}}</text>
       </view>
     </view>
 
