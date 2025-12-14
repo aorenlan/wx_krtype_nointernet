@@ -33,7 +33,20 @@
   "libVersion": "3.12.0",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "glob",
+        "value": "data/voice/**/*"
+      },
+      {
+        "type": "glob",
+        "value": "tools/**/*"
+      },
+      {
+        "type": "glob",
+        "value": "assets/audio/**/*"
+      }
+    ],
     "include": []
   },
   "editorSetting": {}

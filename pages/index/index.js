@@ -1,4 +1,5 @@
 import { decomposeKoreanStructure, validateInput } from '../../utils/hangul';
+import { audioSprite } from '../../utils/audioSprite';
 import { BEGINNER_WORDS } from '../../data/beginnerWords';
 import { COMMON_SENTENCES } from '../../data/commonSentences';
 import { STAR_NICKNAMES } from '../../data/starNicknames';
@@ -52,7 +53,18 @@ Page({
     // Ad Logic
     isTopAdVisible: false,
     shareImage: '',
-    adsDisabled: false
+    adsDisabled: false,
+    
+    // Audio Logic
+    canPlayAudio: false,
+    autoRead: false,
+    showTooltip: false,
+    isTextExpanded: false,
+    expandTextOnPlay: true, // Default to true
+
+    // Contact Logic
+    showContactModal: false,
+    showContactToast: false
   },
 
   onLoad() {
@@ -61,6 +73,25 @@ Page({
     
     const now = Date.now();
     let firstInstallTime = wx.getStorageSync('firstInstallTime');
+    
+    // Load Auto Read Setting
+    const autoRead = wx.getStorageSync('autoRead') || false;
+    // Load Text Display Mode (Default: false -> Scroll Mode)
+    // User wants this to be a persistent mode, not related to audio
+    const isTextExpanded = wx.getStorageSync('isTextExpanded') || false; 
+    this.setData({ autoRead, isTextExpanded });
+    
+    // Check Contact Toast (Version 2 to force reshow)
+    const hasSeenContactToast = wx.getStorageSync('hasSeenContactToast_v2');
+    if (!hasSeenContactToast) {
+      this.setData({ showContactToast: true });
+      // Auto hide after 5 seconds if not interacted
+      setTimeout(() => {
+        if (this.data.showContactToast) {
+          this.closeContactToast();
+        }
+      }, 5000);
+    }
     
     // If no timestamp, treat as new install (start 30 min grace period)
     if (!firstInstallTime) {
@@ -79,6 +110,39 @@ Page({
 
     // Ads are disabled if in grace period OR manually disabled
     const adsDisabled = isInGracePeriod || isManuallyDisabled;
+
+    // Check Tooltip Logic (New key to force reset)
+    // We only set the flag if it's NOT present.
+    // But to ensure user sees it, we set showTooltip to true if flag is missing.
+    // We won't set the storage to true here. We do it when they close it.
+    const hasSeenTooltip = wx.getStorageSync('hasSeenAutoReadTooltip_v3');
+    if (!hasSeenTooltip) {
+      this.setData({ showTooltip: true });
+    }
+
+    // Reset Audio Limits if new day
+    const storedDate = wx.getStorageSync('audioLimitDate');
+    if (storedDate !== today) {
+      wx.setStorageSync('audioLimitDate', today);
+      wx.setStorageSync('dailyAudioPlays', 0);
+      wx.setStorageSync('isAudioUnlocked', false);
+    }
+
+    // Initialize Audio Sprite (Preload Beginner)
+    // No explicit subpackage load needed here because we use lazy loading per category
+    // But we can preload 'beginner' (p3)
+    if (wx.loadSubpackage) {
+        wx.loadSubpackage({
+            name: 'audio_p3',
+            success: () => {
+                console.log('Audio subpackage p3 loaded');
+                audioSprite.init('beginnerWords');
+            },
+            fail: (err) => console.error('Audio p3 load failed', err)
+        });
+    } else {
+        audioSprite.init('beginnerWords');
+    }
 
     // Precise Navbar Calculation
     const menuButton = wx.getMenuButtonBoundingClientRect();
@@ -155,11 +219,15 @@ Page({
       videoAd.onClose((res) => {
         // Only show copy options if ad was fully watched
         if (res && res.isEnded) {
-          this.showCopyActionSheet();
+          if (this.adContext === 'unlockAudio') {
+            this.handleAudioUnlockSuccess();
+          } else {
+            this.showCopyActionSheet();
+          }
         } else {
           // User closed early
           wx.showToast({
-            title: '完整观看视频才能获取地址哦',
+            title: '完整观看视频才能解锁哦',
             icon: 'none',
             duration: 2000
           });
@@ -347,27 +415,96 @@ Page({
     })
   },
 
-  startStarNicknames() {
+  async loadAudioSubpackages(category) {
+      const map = {
+          'beginnerWords': ['audio_p3'],
+          'commonSentences': ['audio_p1', 'audio_p2'],
+          'dramaLines': ['audio_p4'],
+          'supportWords': ['audio_p5'],
+          'startNicknames': ['audio_p6'],
+          'popularSongs': ['audio_p6']
+      };
+      const pkgs = map[category] || [];
+      
+      const promises = pkgs.map(pkg => new Promise((resolve, reject) => {
+          if (wx.loadSubpackage) {
+              wx.loadSubpackage({
+                  name: pkg,
+                  success: () => {
+                      console.log(`Subpackage ${pkg} loaded`);
+                      resolve();
+                  },
+                  fail: (err) => {
+                      console.error(`Subpackage ${pkg} failed`, err);
+                      resolve(); // Resolve anyway to try continuing? Or reject? Let's resolve to avoid blocking UI forever, but audio might fail.
+                  }
+              });
+          } else {
+              resolve();
+          }
+      }));
+      
+      await Promise.all(promises);
+  },
+
+  async startStarNicknames() {
+    wx.showLoading({ title: '加载中...' });
+    await this.loadAudioSubpackages('startNicknames');
+    try { await audioSprite.init('startNicknames'); } catch(e) { console.error(e); }
+    wx.hideLoading();
     this.startPractice(STAR_NICKNAMES, true);
   },
 
-  startSupportWords() {
+  async startSupportWords() {
+    wx.showLoading({ title: '加载中...' });
+    await this.loadAudioSubpackages('supportWords');
+    try { await audioSprite.init('supportWords'); } catch(e) { console.error(e); }
+    wx.hideLoading();
+    
+    // Note: Support Words audio files currently do not match the text content.
+    // This is a known issue.
     this.startPractice(SUPPORT_WORDS, true);
   },
 
-  startDrama() {
+  async startDrama() {
+    wx.showLoading({ title: '加载中...' });
+    await this.loadAudioSubpackages('dramaLines');
+    try { await audioSprite.init('dramaLines'); } catch(e) { console.error(e); }
+    wx.hideLoading();
     this.startPractice(DRAMA_LINES, true);
   },
 
-  startPopular() {
+  async startPopular() {
+    wx.showLoading({ title: '加载中...' });
+    await this.loadAudioSubpackages('popularSongs');
+    try { await audioSprite.init('popularSongs'); } catch(e) { console.error(e); }
+    wx.hideLoading();
     this.startPractice(POPULAR_SONGS, true);
   },
 
-  startBeginner() {
-    this.startPractice(BEGINNER_WORDS, true);
+  async startBeginner() {
+    wx.showLoading({ title: '资源加载中...' });
+    await this.loadAudioSubpackages('beginnerWords');
+    try {
+      await audioSprite.init('beginnerWords');
+    } catch (e) {
+      console.error('Audio load failed', e);
+      wx.showModal({
+        title: '音频资源加载失败',
+        content: e.message || JSON.stringify(e),
+        showCancel: false
+      });
+    } finally {
+      wx.hideLoading();
+      this.startPractice(BEGINNER_WORDS, true);
+    }
   },
 
-  startSentences() {
+  async startSentences() {
+    wx.showLoading({ title: '加载中...' });
+    await this.loadAudioSubpackages('commonSentences');
+    try { await audioSprite.init('commonSentences'); } catch(e) { console.error(e); }
+    wx.hideLoading();
     this.startPractice(COMMON_SENTENCES, true);
   },
 
@@ -413,6 +550,10 @@ Page({
       wx.setStorageSync('adsDisabledDate', today);
       wx.removeStorageSync('adsDisabled'); // Remove legacy key
       
+      // Also unlock audio limits for debugging
+      wx.setStorageSync('dailyAudioPlays', 0);
+      wx.setStorageSync('isAudioUnlocked', true);
+
       this.setData({ 
         adsDisabled: true,
         isTopAdVisible: false,
@@ -423,10 +564,19 @@ Page({
       });
       
       wx.showToast({
-        title: '今日免广告',
+        title: '今日免广告(含音频)',
         icon: 'success'
       });
       return;
+    }
+
+    // Cheat code to reset audio limits
+    if (lowerText === 'resetlimit') {
+       wx.setStorageSync('dailyAudioPlays', 0);
+       wx.setStorageSync('isAudioUnlocked', false);
+       wx.showToast({ title: '播放次数已重置', icon: 'none' });
+       this.setData({ customInputText: '', errorMessage: '' });
+       return;
     }
 
     // Cheat code to enable ads
@@ -438,6 +588,9 @@ Page({
       const expiredTime = Date.now() - (60 * 60 * 1000);
       wx.setStorageSync('firstInstallTime', expiredTime);
       
+      // Re-lock audio (Enable audio ads)
+      wx.setStorageSync('isAudioUnlocked', false);
+
       this.setData({ 
         adsDisabled: false,
         customInputText: '',
@@ -461,6 +614,33 @@ Page({
         icon: 'success'
       });
       return;
+    }
+
+    // Cheat code to clear audio cache
+    if (lowerText === 'clearcache') {
+       const fs = wx.getFileSystemManager();
+       try {
+         // Clear memory cache first
+         audioSprite.clearMemoryCache();
+         
+         const files = fs.readdirSync(wx.env.USER_DATA_PATH);
+         let count = 0;
+         files.forEach(file => {
+           if (file.endsWith('.mp3')) {
+             try {
+               fs.unlinkSync(`${wx.env.USER_DATA_PATH}/${file}`);
+               console.log(`Deleted cached file: ${file}`);
+               count++;
+             } catch(e) { console.error('Failed to delete', file); }
+           }
+         });
+         wx.showToast({ title: `已清理 ${count} 个文件`, icon: 'success' });
+       } catch (e) {
+         console.error('Failed to read dir', e);
+         wx.showToast({ title: '清理失败', icon: 'none' });
+       }
+       this.setData({ customInputText: '', errorMessage: '' });
+       return;
     }
 
     const validation = validateInput(text);
@@ -562,6 +742,221 @@ Page({
     
     // Generate Share Image
     this.drawShareImage(item.korean, item.translation);
+
+    // Check Audio Availability
+    const hasAudio = audioSprite.has(item.korean);
+    this.setData({ canPlayAudio: hasAudio });
+    
+    // Auto-play if enabled
+    if (hasAudio && this.data.autoRead) {
+      // Add a small delay to ensure UI is ready and transition is smooth
+      setTimeout(() => {
+        this.tryPlayAudio(item.korean);
+      }, 500);
+    }
+  },
+
+  tryPlayAudio(text) {
+    const { canPlayAudio } = this.data;
+    if (!canPlayAudio || !text) return;
+
+    // Check Audio Limit
+    const today = new Date().toISOString().split('T')[0];
+    const storedDate = wx.getStorageSync('audioLimitDate');
+    
+    // Reset if new day (double check)
+    if (storedDate !== today) {
+      wx.setStorageSync('audioLimitDate', today);
+      wx.setStorageSync('dailyAudioPlays', 0);
+      wx.setStorageSync('isAudioUnlocked', false);
+    }
+
+    const isUnlocked = wx.getStorageSync('isAudioUnlocked');
+    const plays = wx.getStorageSync('dailyAudioPlays') || 0;
+    const DAILY_LIMIT = 3;
+
+    if (!isUnlocked && plays >= DAILY_LIMIT) {
+       // Show Ad Modal
+       wx.showModal({
+         title: '今日免费次数已用完',
+         content: '观看视频广告解锁【今日无限畅听】？',
+         confirmText: '立即解锁',
+         cancelText: '暂不需要',
+         success: (res) => {
+           if (res.confirm) {
+             this.showUnlockAd();
+           } else if (res.cancel) {
+             // User cancelled. If autoRead was on, turn it off.
+             if (this.data.autoRead) {
+               this.setData({ autoRead: false });
+               wx.setStorageSync('autoRead', false);
+               wx.showToast({
+                 title: '自动朗读已关闭',
+                 icon: 'none'
+               });
+             }
+           }
+         }
+       });
+       return;
+    }
+
+    // Play Audio
+    audioSprite.play(text);
+    
+    // Increment Count if not unlocked
+    if (!isUnlocked) {
+       wx.setStorageSync('dailyAudioPlays', plays + 1);
+    }
+  },
+
+  showUnlockAd(onSuccess) {
+    this.adContext = 'unlockAudio';
+    this.unlockCallback = onSuccess;
+
+    if (videoAd) {
+      videoAd.show().catch(() => {
+        videoAd.load()
+          .then(() => videoAd.show())
+          .catch(err => {
+            console.error('激励视频加载失败', err);
+            wx.showToast({
+               title: '广告加载失败',
+               icon: 'none'
+            });
+            this.unlockCallback = null;
+          })
+      })
+    } else {
+      wx.showToast({
+        title: '暂无广告，已自动解锁',
+        icon: 'none'
+      });
+      this.handleAudioUnlockSuccess();
+    }
+  },
+
+  handleAudioUnlockSuccess() {
+     wx.setStorageSync('isAudioUnlocked', true);
+     wx.showToast({
+       title: '解锁成功！',
+       icon: 'success'
+     });
+     
+     if (this.unlockCallback) {
+        this.unlockCallback();
+        this.unlockCallback = null;
+     }
+
+     // Play current if available
+     const { typingState } = this.data;
+     if (typingState.targetText) {
+        audioSprite.play(typingState.targetText);
+     }
+  },
+
+  playCurrentAudio() {
+    const { typingState } = this.data;
+    if (typingState.targetText) {
+      this.tryPlayAudio(typingState.targetText);
+    }
+  },
+  
+  showSettings() {
+    // Hide tooltip when settings opened and mark as seen
+    if (this.data.showTooltip) {
+      this.setData({ showTooltip: false });
+      wx.setStorageSync('hasSeenAutoReadTooltip_v3', true);
+    }
+    this.setData({ showSettingsModal: true });
+  },
+
+  closeSettings() {
+    this.setData({ showSettingsModal: false });
+  },
+
+  onAutoReadChange(e) {
+    const isAuto = e.detail.value;
+    
+    if (isAuto) {
+      // Check limits before enabling
+      const canEnable = this.checkAudioLimitForAutoRead();
+      if (!canEnable) {
+        // If limit reached and user cancels/needs ad, revert switch immediately
+        // The ad callback will re-enable it if success
+        this.setData({ autoRead: false });
+        return; 
+      }
+    }
+
+    this.setData({ autoRead: isAuto });
+    wx.setStorageSync('autoRead', isAuto);
+  },
+
+  onExpandTextChange(e) {
+    const isExpanded = e.detail.value;
+    this.setData({ isTextExpanded: isExpanded });
+    wx.setStorageSync('isTextExpanded', isExpanded);
+  },
+
+  // --- Contact Logic ---
+  toggleContactModal() {
+    const current = this.data.showContactModal;
+    this.setData({ showContactModal: !current });
+    
+    // Also mark toast as seen if opened
+    if (!current) {
+      this.closeContactToast();
+    }
+  },
+
+  closeContactToast() {
+    this.setData({ showContactToast: false });
+    wx.setStorageSync('hasSeenContactToast_v2', true);
+  },
+
+  copyContactInfo() {
+    const wxId = "gaoyuhao1"; // Replace with actual ID
+    wx.setClipboardData({
+      data: wxId,
+      success: () => {
+        wx.showToast({
+          title: '复制成功',
+          icon: 'success'
+        });
+      }
+    });
+  },
+
+  checkAudioLimitForAutoRead() {
+    const isUnlocked = wx.getStorageSync('isAudioUnlocked');
+    const plays = wx.getStorageSync('dailyAudioPlays') || 0;
+    const DAILY_LIMIT = 3;
+
+    if (!isUnlocked && plays >= DAILY_LIMIT) {
+      wx.showModal({
+        title: '今日免费次数已用完',
+        content: '开启自动朗读需要消耗播放次数。观看视频广告解锁【今日无限畅听】？',
+        confirmText: '立即解锁',
+        cancelText: '取消开启',
+        success: (res) => {
+          if (res.confirm) {
+            this.showUnlockAd(() => {
+              this.setData({ autoRead: true });
+              wx.setStorageSync('autoRead', true);
+              wx.showToast({ title: '自动朗读已开启', icon: 'success' });
+            });
+          }
+        }
+      });
+      return false;
+    }
+    return true;
+  },
+
+  closeTooltip() {
+    this.setData({ showTooltip: false });
+    wx.setStorageSync('hasSeenAutoReadTooltip_v3', true);
   },
 
   onVirtualKeyPress(e) {
@@ -570,6 +965,9 @@ Page({
   },
 
   handleKeyPress(key) {
+    // Note: Removed automatic collapse logic as per user request (persistent mode)
+    // if (this.data.isTextExpanded) { this.setData({ isTextExpanded: false }); }
+    
     const { typingState } = this.data;
     if (typingState.isComplete) return;
 
@@ -747,7 +1145,8 @@ Page({
     this.setData({ 
       displayNodes,
       activeJamos,
-      scrollLeft: scrollLeft
+      scrollLeft: scrollLeft,
+      activeCharIndex: activeCharIndex
     });
   },
 
@@ -771,6 +1170,8 @@ Page({
   },
 
   prevItem() {
+    // Removed automatic collapse
+    // this.setData({ isTextExpanded: false });
     const { currentItemIndex, items } = this.data;
     if (currentItemIndex > 0) {
       const prevIdx = currentItemIndex - 1;
@@ -782,6 +1183,8 @@ Page({
   },
 
   nextItem() {
+    // Removed automatic collapse
+    // this.setData({ isTextExpanded: false });
     const { currentItemIndex, items } = this.data;
     if (currentItemIndex < items.length - 1) {
       const nextIdx = currentItemIndex + 1;

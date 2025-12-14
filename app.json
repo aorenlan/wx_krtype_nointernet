@@ -9,5 +9,37 @@
     "navigationBarTextStyle": "white",
     "navigationStyle": "custom"
   },
+  "subpackages": [
+    {
+      "root": "subpackages/audio_p1",
+      "name": "audio_p1",
+      "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/audio_p2",
+      "name": "audio_p2",
+      "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/audio_p3",
+      "name": "audio_p3",
+      "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/audio_p4",
+      "name": "audio_p4",
+      "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/audio_p5",
+      "name": "audio_p5",
+      "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/audio_p6",
+      "name": "audio_p6",
+      "pages": ["pages/index/index"]
+    }
+  ],
   "sitemapLocation": "sitemap.json"
 }

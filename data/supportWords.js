@@ -1,282 +1,410 @@
 export const SUPPORT_WORDS = [
   {
-    "korean": "제니짱 진짜 최고야!",
-    "translation": "Jennie最棒了！(B站弹幕最高频应援句)"
+    "korean": "가끔은 울어도 돼",
+    "translation": "偶尔哭也没关系"
   },
   {
-    "korean": "뉴진스 음악 진짜 좋아요!",
-    "translation": "NewJeans音乐超赞！(音乐节目直播刷屏句)"
+    "korean": "가족은 영원한 버팀목이야",
+    "translation": "家人是永远的依靠"
   },
   {
-    "korean": "화이팅! 파이팅!",
-    "translation": "加油！Fight！(演唱会全体大合唱应援)"
+    "korean": "고마움은 말로 표현해야 해",
+    "translation": "感谢要用语言表达出来"
   },
   {
-    "korean": "아이브 컴백 대박이에요!",
-    "translation": "IVE回归太厉害了！(新歌首播弹幕TOP1)"
+    "korean": "괜찮아, 너는 충분히 잘하고 있어",
+    "translation": "没关系，你已经做得够好了"
   },
   {
-    "korean": "지민이 오늘도 멋져요",
-    "translation": "Jimin今天也超帅！(INS/SNS粉丝高频评论)"
+    "korean": "괜찮아, 느려도 돼",
+    "translation": "没关系，慢一点也没事"
   },
   {
-    "korean": "핑크가 제일 좋아요!",
-    "translation": "最喜欢BLACKPINK！(全球粉丝投票应援句)"
+    "korean": "괜찮아, 다 잘 될 거야",
+    "translation": "没关系，一切都会好起来的"
   },
   {
-    "korean": "SKZ 음악 진짜 신나요!",
-    "translation": "Stray Kids超嗨！(新歌reaction视频热评)"
+    "korean": "괜찮은 척하지 않아도 돼",
+    "translation": "不用假装没事"
   },
   {
-    "korean": "NMIXX 보컬 대단해요",
-    "translation": "NMIXX演唱太强了！(直拍视频热评)"
+    "korean": "기적은 포기하지 않는 사람에게 와",
+    "translation": "奇迹会降临在不放弃的人身上"
   },
   {
-    "korean": "태양님 오래 기다렸어요",
-    "translation": "TAEYANG久等了！(Solo回归首秀应援)"
+    "korean": "꿈을 포기하지 마",
+    "translation": "不要放弃梦想"
   },
   {
-    "korean": "르세라 콘서트 가고 싶어요",
-    "translation": "想去LE SSERAFIM演唱会！(巡演抢票前刷屏句)"
+    "korean": "꿈을 향해 한 걸음씩",
+    "translation": "向着梦想一步一步走"
   },
   {
-    "korean": "IU OST 진짜 감동이에요",
-    "translation": "IU OST太感人了！(电视剧结尾弹幕神句)"
+    "korean": "내일은 더 나을 거야",
+    "translation": "明天会更好"
   },
   {
-    "korean": "aespa 메타버스 신기해요",
-    "translation": "aespa元宇宙太酷了！(概念舞台reaction热评)"
+    "korean": "내일의 너를 믿어",
+    "translation": "相信明天的自己"
   },
   {
-    "korean": "수지 드라마 보고 싶어요",
-    "translation": "想看SUZY新剧！(演员作品预告应援)"
+    "korean": "너는 너라서 소중해",
+    "translation": "因为是你，所以珍贵"
   },
   {
-    "korean": "지훈이 응원할게요!",
-    "translation": "会应援PARK JIHOON！(选秀决赛夜刷屏句)"
+    "korean": "너는 혼자가 아니야",
+    "translation": "你不是一个人"
   },
   {
-    "korean": "TWICE 일본 투어 기대해요",
-    "translation": "期待TWICE日本巡演！(全球公告应援句)"
+    "korean": "너라서 좋아",
+    "translation": "喜欢原本的你"
   },
   {
-    "korean": "ITZY 신곡 진짜 멋져요",
-    "translation": "ITZY新歌超帅！(新歌首播弹幕热词)"
+    "korean": "너의 상처도 아름다워",
+    "translation": "你的伤痛也是一种美丽"
   },
   {
-    "korean": "BOA 레전드 영원해요",
-    "translation": "BOA传奇永存！(20周年纪念直播应援)"
+    "korean": "넌 네가 생각하는 것보다 강해",
+    "translation": "你比你想象的更坚强"
   },
   {
-    "korean": "보검님 연기 최고예요",
-    "translation": "PARK BOGUM演技最佳！(电视剧开播弹幕)"
+    "korean": "네 마음을 지켜",
+    "translation": "守护你的心"
   },
   {
-    "korean": "미연이 사회 문제 제기해요",
-    "translation": "(G)I-DLE谈社会议题！(深度采访reaction热评)"
+    "korean": "네 선택을 믿어",
+    "translation": "相信你的选择"
   },
   {
-    "korean": "연아 언니 다시 ice show",
-    "translation": "KIM YUNA再办冰演！(体育赛事应援神句)"
+    "korean": "네 편이 되어줄게",
+    "translation": "我会站在你这边"
   },
   {
-    "korean": "아이유 콘서트 꼭 가고 싶어요!",
-    "translation": "一定要去IU演唱会！"
+    "korean": "네가 있어서 고마워",
+    "translation": "谢谢有你在"
   },
   {
-    "korean": "뉴진스 무대 미쳤어요!",
-    "translation": "NewJeans舞台太疯狂了！"
+    "korean": "네가 있어서 다행이야",
+    "translation": "有你在真好"
   },
   {
-    "korean": "르세라핌 오늘도 완벽해요",
-    "translation": "LE SSERAFIM今天也完美！"
+    "korean": "누구나 어른이 처음이야",
+    "translation": "谁都是第一次做大人"
   },
   {
-    "korean": "지수 배우님 분위기 최고예요",
-    "translation": "JISOO演员的氛围感太强了！"
+    "korean": "누군가에게 너는 큰 힘이야",
+    "translation": "对某人来说，你是巨大的力量"
   },
   {
-    "korean": "태연 목소리 들으면 위로돼요",
-    "translation": "听到泰妍的声音就被治愈了！"
+    "korean": "마음의 상처도 치유될 거야",
+    "translation": "心灵的伤口也会愈合"
   },
   {
-    "korean": "차은우 정말 잘생겼다!",
-    "translation": "车银优真的太帅了！"
+    "korean": "말보다 행동이 더 중요해",
+    "translation": "行动比语言更重要"
   },
   {
-    "korean": "한지민 연기 매번 감탄해요",
-    "translation": "每次都被韩志旼的演技震撼！"
+    "korean": "먼 길 돌아와도 결국 제자리야",
+    "translation": "绕了远路最终还是回到原点"
   },
   {
-    "korean": "정국이 무대 장인 맞아요",
-    "translation": "田柾国真的是舞台大师！"
+    "korean": "미래는 누구도 알 수 없어",
+    "translation": "未来谁也无法预知"
   },
   {
-    "korean": "장원영 오늘도 공주님이네",
-    "translation": "张员瑛今天依然像公主！"
+    "korean": "미래는 우리가 만드는 거야",
+    "translation": "未来是我们创造的"
   },
   {
-    "korean": "차태현 예능감 진짜 미쳤다",
-    "translation": "车太贤的综艺感太强了！"
+    "korean": "보고 싶었어",
+    "translation": "我想你了"
   },
   {
-    "korean": "문세윤 보기만 해도 웃겨요",
-    "translation": "看见文世润就开始笑！"
+    "korean": "사람마다 속도는 달라",
+    "translation": "每个人的速度都不同"
   },
   {
-    "korean": "강호동 에너지 대단하다",
-    "translation": "姜虎东的能量太强了！"
+    "korean": "사람은 변할 수 있어",
+    "translation": "人是可以改变的"
   },
   {
-    "korean": "송지효 언니 진짜 멋있어요",
-    "translation": "宋智孝姐姐真的太帅气了！"
+    "korean": "사람은 사람으로 치유돼",
+    "translation": "人是可以被彼此治愈的"
   },
   {
-    "korean": "하하 항상 텐션 최고예요",
-    "translation": "HAHA永远是气氛担当！"
+    "korean": "사랑은 기다림이야",
+    "translation": "爱是等待"
   },
   {
-    "korean": "로제 목소리 너무 예뻐요",
-    "translation": "Rosé的声音太好听了！"
+    "korean": "사랑은 말보다 행동이야",
+    "translation": "爱是行动而非言语"
   },
   {
-    "korean": "리사 춤은 세계 최고죠",
-    "translation": "Lisa的舞全世界最强！"
+    "korean": "사랑은 서로를 이해하는 거야",
+    "translation": "爱是互相理解"
   },
   {
-    "korean": "수호 리더십 진짜 멋져요",
-    "translation": "SUHO的领导力太帅了！"
+    "korean": "사랑은 순간이 아니라 과정이야",
+    "translation": "爱不是瞬间，而是过程"
   },
   {
-    "korean": "카리나 무대 장악력 대단해요",
-    "translation": "Karina舞台掌控力太强了！"
+    "korean": "사랑은 이유가 없어",
+    "translation": "爱没有理由"
   },
   {
-    "korean": "윈터 라이브 들을 맛나요",
-    "translation": "Winter的live太好听了！"
+    "korean": "사랑은 작은 배려에서 시작돼",
+    "translation": "爱始于微小的关怀"
   },
   {
-    "korean": "이도현 연기력 미쳤어요",
-    "translation": "李到晛的演技疯了！"
+    "korean": "사랑은 주는 거야",
+    "translation": "爱是给予"
   },
   {
-    "korean": "안유진 진행 너무 잘한다",
-    "translation": "安宥真主持得太好了！"
+    "korean": "사랑은 지키는 거야",
+    "translation": "爱是守护"
   },
   {
-    "korean": "혜인 무대 자신감 넘쳐요",
-    "translation": "Hyein舞台自信满满！"
+    "korean": "사랑은 함께 자라는 거야",
+    "translation": "爱是共同成长"
   },
   {
-    "korean": "채원 표정연기 최고예요",
-    "translation": "金采源的表情管理最强！"
+    "korean": "삶은 계속돼",
+    "translation": "生活还要继续"
   },
   {
-    "korean": "태용 무대마다 새롭네요",
-    "translation": "TaeYong每个舞台都有新东西！"
+    "korean": "상처는 나누면 반이 돼",
+    "translation": "伤痛分担了就会减半"
   },
   {
-    "korean": "백현 라이브 실력 인정이에요",
-    "translation": "伯贤live实力认可！"
+    "korean": "상처도 지나면 추억이 돼",
+    "translation": "伤痛过后也会变成回忆"
   },
   {
-    "korean": "도영 목소리 들으면 행복해요",
-    "translation": "听到道英的声音就开心！"
+    "korean": "성공은 작은 습관에서 와",
+    "translation": "成功源于微小的习惯"
   },
   {
-    "korean": "재현 비주얼은 전설이다",
-    "translation": "在玹的颜值是传奇！"
+    "korean": "세상에 완벽한 사람은 없어",
+    "translation": "世上没有完美的人"
   },
   {
-    "korean": "봄날 들으면 항상 울컥해요",
-    "translation": "听《春日》总会鼻酸。"
+    "korean": "쉬어가는 것도 용기야",
+    "translation": "休息也是一种勇气"
   },
   {
-    "korean": "태민 춤선은 국보급이에요",
-    "translation": "泰民的舞蹈线条是国宝级！"
+    "korean": "시간이 약이 될 거야",
+    "translation": "时间会治愈一切"
   },
   {
-    "korean": "민호 예능감 좋네요",
-    "translation": "闵浩综艺感很好！"
+    "korean": "오늘도 살아줘서 고마워",
+    "translation": "谢谢你今天也活下来了"
   },
   {
-    "korean": "김종국 힘 너무 세요",
-    "translation": "金钟国力气太大了！"
+    "korean": "용감함은 두려움을 이기는 거야",
+    "translation": "勇敢就是战胜恐惧"
   },
   {
-    "korean": "세븐틴 칼군무 미쳤죠",
-    "translation": "Seventeen的刀群舞疯了吧！"
+    "korean": "용서는 강함의 표시야",
+    "translation": "宽恕是坚强的表现"
   },
   {
-    "korean": "도겸 목소리 정말 따뜻해요",
-    "translation": "DK的声音真的很温暖！"
+    "korean": "용서는 나를 위한 거야",
+    "translation": "宽恕是为了自己"
   },
   {
-    "korean": "정한 분위기 너무 좋아요",
-    "translation": "Jeonghan的氛围感太好了！"
+    "korean": "용서는 나를 자유롭게 해",
+    "translation": "宽恕让我自由"
   },
   {
-    "korean": "우지 작곡은 믿고 듣죠",
-    "translation": "Woozi作曲就是信任保证！"
+    "korean": "용서는 내려놓는 용기야",
+    "translation": "宽恕是放下的勇气"
   },
   {
-    "korean": "보나 배우로도 대박이네요",
-    "translation": "BONA当演员也大火！"
+    "korean": "용서는 마음의 평화를 찾아주는 거야",
+    "translation": "宽恕能找回内心的平静"
   },
   {
-    "korean": "손숙 정통 연기 대단해요",
-    "translation": "孙宿的正剧演技超厉害！"
+    "korean": "용서는 받는 게 아니라 주는 거야",
+    "translation": "宽恕不是接受，而是给予"
   },
   {
-    "korean": "송강 화면 장악력 최고",
-    "translation": "宋江的画面存在感最强！"
+    "korean": "우린 다시 웃을 수 있어",
+    "translation": "我们会再次微笑的"
   },
   {
-    "korean": "김유정 진짜 여신이네",
-    "translation": "金裕贞真的是女神！"
+    "korean": "우린 모두 누군가의 위로야",
+    "translation": "我们都是某人的安慰"
   },
   {
-    "korean": "박서준 액션 너무 좋아요",
-    "translation": "朴叙俊的动作戏太棒了！"
+    "korean": "인생은 마라톤이야",
+    "translation": "人生是一场马拉松"
   },
   {
-    "korean": "한소희 카리스마 미쳤어요",
-    "translation": "韩素希的气场炸裂！"
+    "korean": "인생은 마음먹기 나름이야",
+    "translation": "人生取决于心态"
   },
   {
-    "korean": "이광수 예능계 황태자죠",
-    "translation": "李光洙是综艺界的小王子！"
+    "korean": "인생은 선택의 연속이야",
+    "translation": "人生是连续的选择"
   },
   {
-    "korean": "조세호 말투 너무 귀여워요",
-    "translation": "曹世镐的说话方式太可爱！"
+    "korean": "인생은 예고 없이 변해",
+    "translation": "人生变化无常"
   },
   {
-    "korean": "박나래 텐션 대박입니다",
-    "translation": "朴娜莱的能量太猛了！"
+    "korean": "인생은 예상치 못한 선물이야",
+    "translation": "人生是意想不到的礼物"
   },
   {
-    "korean": "전소민 오늘도 텐션 최고",
-    "translation": "全昭旻今天也状态超好！"
+    "korean": "인생의 주인공은 너야",
+    "translation": "你才是人生的主角"
   },
   {
-    "korean": "신동엽 진행은 믿고 봐요",
-    "translation": "申东烨主持永远值得信任！"
+    "korean": "작은 것에 감사해",
+    "translation": "感谢微小的事物"
   },
   {
-    "korean": "이승기 노래 들으면 설레요",
-    "translation": "李昇基的歌会让人心动！"
+    "korean": "작은 노력이 큰 결과를 내",
+    "translation": "微小的努力带来巨大的结果"
   },
   {
-    "korean": "은지원 리액션 너무 웃겨요",
-    "translation": "殷志源的反应太搞笑了！"
+    "korean": "작은 배려가 큰 감동을 줘",
+    "translation": "小小的关怀带来大大的感动"
   },
   {
-    "korean": "러블리즈 노래 아직도 좋다",
-    "translation": "Lovelyz的歌现在听也好听！"
+    "korean": "작은 용기가 큰 변화를 만들어",
+    "translation": "小小的勇气创造巨大的改变"
   },
   {
-    "korean": "오마이걸 무대 동화 같아요",
-    "translation": "OH MY GIRL的舞台像童话！"
+    "korean": "작은 행복이 큰 행복을 만든다",
+    "translation": "小小的幸福汇聚成大大的幸福"
+  },
+  {
+    "korean": "지금 이 순간도 지나갈 거야",
+    "translation": "这一刻也会过去的"
+  },
+  {
+    "korean": "지금 이 순간을 사랑해 봐",
+    "translation": "试着爱这一刻吧"
+  },
+  {
+    "korean": "진심 어린 말이 제일 아파",
+    "translation": "真心话有时最戳心"
+  },
+  {
+    "korean": "진심은 결국 통할 거야",
+    "translation": "真心终究会相通"
+  },
+  {
+    "korean": "진심은 눈빛에서 느껴져",
+    "translation": "真心能从眼神中感觉到"
+  },
+  {
+    "korean": "진심은 시간이 걸려도 통해",
+    "translation": "真心即使花时间也会相通"
+  },
+  {
+    "korean": "진심은 언젠가 닿아",
+    "translation": "真心总有一天会传达"
+  },
+  {
+    "korean": "진심은 통하는 법이야",
+    "translation": "真心是会相通的"
+  },
+  {
+    "korean": "진심을 믿어 줘서 고마워",
+    "translation": "谢谢你相信我的真心"
+  },
+  {
+    "korean": "진심이 중요해",
+    "translation": "真心很重要"
+  },
+  {
+    "korean": "진정한 친구는 어려울 때 알아",
+    "translation": "患难见真情"
+  },
+  {
+    "korean": "진짜 강함은 부드러움에서 와",
+    "translation": "真正的坚强源于温柔"
+  },
+  {
+    "korean": "진짜 멋진 사람은 남을 생각해",
+    "translation": "真正帅气的人会为他人着想"
+  },
+  {
+    "korean": "진짜 사랑은 기다림이야",
+    "translation": "真爱是等待"
+  },
+  {
+    "korean": "진짜 사랑은 희생이야",
+    "translation": "真爱是牺牲"
+  },
+  {
+    "korean": "진짜 행복은 내 안에 있어",
+    "translation": "真正的幸福在自己心中"
+  },
+  {
+    "korean": "포기하지 않으면 끝이 아니야",
+    "translation": "只要不放弃，就不是结束"
+  },
+  {
+    "korean": "함께 걸어가는 게 진정한 동반자야",
+    "translation": "一起走下去才是真正的伴侣"
+  },
+  {
+    "korean": "함께 꿈을 꾸는 게 중요해",
+    "translation": "一起做梦很重要"
+  },
+  {
+    "korean": "함께 웃는 날이 최고야",
+    "translation": "一起笑的日子最棒"
+  },
+  {
+    "korean": "함께 이겨내는 게 진정한 가족이야",
+    "translation": "一起克服困难才是真正的家人"
+  },
+  {
+    "korean": "함께 이겨내는 게 진정한 사랑이야",
+    "translation": "一起克服困难才是真正的爱"
+  },
+  {
+    "korean": "함께 있는 게 가장 큰 행복이야",
+    "translation": "在一起是最大的幸福"
+  },
+  {
+    "korean": "함께 있는 순간이 소중해",
+    "translation": "在一起的瞬间很珍贵"
+  },
+  {
+    "korean": "함께 할 시간이 소중해",
+    "translation": "在一起的时间很珍贵"
+  },
+  {
+    "korean": "행복은 결국 선택이야",
+    "translation": "幸福终究是一种选择"
+  },
+  {
+    "korean": "행복은 멀리 있지 않아",
+    "translation": "幸福就在不远处"
+  },
+  {
+    "korean": "행복은 선택이야",
+    "translation": "幸福是一种选择"
+  },
+  {
+    "korean": "행복은 작은 것에서 와",
+    "translation": "幸福源于微小的事物"
+  },
+  {
+    "korean": "행복해지기 위해 용기가 필요해",
+    "translation": "想要幸福需要勇气"
+  },
+  {
+    "korean": "혼자가 아니라고 말해주고 싶었어",
+    "translation": "想告诉你，你不是一个人"
+  },
+  {
+    "korean": "힘들면 잠시 쉬어도 돼",
+    "translation": "累了暂时休息一下也可以"
   }
 ];

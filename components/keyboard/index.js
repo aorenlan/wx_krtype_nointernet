@@ -4,7 +4,7 @@ Component({
   properties: {
     nextKeyToPress: {
       type: String,
-      value: null
+      value: ''
     },
     isShiftActive: {
       type: Boolean,

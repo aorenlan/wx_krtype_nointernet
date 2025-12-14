@@ -1,0 +1,852 @@
+export default {
+  "RM": {
+    "start": 0,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "가을": {
+    "start": 1.244,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "강동원": {
+    "start": 2.464,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "강하늘": {
+    "start": 3.9,
+    "duration": 0.888,
+    "file": "startNicknames_0.mp3"
+  },
+  "고경표": {
+    "start": 5.288,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "고윤정": {
+    "start": 6.772,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "김고은": {
+    "start": 8.28,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "김구라": {
+    "start": 9.764,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "김남길": {
+    "start": 11.176,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "김다미": {
+    "start": 12.612,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "김선호": {
+    "start": 14.024,
+    "duration": 1.128,
+    "file": "startNicknames_0.mp3"
+  },
+  "김설현": {
+    "start": 15.652,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "김세정": {
+    "start": 17.136,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "김연경": {
+    "start": 18.644,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "김요한": {
+    "start": 20.128,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "김유정": {
+    "start": 21.492,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "김종국": {
+    "start": 23.024,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "김종대": {
+    "start": 24.556,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "김종민": {
+    "start": 26.016,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "김준호": {
+    "start": 27.548,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "김지원": {
+    "start": 29.056,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "김태리": {
+    "start": 30.516,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "김태연": {
+    "start": 31.976,
+    "duration": 1.08,
+    "file": "startNicknames_0.mp3"
+  },
+  "김희철": {
+    "start": 33.556,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "나연": {
+    "start": 35.088,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "남주혁": {
+    "start": 36.38,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "노홍철": {
+    "start": 37.744,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "닝닝": {
+    "start": 39.204,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "다니엘": {
+    "start": 40.472,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "다영": {
+    "start": 41.788,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "다현": {
+    "start": 43.128,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "도영": {
+    "start": 44.492,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "디오": {
+    "start": 45.736,
+    "duration": 0.696,
+    "file": "startNicknames_0.mp3"
+  },
+  "로운": {
+    "start": 46.932,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "로제": {
+    "start": 48.2,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "류준열": {
+    "start": 49.492,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "류진": {
+    "start": 50.904,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "류현진": {
+    "start": 52.196,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "류혜영": {
+    "start": 53.752,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "리사": {
+    "start": 55.236,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "리즈": {
+    "start": 56.528,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "모모": {
+    "start": 57.796,
+    "duration": 0.696,
+    "file": "startNicknames_0.mp3"
+  },
+  "문별": {
+    "start": 58.992,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "문빈": {
+    "start": 60.356,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "문세윤": {
+    "start": 61.672,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "민지": {
+    "start": 63.204,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "민호": {
+    "start": 64.568,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "박나래": {
+    "start": 65.884,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "박명수": {
+    "start": 67.248,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "박민영": {
+    "start": 68.756,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "박보검": {
+    "start": 70.168,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "박보영": {
+    "start": 71.532,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "박서준": {
+    "start": 73.016,
+    "duration": 1.104,
+    "file": "startNicknames_0.mp3"
+  },
+  "박은빈": {
+    "start": 74.62,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "박정민": {
+    "start": 76.152,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "박초롱": {
+    "start": 77.684,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "박형식": {
+    "start": 79.144,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "백현": {
+    "start": 80.556,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "범규": {
+    "start": 81.92,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "보나": {
+    "start": 83.284,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "뷔": {
+    "start": 84.6,
+    "duration": 0.624,
+    "file": "startNicknames_0.mp3"
+  },
+  "사나": {
+    "start": 85.724,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "사쿠라": {
+    "start": 86.968,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "산하": {
+    "start": 88.308,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "서강준": {
+    "start": 89.528,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "서인국": {
+    "start": 91.084,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "서장훈": {
+    "start": 92.52,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "서현": {
+    "start": 93.956,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "설아": {
+    "start": 95.416,
+    "duration": 0.672,
+    "file": "startNicknames_0.mp3"
+  },
+  "세훈": {
+    "start": 96.588,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "손나은": {
+    "start": 97.952,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "손예진": {
+    "start": 99.484,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "손호준": {
+    "start": 100.968,
+    "duration": 1.104,
+    "file": "startNicknames_0.mp3"
+  },
+  "손흥민": {
+    "start": 102.572,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "솔라": {
+    "start": 104.008,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "솔지": {
+    "start": 105.348,
+    "duration": 0.888,
+    "file": "startNicknames_0.mp3"
+  },
+  "송강": {
+    "start": 106.736,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "송중기": {
+    "start": 108.076,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "송지효": {
+    "start": 109.584,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "수빈": {
+    "start": 111.02,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "수영": {
+    "start": 112.24,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "수호": {
+    "start": 113.556,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "슈가": {
+    "start": 114.872,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "신동엽": {
+    "start": 116.14,
+    "duration": 0.888,
+    "file": "startNicknames_0.mp3"
+  },
+  "신민아": {
+    "start": 117.528,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "신비": {
+    "start": 119.036,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "아이유": {
+    "start": 120.352,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "안보현": {
+    "start": 121.62,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "안유진": {
+    "start": 123.104,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "양세찬": {
+    "start": 124.54,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "연준": {
+    "start": 126.048,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "영훈": {
+    "start": 127.412,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "예지": {
+    "start": 128.848,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "오연서": {
+    "start": 130.188,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "온유": {
+    "start": 131.696,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "윈터": {
+    "start": 132.94,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "유나": {
+    "start": 134.184,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "유라": {
+    "start": 135.428,
+    "duration": 0.696,
+    "file": "startNicknames_0.mp3"
+  },
+  "유아인": {
+    "start": 136.624,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "유재석": {
+    "start": 137.964,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "윤아": {
+    "start": 139.4,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "은우": {
+    "start": 140.644,
+    "duration": 0.696,
+    "file": "startNicknames_0.mp3"
+  },
+  "은하": {
+    "start": 141.84,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "이광수": {
+    "start": 143.156,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "이병헌": {
+    "start": 144.568,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "이성경": {
+    "start": 146.028,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "이세영": {
+    "start": 147.44,
+    "duration": 0.888,
+    "file": "startNicknames_0.mp3"
+  },
+  "이연희": {
+    "start": 148.828,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "이제훈": {
+    "start": 150.24,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "이종석": {
+    "start": 151.652,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "임시완": {
+    "start": 153.016,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "장도연": {
+    "start": 154.284,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "장원영": {
+    "start": 155.84,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "재현": {
+    "start": 157.324,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "전소민": {
+    "start": 158.736,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "전지현": {
+    "start": 160.196,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "전현무": {
+    "start": 161.728,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "정국": {
+    "start": 163.212,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "정려원": {
+    "start": 164.432,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "정소민": {
+    "start": 165.892,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "정우성": {
+    "start": 167.304,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "정은지": {
+    "start": 168.716,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "정인선": {
+    "start": 170.272,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "정지소": {
+    "start": 171.804,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "정해인": {
+    "start": 173.216,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "정형돈": {
+    "start": 174.652,
+    "duration": 1.032,
+    "file": "startNicknames_0.mp3"
+  },
+  "정호석": {
+    "start": 176.184,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "제이홉": {
+    "start": 177.596,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "조세호": {
+    "start": 179.008,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "조인성": {
+    "start": 180.468,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "주상욱": {
+    "start": 182.024,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "주연": {
+    "start": 183.34,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "주학년": {
+    "start": 184.608,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "지민": {
+    "start": 186.044,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "지민박": {
+    "start": 187.336,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "지수": {
+    "start": 188.676,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "지젤": {
+    "start": 189.968,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "지창욱": {
+    "start": 191.26,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "지효": {
+    "start": 192.6,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "진": {
+    "start": 193.94,
+    "duration": 0.696,
+    "file": "startNicknames_0.mp3"
+  },
+  "진구": {
+    "start": 195.136,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "차승원": {
+    "start": 196.5,
+    "duration": 1.008,
+    "file": "startNicknames_0.mp3"
+  },
+  "차은우": {
+    "start": 198.008,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "찬열": {
+    "start": 199.444,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "찬희": {
+    "start": 200.712,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "최우식": {
+    "start": 202.052,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "카리나": {
+    "start": 203.392,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "카즈하": {
+    "start": 204.756,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "코코": {
+    "start": 206.096,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "키": {
+    "start": 207.412,
+    "duration": 0.624,
+    "file": "startNicknames_0.mp3"
+  },
+  "탁재훈": {
+    "start": 208.536,
+    "duration": 0.984,
+    "file": "startNicknames_0.mp3"
+  },
+  "태민": {
+    "start": 210.02,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "태연": {
+    "start": 211.24,
+    "duration": 0.816,
+    "file": "startNicknames_0.mp3"
+  },
+  "태연우": {
+    "start": 212.556,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "태용": {
+    "start": 213.992,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "태현": {
+    "start": 215.284,
+    "duration": 0.864,
+    "file": "startNicknames_0.mp3"
+  },
+  "하니": {
+    "start": 216.648,
+    "duration": 0.768,
+    "file": "startNicknames_0.mp3"
+  },
+  "하하": {
+    "start": 217.916,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "한소희": {
+    "start": 219.136,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  },
+  "한지민": {
+    "start": 220.572,
+    "duration": 0.912,
+    "file": "startNicknames_0.mp3"
+  },
+  "해린": {
+    "start": 221.984,
+    "duration": 0.72,
+    "file": "startNicknames_0.mp3"
+  },
+  "허윤진": {
+    "start": 223.204,
+    "duration": 1.056,
+    "file": "startNicknames_0.mp3"
+  },
+  "현빈": {
+    "start": 224.76,
+    "duration": 0.84,
+    "file": "startNicknames_0.mp3"
+  },
+  "혜리": {
+    "start": 226.1,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "혜인": {
+    "start": 227.344,
+    "duration": 0.744,
+    "file": "startNicknames_0.mp3"
+  },
+  "홍은채": {
+    "start": 228.588,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "화사": {
+    "start": 230.048,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "황민현": {
+    "start": 231.34,
+    "duration": 0.96,
+    "file": "startNicknames_0.mp3"
+  },
+  "휘인": {
+    "start": 232.8,
+    "duration": 0.792,
+    "file": "startNicknames_0.mp3"
+  },
+  "휴닝카이": {
+    "start": 234.092,
+    "duration": 0.936,
+    "file": "startNicknames_0.mp3"
+  }
+};

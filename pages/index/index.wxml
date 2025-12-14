@@ -54,6 +54,14 @@ module.exports = {
 
   <!-- Menu Mode -->
   <view wx:if="{{mode === 'menu'}}" class="menu-container fade-in">
+    <view class="contact-wrapper">
+      <view class="contact-btn" bindtap="toggleContactModal">?</view>
+      <view class="contact-toast fade-in" wx:if="{{showContactToast}}" bindtap="closeContactToast">
+        <text>联系作者 / 反馈</text>
+        <view class="toast-arrow"></view>
+      </view>
+    </view>
+
     <view class="header-section">
       <view class="badge">PRACTICE MODE</view>
       <view class="main-title">韩语打字练习</view>
@@ -136,7 +144,7 @@ module.exports = {
         <button class="menu-item outline pc-btn" bindtap="handleCopyPC">
           <view class="menu-content centered">
             <view class="menu-text small-text">
-              <view>在浏览器中使用</view>
+              <view>在浏览器使用</view>
               <view>点击复制链接</view>
             </view>
             <view class="menu-sub pc-sub">需完整观看广告</view>
@@ -182,14 +190,15 @@ module.exports = {
 
       <button class="start-btn" bindtap="submitCustom">开始练习</button>
     </view>
+
+    <!-- Custom Mode Ad -->
+    <!-- Removed by user request -->
   </view>
 
   <!-- Typing Mode -->
   <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in {{isTopAdVisible ? 'has-ad' : ''}}">
     <!-- Custom Ad -->
-    <view class="ad-container" wx:if="{{!adsDisabled}}">
-      <ad-custom unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
-    </view>
+    <ad-custom wx:if="{{!adsDisabled}}" unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
 
     <!-- Top Info -->
     <view class="status-bar">
@@ -198,17 +207,25 @@ module.exports = {
       </view>
 
       <view class="mini-controls">
-        <view class="icon-btn" bindtap="prevItem" hover-class="icon-hover">
-          <image class="icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNSAxOCA5IDEyIDE1IDYiPjwvcG9seWxpbmU+PC9zdmc+"></image>
+        <!-- Settings Button -->
+        <view class="settings-wrapper">
+        <view class="icon-btn" bindtap="showSettings" hover-class="icon-hover">
+           <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIj48L2NpcmNsZT48cGF0aCBkPSJNMTkuNCAxNWExLjY1IDEuNjUgMCAwIDAgLjMzIDEuODJsLjA2LjA2YTIgMiAwIDAgMSAwIDIuODMgMiAyIDAgMCAxLTIuODMgMGwtLjA2LS4wNmExLjY1IDEuNjUgMCAwIDAtMS44Mi0uMzMgMS42NSAxLjY1IDAgMCAwLTEgMS41MVYyMWEyIDIgMCAwIDEtMiAyIDIgMiAwIDAgMS0yLTJ2LS4wOUExLjY1IDEuNjUgMCAwIDAgOSAxOS40YTEuNjUgMS42NSAwIDAgMC0xLjgyLjMzbC0uMDYuMDZhMiAyIDAgMCAxLTIuODMgMCAyIDIgMCAwIDEgMC0yLjgzbC4wNi0uMDZhMS42NSAxLjY1IDAgMCAwIC4zMy0xLjgyIDEuNjUgMS42NSAwIDAgMC0xLjUxLTFIM2EyIDIgMCAwIDEtMi0yIDIgMiAwIDAgMSAyLTJoLjA5QTEuNjUgMS42NSAwIDAgMCA0LjYgOWExLjY1IDEuNjUgMCAwIDAtLjMzLTEuODJsLS4wNi0uMDZhMiAyIDAgMCAxIDAtMi44MyAyIDIgMCAwIDEgMi44MyAwbC4wNi4wNmExLjY1IDEuNjUgMCAwIDAgMS44Mi4zM0g5YTEuNjUgMS42NSAwIDAgMCAxLTEuNTFWM2EyIDIgMCAwIDEgMi0yIDIgMiAwIDAgMSAyIDJ2LjA5YTEuNjUgMS42NSAwIDAgMCAxIDEuNTEgMS42NSAxLjY1IDAgMCAwIDEuODItLjMzbC4wNi0uMDZhMiAyIDAgMCAxIDIuODMgMCAyIDIgMCAwIDEgMCAyLjgzbC0uMDYuMDZhMS42NSAxLjY1IDAgMCAwLS4zMyAxLjgyVjlhMS42NSAxLjY1IDAgMCAwIDEuNTEgMUgyMWEyIDIgMCAwIDEgMiAyIDIgMiAwIDAgMS0yIDJoLS4wOWExLjY1IDEuNjUgMCAwIDAtMS41MSAxeiI+PC9wYXRoPjwvc3ZnPg=="></image>
+        </view>
+          
+          <view class="tooltip-bubble" wx:if="{{showTooltip}}" catchtap="closeTooltip">
+            <text>可开启自动朗读</text>
+          </view>
+        </view>
+
+        <!-- Play Button -->
+        <view class="icon-btn" bindtap="playCurrentAudio" hover-class="icon-hover" style="{{!canPlayAudio ? 'opacity: 0.3' : ''}}">
+           <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWdvbiBwb2ludHM9IjExIDUgNiA5IDIgOSAyIDE1IDYgMTUgMTEgMTkiPjwvcG9seWdvbj48cGF0aCBkPSJNMTUuNTQgOC40NmEzIDMgMCAwIDEgMCA3LjA3Ij48L3BhdGg+PHBhdGggZD0iTTE5LjA3IDQuOTNhMTAgMTAgMCAwIDEgMCAxNC4xNCI+PC9wYXRoPjwvc3ZnPg=="></image>
         </view>
         
         <button class="icon-btn share-btn-reset" open-type="share" hover-class="icon-hover">
            <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxOCIgY3k9IjUiIHI9IjMiPjwvY2lyY2xlPjxjaXJjbGUgY3g9IjYiIGN5PSIxMiIgcj0iMyI+PC9jaXJjbGU+PGNpcmNsZSBjeD0iMTgiIGN5PSIxOSIgcj0iMyI+PC9jaXJjbGU+PGxpbmUgeDE9IjguNTkiIHkxPSIxMy41MSIgeDI9IjE1LjQyIiB5Mj0iMTcuNDkiPjwvbGluZT48bGluZSB4MT0iMTUuNDEiIHkxPSI2LjUxIiB4Mj0iOC41OSIgeTI9IjEwLjQ5Ij48L2xpbmU+PC9zdmc+"></image>
         </button>
-
-        <view class="icon-btn" bindtap="nextItem" hover-class="icon-hover">
-          <image class="icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI5IDE4IDE1IDEyIDkgNiI+PC9wb2x5bGluZT48L3N2Zz4="></image>
-        </view>
       </view>
     </view>
 
@@ -216,44 +233,90 @@ module.exports = {
     <view class="display-area">
       <view class="translation-container">
         <view class="translation">{{typingState.targetTranslation}}</view>
-
       </view>
       
-      <view class="text-scroll-wrapper">
-        <view class="fade-mask left"></view>
-        <view class="fade-mask right"></view>
-        
-        <scroll-view 
-          class="text-scroll" 
-          scroll-x="{{true}}" 
-          scroll-with-animation="{{true}}"
-          scroll-left="{{scrollLeft}}"
-          enable-flex="{{true}}"
-          show-scrollbar="{{false}}"
-        >
-          <view class="scroll-content">
-             <!-- Extra padding at start to center first char -->
-             <view id="start-padding" class="start-padding"></view>
-             <block wx:for="{{displayNodes}}" wx:key="index">
-                <!-- Word -->
-                <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
-                   <block wx:for="{{item.chars}}" wx:key="idx" wx:for-item="charItem">
-                      <text 
-                        id="char-{{charItem.globalIndex}}" 
-                        class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}"
-                        style="{{charItem.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + charItem.progress + '%, #ffffff ' + charItem.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
-                      >{{utils.getDisplayChar(charItem.char)}}</text>
-                   </block>
-                </view>
-                <!-- Space -->
-                <view wx:else class="space-wrapper">
-                   <text id="char-{{item.char.globalIndex}}" class="char-block {{utils.getCharClass(item.char.status, item.char.char)}}">{{utils.getDisplayChar(item.char.char)}}</text>
-                </view>
-             </block>
-             <!-- Extra padding at end to allow last char to scroll to center -->
-             <view class="end-padding"></view>
+      <view class="display-row">
+        <!-- Left Nav -->
+        <view class="nav-strip left" bindtap="prevItem" hover-class="icon-hover">
+           <image class="nav-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNSAxOCA5IDEyIDE1IDYiPjwvcG9seWxpbmU+PC9zdmc+"></image>
+        </view>
+
+        <view class="text-area-container">
+          <!-- Normal Scroll View -->
+          <view class="text-scroll-wrapper" wx:if="{{!isTextExpanded}}">
+            <view class="fade-mask left"></view>
+            <view class="fade-mask right"></view>
+            
+            <scroll-view 
+              class="text-scroll" 
+              scroll-x="{{true}}" 
+              scroll-with-animation="{{true}}"
+              scroll-left="{{scrollLeft}}"
+              enable-flex="{{true}}"
+              show-scrollbar="{{false}}"
+            >
+              <view class="scroll-content">
+                 <!-- Extra padding at start to center first char -->
+                 <view id="start-padding" class="start-padding"></view>
+                 <block wx:for="{{displayNodes}}" wx:key="index">
+                    <!-- Word -->
+                    <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
+                       <block wx:for="{{item.chars}}" wx:key="idx" wx:for-item="charItem">
+                          <text 
+                            id="char-{{charItem.globalIndex}}" 
+                            class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}"
+                            style="{{charItem.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + charItem.progress + '%, #ffffff ' + charItem.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
+                          >{{utils.getDisplayChar(charItem.char)}}</text>
+                       </block>
+                    </view>
+                    <!-- Space -->
+                    <view wx:else class="space-wrapper">
+                       <text id="char-{{item.char.globalIndex}}" class="char-block {{utils.getCharClass(item.char.status, item.char.char)}}">{{utils.getDisplayChar(item.char.char)}}</text>
+                    </view>
+                 </block>
+                 <!-- Extra padding at end to allow last char to scroll to center -->
+                 <view class="end-padding"></view>
+              </view>
+            </scroll-view>
           </view>
-        </scroll-view>
+
+          <!-- Expanded View (Full Text) -->
+          <block wx:else>
+            <view class="fade-mask top"></view>
+            <view class="fade-mask bottom"></view>
+            <scroll-view 
+              class="expanded-text-view {{typingState.targetText.length > 25 ? 'tiny-text' : (typingState.targetText.length > 12 ? 'small-text' : '')}}" 
+              scroll-y="{{true}}"
+              enable-flex="{{true}}"
+              scroll-into-view="expanded-char-{{activeCharIndex}}"
+              scroll-with-animation="{{true}}"
+              show-scrollbar="{{false}}"
+            >
+               <block wx:for="{{displayNodes}}" wx:key="index">
+                  <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
+                     <block wx:for="{{item.chars}}" wx:key="idx" wx:for-item="charItem">
+                        <text 
+                          id="expanded-char-{{charItem.globalIndex}}"
+                          class="char-block {{utils.getCharClass(charItem.status, charItem.char)}}"
+                          style="{{charItem.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + charItem.progress + '%, #ffffff ' + charItem.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
+                        >{{utils.getDisplayChar(charItem.char)}}</text>
+                     </block>
+                  </view>
+                  <view wx:else class="space-wrapper">
+                     <text 
+                       id="expanded-char-{{item.char.globalIndex}}"
+                       class="char-block {{utils.getCharClass(item.char.status, item.char.char)}}"
+                     >{{utils.getDisplayChar(item.char.char)}}</text>
+                  </view>
+               </block>
+            </scroll-view>
+          </block>
+        </view>
+
+        <!-- Right Nav -->
+        <view class="nav-strip right" bindtap="nextItem" hover-class="icon-hover">
+           <image class="nav-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI5IDE4IDE1IDEyIDkgNiI+PC9wb2x5bGluZT48L3N2Zz4="></image>
+        </view>
       </view>
 
       <!-- Jamo Breakdown for Active Char -->
@@ -282,11 +345,61 @@ module.exports = {
     <view class="keyboard-wrapper">
       <keyboard 
         id="keyboard"
-        nextKeyToPress="{{typingState.nextKey}}"
+        nextKeyToPress="{{typingState.nextKey || ''}}"
         isShiftActive="{{typingState.isShiftActive}}"
         visualMode="{{preferredKeyboardMode}}"
         bind:keyPress="onVirtualKeyPress"
       />
+    </view>
+  </view>
+
+  <!-- Settings Modal Overlay -->
+  <view class="modal-overlay fade-in" wx:if="{{showSettingsModal}}" bindtap="closeSettings">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header">设置 / Settings</view>
+      <view class="modal-body">
+        <view class="setting-item">
+           <view class="setting-text">
+             <text class="setting-title">自动朗读</text>
+             <text class="setting-desc">练习时自动播放单词发音</text>
+           </view>
+           <switch checked="{{autoRead}}" bindchange="onAutoReadChange" color="#6366f1"/>
+        </view>
+        
+        <view class="setting-item" style="margin-top: 20px;">
+           <view class="setting-text">
+             <text class="setting-title">始终展开文本</text>
+             <text class="setting-desc">开启后文本将显示为多行</text>
+           </view>
+           <switch checked="{{isTextExpanded}}" bindchange="onExpandTextChange" color="#6366f1"/>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-close-btn" bindtap="closeSettings">关闭</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Contact Modal -->
+  <view class="modal-overlay fade-in" wx:if="{{showContactModal}}" bindtap="toggleContactModal">
+    <view class="modal-content contact-modal" catchtap="true">
+      <view class="modal-header">联系作者 / Contact</view>
+      <view class="modal-body contact-body">
+         <image class="contact-avatar" src="../../images/logo.png" mode="aspectFit" wx:if="{{false}}"></image> <!-- Placeholder if needed -->
+         <view class="contact-desc">
+           <text>如有建议或反馈，或有自己想要的功能</text>
+           <text>欢迎联系作者~</text>
+           <text class="contact-sub">点击下方按钮复制微信号</text>
+         </view>
+         <view class="wx-id-box" bindtap="copyContactInfo">
+            <text class="wx-label">WeChat ID:</text>
+            <text class="wx-value">gaoyuhao1</text>
+            <view class="copy-icon">📋</view>
+         </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-close-btn" bindtap="toggleContactModal">关闭</view>
+      </view>
     </view>
   </view>
 
