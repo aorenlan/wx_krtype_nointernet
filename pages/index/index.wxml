@@ -282,15 +282,17 @@ module.exports = {
 
           <!-- Expanded View (Full Text) -->
           <block wx:else>
-            <view class="fade-mask top"></view>
-            <view class="fade-mask bottom"></view>
+            <!-- Removed fade masks for clearer visibility -->
+            <!-- <view class="fade-mask top"></view> -->
+            <!-- <view class="fade-mask bottom"></view> -->
             <scroll-view 
               class="expanded-text-view {{typingState.targetText.length > 25 ? 'tiny-text' : (typingState.targetText.length > 12 ? 'small-text' : '')}}" 
-              scroll-y="{{true}}"
+              scroll-y="{{typingState.targetText.length > 60}}"
+              enhanced="{{true}}"
+              show-scrollbar="{{false}}"
               enable-flex="{{true}}"
               scroll-into-view="expanded-char-{{activeCharIndex}}"
               scroll-with-animation="{{true}}"
-              show-scrollbar="{{false}}"
             >
                <block wx:for="{{displayNodes}}" wx:key="index">
                   <view wx:if="{{item.type === 'word'}}" class="word-wrapper">
@@ -393,7 +395,7 @@ module.exports = {
          </view>
          <view class="wx-id-box" bindtap="copyContactInfo">
             <text class="wx-label">WeChat ID:</text>
-            <text class="wx-value">gaoyuhao1</text>
+            <text class="wx-value">zaizaikf007</text>
             <view class="copy-icon">📋</view>
          </view>
       </view>

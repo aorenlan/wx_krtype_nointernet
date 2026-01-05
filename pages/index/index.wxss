@@ -653,15 +653,15 @@
   color: #fff; 
   opacity: 1; 
   transform: scale(1.2); /* Larger scale for emphasis */
-  border-bottom: 8rpx solid #6366f1; /* Thicker underline */
-  padding-bottom: 6rpx;
+  border-bottom: 4rpx solid #6366f1; /* Thinner underline (was 8rpx) */
+  padding-bottom: 4rpx; /* Adjusted padding */
   text-shadow: 0 0 20px rgba(99, 102, 241, 0.5); /* Glow effect */
 } /* Active */
 .text-gray { color: #94a3b8; opacity: 0.5; } /* Future: lighter gray, readable */
 
 .space-active {
   background-color: transparent;
-  border-bottom: 6rpx solid #6366f1;
+  border-bottom: 4rpx solid #6366f1; /* Matched to text underline */
   width: 80rpx; /* Fixed width for space too */
   height: 60rpx; /* Approximate height match */
   display: inline-block;
@@ -1266,9 +1266,9 @@
   align-items: center; /* Vertically center items in lines */
   justify-content: center; /* Center lines horizontally */
   align-content: center; /* Center content vertically in the container if height is fixed */
-  padding: 4px 8px; /* Reduced vertical padding */
+  padding: 10px 10px; /* Increased vertical padding */
   box-sizing: border-box;
-  gap: 2px 4px; /* Reduced gaps */
+  gap: 12px 6px; /* Increased vertical gap to prevent overlap */
   max-height: 240rpx; /* Limit height to approx 2-3 lines */
   /* overflow handled by scroll-view */
 }
@@ -1281,7 +1281,7 @@
 }
 
 .expanded-text-view .word-wrapper {
-  margin: 0 2px; /* Reduced margin */
+  margin: 0 3px; /* Slightly increased margin */
   display: inline-flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1294,6 +1294,12 @@
   height: auto;
   margin: 0;
   padding: 0;
+  opacity: 0.9; /* Increased opacity for better visibility */
+}
+
+/* Remove scaling in expanded view to prevent crowding */
+.expanded-text-view .text-yellow {
+  transform: scale(1);
 }
 
 /* Dynamic Font Sizes for Expanded View */

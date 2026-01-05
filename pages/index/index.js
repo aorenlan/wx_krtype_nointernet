@@ -9,7 +9,10 @@ import { POPULAR_SONGS } from '../../data/popularSongs';
 
 const app = getApp();
 let interstitialAd = null;
-let videoAd = null;
+let videoAdCopy = null; // ID: adunit-78856528510e4410
+let videoAdUnlock = null; // ID: adunit-7f4c5e891b10e943
+let videoAdCopyHandler = null;
+let videoAdUnlockHandler = null;
 
 
 const DEFAULT_SAMPLE_TEXT = "연습은 완벽을 만듭니다. Fighting! 화이팅!";
@@ -207,32 +210,81 @@ Page({
       }, timeRemaining);
     }
 
-    // Initialize Rewarded Video Ad
+    // Initialize Video Ads
+    this.initVideoAds();
+  },
+
+  onUnload() {
+    // Clean up listeners
+    if (videoAdCopy && videoAdCopyHandler) {
+      videoAdCopy.offClose(videoAdCopyHandler);
+    }
+    if (videoAdUnlock && videoAdUnlockHandler) {
+      videoAdUnlock.offClose(videoAdUnlockHandler);
+    }
+  },
+
+  initVideoAds() {
     if (wx.createRewardedVideoAd) {
-      videoAd = wx.createRewardedVideoAd({
-        adUnitId: 'adunit-78856528510e4410'
-      })
-      videoAd.onLoad(() => {})
-      videoAd.onError((err) => {
-        console.error('激励视频光告加载失败', err)
-      })
-      videoAd.onClose((res) => {
-        // Only show copy options if ad was fully watched
+      // --- Copy Ad ---
+      if (!videoAdCopy) {
+        videoAdCopy = wx.createRewardedVideoAd({
+          adUnitId: 'adunit-78856528510e4410'
+        });
+        videoAdCopy.onError((err) => {
+          console.error('激励视频(Copy)加载失败', err);
+        });
+      }
+      
+      // Clean up old listener if exists
+      if (videoAdCopyHandler) {
+        videoAdCopy.offClose(videoAdCopyHandler);
+      }
+      
+      // Create new handler bound to this page instance
+      videoAdCopyHandler = (res) => {
         if (res && res.isEnded) {
-          if (this.adContext === 'unlockAudio') {
-            this.handleAudioUnlockSuccess();
-          } else {
-            this.showCopyActionSheet();
-          }
+          this.showCopyActionSheet();
         } else {
-          // User closed early
           wx.showToast({
             title: '完整观看视频才能解锁哦',
             icon: 'none',
             duration: 2000
           });
         }
-      })
+      };
+      
+      videoAdCopy.onClose(videoAdCopyHandler);
+      
+      // --- Unlock Ad ---
+      if (!videoAdUnlock) {
+        videoAdUnlock = wx.createRewardedVideoAd({
+          adUnitId: 'adunit-7f4c5e891b10e943'
+        });
+        videoAdUnlock.onError((err) => {
+          console.error('激励视频(Unlock)加载失败', err);
+        });
+      }
+      
+      // Clean up old listener
+      if (videoAdUnlockHandler) {
+        videoAdUnlock.offClose(videoAdUnlockHandler);
+      }
+      
+      // Create new handler
+      videoAdUnlockHandler = (res) => {
+        if (res && res.isEnded) {
+          this.handleAudioUnlockSuccess();
+        } else {
+          wx.showToast({
+            title: '完整观看视频才能解锁哦',
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      };
+      
+      videoAdUnlock.onClose(videoAdUnlockHandler);
     }
   },
 
@@ -368,13 +420,13 @@ Page({
   // --- Menu Handlers ---
   
   handleCopyPC() {
-    if (videoAd) {
-      videoAd.show().catch(() => {
+    if (videoAdCopy) {
+      videoAdCopy.show().catch(() => {
         // Retry load
-        videoAd.load()
-          .then(() => videoAd.show())
+        videoAdCopy.load()
+          .then(() => videoAdCopy.show())
           .catch(err => {
-            console.error('激励视频 广告显示失败', err);
+            console.error('激励视频(Copy) 广告显示失败', err);
             // If ad fails to load/show, inform user instead of bypassing
             wx.showToast({
               title: '广告加载失败，请稍后重试',
@@ -393,12 +445,21 @@ Page({
   },
 
   showCopyActionSheet() {
+    // Prevent ghost clicks from detached pages
+    const pages = getCurrentPages();
+    const currentPage = pages[pages.length - 1];
+    if (currentPage && currentPage !== this) {
+      console.log('Ignore showCopyActionSheet from detached page');
+      return;
+    }
+
     wx.showActionSheet({
-      itemList: ['复制国内版网址 (Faster)', '复制国际版网址 (Global)'],
+      itemList: ['复制国内版韩语网址', '复制国际版韩语网址', '复制英语背单词网址'],
       success: (res) => {
         let url = '';
         if (res.tapIndex === 0) url = 'https://krtype.aorenlan.fun/';
         if (res.tapIndex === 1) url = 'https://krtype-global.aorenlan.fun/';
+        if (res.tapIndex === 2) url = 'https://enlearn.aorenlan.fun/';
         
         if (url) {
           wx.setClipboardData({
@@ -811,15 +872,15 @@ Page({
   },
 
   showUnlockAd(onSuccess) {
-    this.adContext = 'unlockAudio';
+    // this.adContext = 'unlockAudio'; // No longer needed
     this.unlockCallback = onSuccess;
 
-    if (videoAd) {
-      videoAd.show().catch(() => {
-        videoAd.load()
-          .then(() => videoAd.show())
+    if (videoAdUnlock) {
+      videoAdUnlock.show().catch(() => {
+        videoAdUnlock.load()
+          .then(() => videoAdUnlock.show())
           .catch(err => {
-            console.error('激励视频加载失败', err);
+            console.error('激励视频(Unlock)加载失败', err);
             wx.showToast({
                title: '广告加载失败',
                icon: 'none'
@@ -837,6 +898,14 @@ Page({
   },
 
   handleAudioUnlockSuccess() {
+     // Prevent ghost clicks from detached pages
+     const pages = getCurrentPages();
+     const currentPage = pages[pages.length - 1];
+     if (currentPage && currentPage !== this) {
+       console.log('Ignore handleAudioUnlockSuccess from detached page');
+       return;
+     }
+
      wx.setStorageSync('isAudioUnlocked', true);
      wx.showToast({
        title: '解锁成功！',
@@ -916,7 +985,7 @@ Page({
   },
 
   copyContactInfo() {
-    const wxId = "gaoyuhao1"; // Replace with actual ID
+    const wxId = "zaizaikf007"; // Replace with actual ID
     wx.setClipboardData({
       data: wxId,
       success: () => {
