@@ -1,0 +1,289 @@
+<custom-nav title="设置" theme="light" showSettings="{{false}}"></custom-nav>
+<view style="padding-top: {{statusBarHeight + navBarHeight}}px; height: 100vh; box-sizing: border-box;">
+  <scroll-view
+    class="container"
+    scroll-y="true"
+    enable-back-to-top="true"
+    enable-flex="true"
+    style="height: {{scrollHeight}}px;"
+  >
+  
+  <!-- VIEW 1: CATEGORIES -->
+  <block wx:if="{{view === 'categories'}}">
+    <view class="page-title">词库设置</view>
+
+    <view class="section-label">选择词书</view>
+
+    <!-- Word Book List -->
+    <view class="book-list">
+      <block wx:for="{{categories}}" wx:key="*this">
+        <view class="card book-card {{currentCategory === item ? 'active' : ''}}" bindtap="selectCategory" data-category="{{item}}">
+            <view class="active-bar" wx:if="{{currentCategory === item}}"></view>
+            <view class="book-content">
+                <view class="book-info">
+                    <text class="book-name {{currentCategory === item ? 'active-text' : ''}}">{{item}}</text>
+                    
+                    <!-- Mistakes Logic -->
+                    <text class="book-desc" wx:if="{{item === 'Mistakes (错题本)'}}">{{mistakesCount}} 个单词</text>
+                    
+                    <!-- Standard Logic -->
+                    <view class="book-desc-row" wx:else>
+                       <text class="icon-headphones">🎧</text> 
+                       <text>{{categoryCounts[item] || 0}} 个单词</text>
+                       <text wx:if="{{currentCategory !== item}}" style="margin-left: 8px;">点击进入设置</text>
+                    </view>
+                </view>
+                <view class="arrow-icon">›</view>
+            </view>
+        </view>
+      </block>
+    </view>
+
+    <view class="action-cards">
+      <view class="card action-card" bindtap="onContactSupport">
+        <view class="card-left">
+          <view class="icon-circle blue">
+            <text class="action-icon">💬</text>
+          </view>
+          <text class="card-text">联系客服 (复制微信)</text>
+        </view>
+      </view>
+
+      <view class="card action-card" bindtap="switchVersion">
+        <view class="card-left">
+          <view class="icon-circle gray">
+            <text class="action-icon">↺</text>
+          </view>
+          <text class="card-text">切换回旧版本</text>
+        </view>
+        <view class="arrow-icon">›</view>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- VIEW 2: SETTINGS -->
+  <block wx:if="{{view === 'filters'}}">
+    <view class="header-bar">
+      <view class="back-btn" bindtap="goBackToCategories">
+        <text class="icon">‹</text>
+        <text>返回词书列表</text>
+      </view>
+      <view class="category-header">
+        <text class="category-title">{{currentCategory}}</text>
+        <text class="category-count">共 {{totalWords}} 个单词</text>
+      </view>
+    </view>
+
+    <view class="filter-content">
+      <view class="setting-section">
+        <view class="section-title">词书</view>
+        <picker mode="selector" range="{{categories}}" value="{{categoryPickerIndex}}" bindchange="onCategoryPickerChange">
+          <view class="category-item picker-item">
+            <text class="picker-label">选择词书</text>
+            <view class="picker-right">
+              <text class="picker-value">{{settings.category}}</text>
+              <text class="picker-arrow">›</text>
+            </view>
+          </view>
+        </picker>
+      </view>
+
+      <view class="setting-section" wx:if="{{showTopikSub}}">
+        <view class="section-title">选择二级分类</view>
+        <picker mode="selector" range="{{topikLevels}}" value="{{topikLevelPickerIndex}}" bindchange="onTopikLevelPickerChange">
+          <view class="category-item picker-item">
+            <text class="picker-label">TOPIK 等级</text>
+            <view class="picker-right">
+              <text class="picker-value">TOPIK {{settings.topikLevel}}</text>
+              <text class="picker-arrow">›</text>
+            </view>
+          </view>
+        </picker>
+
+        <view class="topik-session" wx:if="{{topikSessions.length}}">
+          <text class="picker-label">Session</text>
+          <scroll-view scroll-x class="topik-session-scroll" show-scrollbar="{{false}}">
+            <view class="topik-session-row">
+              <block wx:for="{{topikSessions}}" wx:key="*this">
+                <view class="topik-session-chip {{settings.topikSession === item ? 'active' : ''}}" bindtap="selectTopikSession" data-session="{{item}}">
+                  <text>{{item}}</text>
+                </view>
+              </block>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <view class="setting-section" wx:if="{{showYonseiSub}}">
+        <view class="section-title">选择二级分类</view>
+        <picker mode="selector" range="{{yonseiLessonOptions}}" value="{{yonseiLessonPickerIndex}}" bindchange="onYonseiLessonPickerChange">
+          <view class="category-item picker-item">
+            <text class="picker-label">课次 (lesson_id)</text>
+            <view class="picker-right">
+              <text class="picker-value">{{yonseiLessonDisplay}}</text>
+              <text class="picker-arrow">›</text>
+            </view>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </block>
+
+  <!-- VIEW 3: IMPORT LIST -->
+  <block wx:if="{{view === 'importList'}}">
+    <view class="nav-header" bindtap="goBackToCategories">
+      <text class="back-arrow">‹</text>
+      <text class="back-text">返回设置</text>
+    </view>
+    
+    <view class="page-title-large">
+      <text>导入单词</text>
+      <text class="page-count">{{lists.length}}/10</text>
+    </view>
+
+    <!-- Top Action Cards -->
+    <view class="top-cards-grid">
+      <!-- Manual Input -->
+      <view class="action-card-column" bindtap="createNewList">
+        <view class="icon-circle-large blue-bg">
+          <text class="plus-icon-large">+</text>
+        </view>
+        <text class="action-text">手动输入</text>
+      </view>
+
+      <!-- Smart Import -->
+      <view class="action-card-column" bindtap="onSmartImport">
+        <view class="icon-circle-large yellow-bg">
+          <text class="lightning-icon">⚡️</text>
+        </view>
+        <view class="text-group">
+            <text class="action-text">智能导入</text>
+            <text class="action-subtext">自动识别文本</text>
+        </view>
+      </view>
+
+      <view class="action-card-column" bindtap="onCameraClick">
+        <view class="icon-circle-large gray-bg">
+          <text class="camera-icon">📷</text>
+        </view>
+        <text class="action-text">拍照导入</text>
+      </view>
+    </view>
+
+    <view class="section-label">我的词单</view>
+
+    <view class="list-container">
+      <block wx:for="{{lists}}" wx:key="id">
+        <view class="card list-item">
+          <view class="item-info">
+            <text class="item-name">{{item.name}}</text>
+            <text class="item-meta">{{item.words.length}} 个单词 • {{item.formattedDate}}</text>
+          </view>
+          <view class="item-actions">
+            <view class="action-icon" catchtap="editList" data-id="{{item.id}}">✎</view>
+            <view class="action-icon" catchtap="exportList" data-id="{{item.id}}">📥</view>
+            <view class="action-icon delete" catchtap="deleteList" data-id="{{item.id}}">🗑️</view>
+          </view>
+        </view>
+      </block>
+      
+      <view class="empty-state" wx:if="{{lists.length === 0}}">
+         <text class="empty-text">暂无词单，点击上方“手动输入”添加</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- VIEW 4: IMPORT FORM -->
+  <block wx:if="{{view === 'importForm'}}">
+    <view class="nav-header" bindtap="goBackToImportList">
+      <text class="back-arrow">‹</text>
+      <text class="back-text">返回列表</text>
+    </view>
+
+    <view class="page-title-large">
+      <text>{{editingId ? '编辑词单' : '新建词单'}}</text>
+    </view>
+
+    <view class="form-content">
+      <view class="form-group">
+        <text class="label">名称</text>
+        <input class="input" placeholder="例如：我的生词本" value="{{name}}" bindinput="onNameInput" />
+      </view>
+
+      <view class="form-group flex-1">
+        <text class="label">单词内容 <text class="sub-label">(每行一个，格式：单词 [可选释义])</text></text>
+        <view class="textarea-wrap">
+          <view class="fake-placeholder" wx:if="{{!content}}">
+            <block wx:for="{{importPlaceholderLines}}" wx:key="*this">
+              <view class="fake-placeholder-line">
+                <text>{{item}}</text>
+              </view>
+            </block>
+          </view>
+          <textarea 
+            class="textarea" 
+            placeholder="" 
+            value="{{content}}" 
+            bindinput="onContentInput" 
+            cursor="{{contentCursor}}"
+            focus="{{contentFocus}}"
+            maxlength="-1"
+          ></textarea>
+        </view>
+        
+        <!-- Suggestion Box -->
+        <view class="suggestion-box" wx:if="{{suggestion}}">
+            <view class="suggestion-header">
+                <text class="suggestion-title">{{suggestion.word}}</text>
+                <view class="suggestion-close" bindtap="closeSuggestion">×</view>
+            </view>
+            <view class="suggestion-list">
+                <block wx:for="{{suggestion.meanings}}" wx:key="*this">
+                    <view class="suggestion-item" bindtap="confirmSuggestion" data-meaning="{{item}}">
+                        <text class="suggestion-index">{{index + 1}}</text>
+                        <text class="suggestion-text">{{item}}</text>
+                    </view>
+                </block>
+            </view>
+        </view>
+      </view>
+
+      <view class="form-actions">
+        <button class="btn-primary-large" bindtap="saveList">
+          <text class="save-icon">💾</text> 保存
+        </button>
+      </view>
+    </view>
+  </block>
+
+  <!-- VIEW 5: SMART IMPORT -->
+  <block wx:if="{{view === 'smartImport'}}">
+    <view class="nav-header" bindtap="goBackToImportList">
+      <text class="back-arrow">‹</text>
+      <text class="back-text">返回列表</text>
+    </view>
+
+    <view class="page-title-large">
+      <text>智能导入</text>
+    </view>
+
+    <view class="smart-intro">
+      粘贴任意包含英文的文本，将自动提取单词并匹配释义。
+    </view>
+
+    <textarea 
+        class="smart-textarea" 
+        placeholder="在这里粘贴英文文章、字幕、笔记..." 
+        value="{{content}}" 
+        bindinput="onContentInput" 
+        maxlength="-1"
+    ></textarea>
+
+    <view class="btn-smart-action" bindtap="startSmartRecognition">
+        <text>开始识别</text>
+    </view>
+  </block>
+
+  </scroll-view>
+</view>

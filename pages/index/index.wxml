@@ -43,7 +43,7 @@ module.exports = {
   <!-- Navbar -->
   <view class="nav-bar" style="height: {{navBar.totalHeight}}px; padding-top: {{navBar.paddingTop}}px; box-sizing: border-box;">
     <view class="nav-content">
-      <view wx:if="{{mode !== 'menu'}}" class="back-btn" bindtap="goBack">
+      <view wx:if="{{mode !== 'menu' && mode !== 'typing'}}" class="back-btn" bindtap="goBack">
         <view class="back-icon-box">
           <image class="back-icon-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMTUgMTggOSAxMiAxNSA2Ij48L3BvbHlsaW5lPjwvc3ZnPg=="></image>
         </view>
@@ -207,6 +207,9 @@ module.exports = {
       </view>
 
       <view class="mini-controls">
+        <view class="icon-btn" bindtap="goBack" hover-class="icon-hover">
+          <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNSAxOCA5IDEyIDE1IDYiPjwvcG9seWxpbmU+PC9zdmc+"></image>
+        </view>
         <!-- Settings Button -->
         <view class="settings-wrapper">
         <view class="icon-btn" bindtap="showSettings" hover-class="icon-hover">
@@ -347,6 +350,8 @@ module.exports = {
     <view class="keyboard-wrapper">
       <keyboard 
         id="keyboard"
+        theme="dark"
+        variant="legacy"
         nextKeyToPress="{{typingState.nextKey || ''}}"
         isShiftActive="{{typingState.isShiftActive}}"
         visualMode="{{preferredKeyboardMode}}"
@@ -407,5 +412,22 @@ module.exports = {
 
   <!-- Hidden Canvas for Share Image Generation -->
   <canvas type="2d" id="shareCanvas" class="share-canvas" style="position: absolute; left: -9999px; top: 0; width: 500px; height: 400px;"></canvas>
+
+  <!-- New Version Popup -->
+  <view class="nv-popup-mask" wx:if="{{showNvPopup}}">
+    <view class="nv-popup-content">
+      <view class="nv-title">发现新版本</view>
+      <view class="nv-desc">全新设计的练习模式，是否体验？</view>
+      <view class="nv-actions">
+        <button class="nv-btn cancel" bindtap="minimizeNvPopup">暂不体验</button>
+        <button class="nv-btn confirm" bindtap="enterNewVersion">立即体验</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- Minimized Icon -->
+  <view class="nv-minimized" wx:if="{{!showNvPopup && (nvPopupMinimized || hasSeenNvPopup)}}" bindtap="restoreNvPopup" style="top: {{navBar.totalHeight + 28}}px">
+    <text>新版</text>
+  </view>
 
 </view>

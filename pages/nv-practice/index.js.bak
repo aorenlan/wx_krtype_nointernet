@@ -1,0 +1,1149 @@
+import { getWords, recordWordResult } from '../../utils/api';
+import { getImportedLists, saveMistake, getCachedWords, setCachedWords, saveProgress, getProgress } from '../../utils/storage';
+import { DEFAULT_SETTINGS } from '../../utils/constants';
+import { YOUDAO_VOICE_URL, OSS_AUDIO_BASE } from '../../utils/config';
+
+const getInitialSettings = () => {
+    const storedSettings = wx.getStorageSync('settings') || {};
+    return { ...DEFAULT_SETTINGS, ...storedSettings };
+};
+
+Page({
+    data: {
+        words: [],
+        currentIndex: 0,
+        currentWord: null,
+        inputValue: '',
+        showAnswer: false,
+        isCorrect: false,
+        isError: false,
+        loading: true,
+        hasMore: true,
+        offset: 0,
+        settings: getInitialSettings(),
+        category: 'CET4',
+        displayCategory: 'CET4',
+
+        // New States
+        lastCorrectWord: null,
+        hintChar: '',
+        isWordVisible: true, // For Flash/Blink modes
+        timeLeft: 0,
+        hasInteracted: false,
+        showSettingsModal: false,
+        inputFocus: false,
+        isKeyboardOpen: false,
+        showMistakeGuide: false,
+        tabBarHeight: 58,
+        virtualKeyboardHeight: 272,
+        keyboardOffsetBottom: 58 + 272,
+        compactOnKeyboard: false,
+        navBarHeight: 0,
+        statusBarHeight: 0,
+        screenWidth: 0,
+        menuButtonInfo: null,
+        boxSizeClass: 'box-large',
+        iconEye: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMSAxMnM0LTggMTEtOCAxMSA4IDExIDgtNCA4LTExIDgtMTEtOC0xMS04eiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjMiPjwvY2lyY2xlPjwvc3ZnPg==',
+        shareImageUrl: '',
+        checkInText: '打卡',
+        checkInCount: 0,
+        checkedInToday: false
+    },
+
+    syncTabbarDark: function () {
+        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+            this.getTabBar().setData({ dark: !!this.data.settings.darkMode });
+        }
+    },
+
+    // Timers
+    hintTimer: null,
+    flashTimer: null,
+    blinkTimer: null,
+    quizTimer: null,
+    audioCtx: null,
+    errorTimeout: null,
+    wrongAttempts: 0,
+    autoPronounceTimer: null,
+    _autoPronounceToken: null,
+    _shareImageToken: null,
+
+    getTodayKey: function () {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    },
+
+    loadCheckInStatus: function () {
+        const lastDate = wx.getStorageSync('flashflow_checkin_date') || '';
+        const count = Number(wx.getStorageSync('flashflow_checkin_count') || 0);
+        const today = this.getTodayKey();
+        const doneToday = lastDate === today;
+        this.setData({
+            checkInCount: count,
+            checkedInToday: doneToday,
+            checkInText: doneToday ? `打卡${count}天` : '打卡'
+        });
+    },
+
+    onCheckIn: function () {
+        const today = this.getTodayKey();
+        const lastDate = wx.getStorageSync('flashflow_checkin_date') || '';
+        const count = Number(wx.getStorageSync('flashflow_checkin_count') || 0);
+
+        if (lastDate === today) {
+            wx.showToast({ title: '今天已打卡', icon: 'none' });
+            this.loadCheckInStatus();
+            return;
+        }
+
+        const nextCount = count + 1;
+        wx.setStorageSync('flashflow_checkin_date', today);
+        wx.setStorageSync('flashflow_checkin_count', nextCount);
+        wx.showToast({ title: `打卡成功：${nextCount}天`, icon: 'success' });
+        this.loadCheckInStatus();
+    },
+
+    refreshShareImage: function (word) {
+        if (!word) return;
+        const token = `${Date.now()}_${Math.random()}`;
+        this._shareImageToken = token;
+        this.generateWordCardImage(word)
+            .then((tempFilePath) => {
+                if (this._shareImageToken !== token) return;
+                this.setData({ shareImageUrl: tempFilePath });
+            })
+            .catch(() => { });
+    },
+
+    getDictVoiceUrl: function (text, isChinese = false) {
+        const encoded = encodeURIComponent(text || '');
+        return `${YOUDAO_VOICE_URL}?audio=${encoded}&type=1`;
+    },
+
+    getOssEnglishUrl: function (text) {
+        const cleaned = (text || '').trim();
+        if (!/^[a-zA-Z][a-zA-Z'-]*$/.test(cleaned)) return '';
+        const filename = `${cleaned.toLowerCase()}.mp3`;
+        return `${OSS_AUDIO_BASE}out_db/${encodeURIComponent(filename)}`;
+    },
+
+    getOssChineseUrl: function (wordText, category) {
+        const cleanedWord = (wordText || '').trim();
+        const cleanedCategory = (category || '').trim();
+        if (!/^[a-zA-Z][a-zA-Z'-]*$/.test(cleanedWord)) return '';
+        if (!cleanedCategory) return '';
+        const suffix = cleanedCategory.toLowerCase();
+        const filename = `${cleanedWord.toLowerCase()}_${suffix}_cn.mp3`;
+        return `${OSS_AUDIO_BASE}out_db/${encodeURIComponent(filename)}`;
+    },
+
+    playAudioUrl: function (url, token) {
+        return new Promise((resolve, reject) => {
+            if (!url || !this.audioCtx) {
+                resolve();
+                return;
+            }
+
+            if (token && this._speakToken !== token) {
+                resolve();
+                return;
+            }
+
+            const ctx = this.audioCtx;
+            let finished = false;
+
+            const cleanup = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                ctx.offEnded(onEnded);
+                ctx.offError(onError);
+            };
+
+            const onEnded = () => {
+                cleanup();
+                resolve();
+            };
+
+            const onError = (e) => {
+                cleanup();
+                if (token && this._speakToken !== token) {
+                    resolve();
+                    return;
+                }
+                reject(e);
+            };
+
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('timeout'));
+            }, 5000);
+
+            ctx.onEnded(onEnded);
+            ctx.onError(onError);
+            ctx.src = url;
+            ctx.play();
+        });
+    },
+
+    playWithFallback: async function ({ text, isChinese, wordForOss, categoryForOss, token }) {
+        if (!text) return;
+        if (token && this._speakToken !== token) return;
+        if (isChinese) {
+            const ossUrl = this.getOssChineseUrl(wordForOss, categoryForOss);
+            if (!ossUrl) return;
+            try {
+                await this.playAudioUrl(ossUrl, token);
+            } catch (e) { }
+            return;
+        }
+
+        const dictUrl = this.getDictVoiceUrl(text, false);
+        try {
+            await this.playAudioUrl(dictUrl, token);
+            return;
+        } catch (e) { }
+
+        if (token && this._speakToken !== token) return;
+
+        const ossUrl = this.getOssEnglishUrl(text);
+        if (!ossUrl) return;
+        try {
+            await this.playAudioUrl(ossUrl, token);
+        } catch (e) { }
+    },
+
+    updateDisplayCategory: function () {
+        const { category, settings } = this.data;
+        let display = category;
+        const { wordLengthFilter, wordStartFilter } = settings;
+
+        const parts = [];
+        if (wordLengthFilter) parts.push(`${wordLengthFilter}字母`);
+        if (wordStartFilter) parts.push(wordStartFilter);
+
+        if (parts.length > 0) {
+            display = `${category} (${parts.join(', ')})`;
+        }
+
+        this.setData({ displayCategory: display });
+    },
+
+    maybeShowLocalImportToast: function (category) {
+        const key = 'flashflow_local_import_toast_last_category';
+        const last = wx.getStorageSync(key) || '';
+        const importedLists = getImportedLists();
+        const isImported = Array.isArray(importedLists) && importedLists.some(l => l && l.name === category);
+        if (isImported && last !== category) {
+            wx.showToast({
+                title: '本地导入单词可能有无法朗读的情况，请谅解',
+                icon: 'none',
+                duration: 2000
+            });
+        }
+        wx.setStorageSync(key, category);
+    },
+
+    onLoad: function (options) {
+        const app = getApp();
+        if (app && typeof app.registerThemePage === 'function') {
+            app.registerThemePage('index', this);
+        }
+
+        // Layout calculation
+        const systemInfo = wx.getSystemInfoSync();
+        const menuButtonInfo = wx.getMenuButtonBoundingClientRect();
+        const statusBarHeight = systemInfo.statusBarHeight;
+        const navBarHeight = (menuButtonInfo.top - statusBarHeight) * 2 + menuButtonInfo.height;
+        const screenWidth = systemInfo.windowWidth;
+
+        this.setData({
+            statusBarHeight,
+            navBarHeight,
+            menuButtonInfo,
+            screenWidth
+        });
+
+        this.audioCtx = wx.createInnerAudioContext();
+        this.loadSettings();
+        this.loadCheckInStatus();
+        this.fetchWords();
+    },
+
+    onShow: function () {
+        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+            this.getTabBar().setData({
+                selected: 0
+            })
+        }
+        const storedCategory = wx.getStorageSync('category') || 'CET4';
+        this.maybeShowLocalImportToast(storedCategory);
+
+        // Check if settings changed
+        this.loadSettings();
+        this.loadCheckInStatus();
+        if (this.data.currentWord) {
+            wx.nextTick(() => this.refreshShareImage(this.data.currentWord));
+        }
+
+        // Check if filters changed
+        const currentFilters = {
+            minLength: this.data.settings.wordLengthFilter,
+            firstLetter: this.data.settings.wordStartFilter
+        };
+
+        // Simple deep compare or just check if category changed OR filters changed
+        // Ideally we should store last loaded filters
+
+        const filtersChanged = (this.lastLoadedFilters && (
+            this.lastLoadedFilters.minLength != currentFilters.minLength ||
+            this.lastLoadedFilters.firstLetter != currentFilters.firstLetter
+        ));
+
+        if (storedCategory !== this.data.category || filtersChanged) {
+            this.setData({
+                category: storedCategory,
+                words: [],
+                currentIndex: 0,
+                offset: 0,
+                hasMore: true
+            }, () => {
+                this.updateDisplayCategory();
+                this.fetchWords();
+            });
+        } else {
+            this.updateDisplayCategory();
+            // Sync progress if same category
+            const progressIndex = getProgress(storedCategory);
+            if (progressIndex !== this.data.currentIndex && progressIndex < this.data.words.length) {
+                this.setCurrentWord(progressIndex);
+            } else if (progressIndex >= this.data.words.length && this.data.hasMore) {
+                // Need to fetch more to reach progress
+                // Ideally we jump offset, but simple implementation:
+                // Just let it be, user will scroll or next.
+                // Or better: update offset if needed.
+            }
+        }
+    },
+
+    onHide: function () {
+        this.clearAllTimers();
+        if (this.autoPronounceTimer) clearTimeout(this.autoPronounceTimer);
+        this._autoPronounceToken = null;
+        this._speakToken = null;
+        if (this.audioCtx) {
+            try { this.audioCtx.stop(); } catch (e) { }
+        }
+    },
+
+    onUnload: function () {
+        const app = getApp();
+        if (app && typeof app.unregisterThemePage === 'function') {
+            app.unregisterThemePage('index', this);
+        }
+
+        this.clearAllTimers();
+        if (this.autoPronounceTimer) clearTimeout(this.autoPronounceTimer);
+        this._autoPronounceToken = null;
+        this._speakToken = null;
+        if (this.audioCtx) {
+            try { this.audioCtx.stop(); } catch (e) { }
+        }
+    },
+
+    loadSettings: function () {
+        const storedSettings = wx.getStorageSync('settings') || {};
+        const settings = { ...DEFAULT_SETTINGS, ...storedSettings };
+        this.setData({ settings });
+        this.syncTabbarDark();
+    },
+
+    fetchWords: async function () {
+        this.setData({ loading: true });
+
+        // Prepare filters
+        const { wordLengthFilter, wordStartFilter } = this.data.settings;
+        const filters = {};
+        if (wordLengthFilter) filters.minLength = wordLengthFilter;
+        if (wordStartFilter) filters.firstLetter = wordStartFilter;
+
+        // Check if imported list
+        const importedLists = getImportedLists();
+        const currentList = importedLists.find(l => l.name === this.data.category);
+
+        if (currentList) {
+            let words = currentList.words;
+
+            // Apply Local Filters
+            if (wordLengthFilter) {
+                words = words.filter(w => w.word.length == wordLengthFilter);
+            }
+            if (wordStartFilter) {
+                words = words.filter(w => w.word.toUpperCase().startsWith(wordStartFilter));
+            }
+
+            this.setData({
+                words: words,
+                loading: false,
+                offset: 0,
+                hasMore: false,
+                currentIndex: 0
+            });
+
+            if (words.length > 0) {
+                this.setCurrentWord(0);
+            } else {
+                this.setData({ currentWord: null });
+            }
+            return;
+        }
+
+        // Check if Mistakes
+        if (this.data.category === 'Mistakes (错题本)') {
+            let mistakes = wx.getStorageSync('flashflow_mistakes') || [];
+
+            // Apply Local Filters for Mistakes
+            if (wordLengthFilter) {
+                mistakes = mistakes.filter(w => w.word.length == wordLengthFilter);
+            }
+            if (wordStartFilter) {
+                mistakes = mistakes.filter(w => w.word.toUpperCase().startsWith(wordStartFilter));
+            }
+
+            this.setData({
+                words: mistakes,
+                loading: false,
+                offset: 0,
+                hasMore: false,
+                currentIndex: 0
+            });
+
+            if (mistakes.length > 0) {
+                this.setCurrentWord(0);
+            } else {
+                this.setData({ currentWord: null });
+            }
+            return;
+        }
+
+        // Try Local Cache First
+        if (this.data.offset === 0) {
+            const cached = getCachedWords(this.data.category, filters);
+            if (cached && cached.length > 0) {
+                console.log('Using cached words for:', this.data.category);
+
+                // Check saved progress
+                let startIndex = 0;
+                const savedIndex = getProgress(this.data.category);
+                if (savedIndex && savedIndex < cached.length) {
+                    startIndex = savedIndex;
+                }
+
+                this.setData({
+                    words: cached,
+                    loading: false,
+                    offset: cached.length,
+                    hasMore: true
+                });
+
+                if (this.data.currentIndex === 0 || startIndex > 0) {
+                    this.setCurrentWord(startIndex);
+                }
+
+                if (cached.length >= 50) return;
+            }
+        }
+
+        // API Fetch
+        const { words, total } = await getWords(this.data.category, 50, this.data.offset, filters);
+
+        // Store loaded filters
+        this.lastLoadedFilters = {
+            minLength: filters.minLength,
+            firstLetter: filters.firstLetter
+        };
+
+        if (words.length > 0) {
+            const newWords = this.data.offset === 0 ? words : [...this.data.words, ...words];
+
+            // Update Cache
+            if (this.data.offset === 0) {
+                setCachedWords(this.data.category, filters, newWords);
+            } else {
+                // Append to cache? Maybe too big. Just cache first page for quick load.
+            }
+
+            this.setData({
+                words: newWords,
+                loading: false,
+                offset: this.data.offset + 50,
+                hasMore: newWords.length < total
+            });
+
+            // Initialize first word if just starting
+            if (this.data.currentIndex === 0 && this.data.words.length > 0) {
+                this.setCurrentWord(0);
+            }
+
+        } else {
+            this.setData({ loading: false, hasMore: false });
+        }
+    },
+
+    setCurrentWord: function (index) {
+        const word = this.data.words[index];
+        if (this.autoPronounceTimer) clearTimeout(this.autoPronounceTimer);
+        this._autoPronounceToken = null;
+
+        // Calculate box size class based on word length
+        let boxSizeClass = 'box-large';
+        let slotGap = 6;
+        if (word.word.length > 10) {
+            boxSizeClass = 'box-small';
+            slotGap = 2;
+        } else if (word.word.length > 7) {
+            boxSizeClass = 'box-medium';
+            slotGap = 4;
+        }
+
+        // Calculate main word font size class
+        let mainWordSizeClass = 'word-4xl';
+        const len = word.word.length;
+        if (len > 18) {
+            mainWordSizeClass = 'word-xl';
+        } else if (len > 12) {
+            mainWordSizeClass = 'word-2xl';
+        } else if (len > 8) {
+            mainWordSizeClass = 'word-3xl';
+        }
+
+        this.wrongAttempts = 0; // Reset error count
+
+        this.setData({
+            currentIndex: index,
+            currentWord: word,
+            inputValue: '',
+            showAnswer: false,
+            isCorrect: false,
+            isError: false,
+            hintChar: '',
+            isWordVisible: true, // Reset visibility
+            timeLeft: this.data.settings.timerDuration,
+            boxSizeClass: boxSizeClass,
+            slotGap: slotGap,
+            mainWordSizeClass: mainWordSizeClass
+        });
+        wx.setStorageSync('wallpaper_draft', word);
+
+        this.clearAllTimers();
+        this.startModeLogic();
+        this.startHintTimer();
+        wx.nextTick(() => this.refreshShareImage(word));
+
+        if (this.data.settings.autoPronounce) this.scheduleAutoPronounce(word);
+
+        // Save progress
+        saveProgress(this.data.category, index);
+    },
+
+    startModeLogic: function () {
+        const { practiceMode, flashDuration, blinkInterval, enableTimer } = this.data.settings;
+
+        // Flash Mode
+        if (practiceMode === 'flash') {
+            this.flashTimer = setTimeout(() => {
+                this.setData({ isWordVisible: false });
+            }, flashDuration);
+        }
+        // Blink Mode
+        else if (practiceMode === 'blink') {
+            this.blinkTimer = setInterval(() => {
+                this.setData({ isWordVisible: !this.data.isWordVisible });
+            }, blinkInterval);
+        }
+
+        // Quiz Timer
+        if (enableTimer && this.data.hasInteracted) {
+            this.quizTimer = setInterval(() => {
+                if (this.data.timeLeft <= 1) {
+                    this.setData({
+                        timeLeft: 0,
+                        showAnswer: true,
+                        isWordVisible: true
+                    });
+                    this.clearAllTimers();
+                    this.autoNextTimer = setTimeout(() => {
+                        if (!this.data.currentWord) return;
+                        this.nextWord();
+                    }, 600);
+                } else {
+                    this.setData({ timeLeft: this.data.timeLeft - 1 });
+                }
+            }, 1000);
+        }
+    },
+
+    startHintTimer: function () {
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        if (!this.data.settings.enableKeyboardHint) return;
+
+        this.hintTimer = setTimeout(() => {
+            const { currentWord, inputValue, isCorrect, isError } = this.data;
+            if (!currentWord || isCorrect || isError) return;
+
+            if (inputValue.length < currentWord.word.length) {
+                const nextChar = currentWord.word[inputValue.length];
+                if (/^[a-zA-Z]$/.test(nextChar)) {
+                    this.setData({ hintChar: nextChar.toLowerCase() });
+                }
+            }
+        }, 3000); // 3 seconds delay for hint
+    },
+
+    clearAllTimers: function () {
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        if (this.flashTimer) clearTimeout(this.flashTimer);
+        if (this.blinkTimer) clearInterval(this.blinkTimer);
+        if (this.quizTimer) clearInterval(this.quizTimer);
+        if (this.errorTimeout) clearTimeout(this.errorTimeout);
+        if (this.autoNextTimer) clearTimeout(this.autoNextTimer);
+    },
+
+    // --- Input & Keyboard Handling ---
+
+    openKeyboard: function () {
+        if (this.data.isKeyboardOpen) return;
+        const estimatedHeight = this.data.virtualKeyboardHeight || 272;
+        this.setData({
+            isKeyboardOpen: true,
+            keyboardOffsetBottom: this.data.tabBarHeight + estimatedHeight
+        });
+
+        if (!wx.getStorageSync('mistake_guide_shown')) {
+            wx.setStorageSync('mistake_guide_shown', true);
+            this.setData({ showMistakeGuide: true });
+        }
+
+        wx.nextTick(() => {
+            const vk = this.selectComponent('#vk');
+            if (!vk) return;
+
+            wx.createSelectorQuery()
+                .in(vk)
+                .select('.keyboard-container')
+                .boundingClientRect((rect) => {
+                    if (!rect || !rect.height) return;
+                    const vkHeight = rect.height;
+                    const keyboardOffsetBottom = this.data.tabBarHeight + vkHeight;
+                    const compactOnKeyboard = this.shouldUseCompactKeyboardLayout(vkHeight);
+                    this.setData({
+                        virtualKeyboardHeight: vkHeight,
+                        keyboardOffsetBottom,
+                        compactOnKeyboard
+                    });
+                })
+                .exec();
+        });
+    },
+
+    closeKeyboard: function () {
+        this.setData({ isKeyboardOpen: false, showMistakeGuide: false, compactOnKeyboard: false });
+    },
+
+    shouldUseCompactKeyboardLayout: function (vkHeight) {
+        let sys = null;
+        try { sys = wx.getSystemInfoSync() || null; } catch (e) { }
+        const windowHeight = (sys && sys.windowHeight) || 0;
+        if (!windowHeight) return false;
+        const topInset = (Number(this.data.statusBarHeight) || 0) + (Number(this.data.navBarHeight) || 0) + 10;
+        const tabBarHeight = Number(this.data.tabBarHeight) || 58;
+        const keyboardHeight = Number(vkHeight) || Number(this.data.virtualKeyboardHeight) || 272;
+        const safeBottom = (sys && sys.safeArea && typeof sys.screenHeight === 'number' && typeof sys.safeArea.bottom === 'number')
+            ? Math.max(0, sys.screenHeight - sys.safeArea.bottom)
+            : 0;
+        const inputAreaEstimate = 92;
+        const available = windowHeight - topInset - tabBarHeight - keyboardHeight - safeBottom - inputAreaEstimate;
+        return available < 330;
+    },
+
+    dismissMistakeGuide: function () {
+        if (!this.data.showMistakeGuide) return;
+        this.setData({ showMistakeGuide: false });
+    },
+
+    onVirtualKeyPress: function (e) {
+        const key = e.detail.key;
+        this.processInput(this.data.inputValue + key);
+    },
+
+    onVirtualDelete: function () {
+        const { inputValue, isCorrect } = this.data;
+        if (inputValue.length > 0 && !isCorrect) {
+            this.processInput(inputValue.slice(0, -1));
+        }
+    },
+
+    onInput: function (e) {
+        const val = e.detail.value;
+        this.processInput(val);
+    },
+
+    processInput: function (val) {
+        const { currentWord, isCorrect, settings } = this.data;
+        if (isCorrect || !currentWord) return;
+
+        const targetWord = currentWord.word;
+
+        // Logic depends on Auto Check setting
+        if (settings.autoCheckSpelling) {
+            // Strict Mode
+            if (val.length > targetWord.length) {
+                this.triggerMistakeLogic();
+                this.triggerError();
+                return; // Reject input
+            }
+
+            const isMatch = targetWord.toLowerCase().startsWith(val.toLowerCase());
+            if (!isMatch) {
+                this.triggerMistakeLogic();
+                this.triggerError();
+                // In Strict Mode, we don't update inputValue on mismatch
+                return;
+            }
+
+            // Accept input
+            this.setData({ inputValue: val, hintChar: '' });
+            this.startHintTimer();
+
+            if (val.length === targetWord.length) {
+                this.checkAnswer();
+            }
+        } else {
+            // Loose Mode
+            // If showing hint (slots), limit length to target word
+            if (settings.showHint && val.length > targetWord.length) {
+                return;
+            }
+
+            this.setData({ inputValue: val, hintChar: '' });
+            this.startHintTimer();
+        }
+    },
+
+    triggerMistakeLogic: function () {
+        this.wrongAttempts += 1;
+        // Auto Check Mistake Logic: 2 errors trigger mistake recording
+        if (this.wrongAttempts >= 2) {
+            if (this.data.currentWord) {
+                saveMistake(this.data.currentWord);
+            }
+            recordWordResult(this.data.currentWord.id, false);
+        }
+    },
+
+    triggerError: function () {
+        this.setData({ isError: true });
+        wx.vibrateShort({ type: 'heavy' });
+
+        if (this.errorTimeout) clearTimeout(this.errorTimeout);
+        this.errorTimeout = setTimeout(() => {
+            this.setData({ isError: false });
+        }, 400);
+    },
+
+    checkAnswer: function () {
+        const { inputValue, currentWord, isCorrect, settings } = this.data;
+        if (isCorrect) {
+            this.nextWord();
+            return;
+        }
+
+        if (!currentWord) return;
+
+        const correctWord = currentWord.word.trim();
+        const input = inputValue.trim();
+        // Default to strict comparison unless configured otherwise (web app does toLowerCase)
+        const isMatch = input.toLowerCase() === correctWord.toLowerCase();
+
+        if (isMatch) {
+            // Correct
+            this.setData({
+                isCorrect: true,
+                isError: false,
+                showAnswer: true,
+                isWordVisible: true // Always show word when correct
+            });
+            this.clearAllTimers();
+
+            // Record success
+            recordWordResult(currentWord.id, true);
+
+            // Delay to show success state before moving to next
+            setTimeout(() => {
+                this.setData({ lastCorrectWord: currentWord });
+                this.nextWord();
+            }, 800);
+        } else {
+            // Incorrect (Manual Check)
+            this.triggerMistakeLogic(); // Increment attempts
+            if (this.data.currentWord) {
+                saveMistake(this.data.currentWord);
+            }
+            recordWordResult(currentWord.id, false); // Record mistake immediately on manual check failure
+            this.triggerError();
+        }
+    },
+
+    toggleShowAnswer: function () {
+        const nextShowAnswer = !this.data.showAnswer;
+        this.setData({
+            showAnswer: nextShowAnswer,
+            isWordVisible: nextShowAnswer ? true : this.data.isWordVisible
+        });
+
+        if (nextShowAnswer) {
+            this.clearAllTimers();
+            return;
+        }
+
+        this.clearAllTimers();
+        this.startModeLogic();
+        this.startHintTimer();
+    },
+
+    nextWord: function () {
+        if (!this.data.hasInteracted) {
+            this.setData({ hasInteracted: true });
+        }
+
+        let nextIndex = this.data.currentIndex + 1;
+
+        if (nextIndex >= this.data.words.length) {
+            if (this.data.hasMore) {
+                this.fetchWords(); // Fetch next batch
+            } else {
+                // Loop back to start or show finished
+                nextIndex = 0;
+                wx.showToast({ title: '已学完本轮', icon: 'none' });
+            }
+        }
+
+        this.setCurrentWord(nextIndex);
+    },
+
+    prevWord: function () {
+        const prevIndex = this.data.currentIndex - 1;
+        if (prevIndex >= 0) {
+            this.setCurrentWord(prevIndex);
+        } else {
+            wx.showToast({ title: 'This is the first word', icon: 'none' });
+        }
+    },
+
+    // --- Audio ---
+    playWordAudio: function () {
+        if (!this.data.currentWord) return;
+        if (this.autoPronounceTimer) clearTimeout(this.autoPronounceTimer);
+        this._autoPronounceToken = null;
+        this.speakSequence(this.data.currentWord, true);
+    },
+
+    scheduleAutoPronounce: function (word) {
+        if (this.autoPronounceTimer) clearTimeout(this.autoPronounceTimer);
+        const token = `${Date.now()}-${Math.random()}`;
+        this._autoPronounceToken = token;
+        this.autoPronounceTimer = setTimeout(() => {
+            if (this._autoPronounceToken !== token) return;
+            if (!this.data.settings.autoPronounce) return;
+            const current = this.data.currentWord;
+            if (!current) return;
+            if (word && current.word !== word.word) return;
+            this.speakSequence(current);
+        }, 350);
+    },
+
+    speakSequence: async function (word, force = false) {
+        if (!word) return;
+        if (!this.data.settings.autoPronounce && !force) return;
+        if (!this.audioCtx) return;
+
+        const token = `${Date.now()}-${Math.random()}`;
+        this._speakToken = token;
+        this.audioCtx.stop();
+
+        await this.playWithFallback({
+            text: word.word,
+            isChinese: false,
+            token
+        });
+
+        if (this._speakToken !== token) return;
+
+        if (this.data.settings.pronounceMeaning) {
+            await new Promise(r => setTimeout(r, 300));
+            if (this._speakToken !== token) return;
+
+            await this.playWithFallback({
+                text: word.meaning,
+                isChinese: true,
+                wordForOss: word.word,
+                categoryForOss: this.data.category,
+                token
+            });
+        }
+    },
+
+    onAddToMistakes: function () {
+        const { currentWord } = this.data;
+        if (currentWord) {
+            saveMistake(currentWord);
+            wx.showToast({ title: '已加入错题本', icon: 'success' });
+        }
+        this.dismissMistakeGuide();
+    },
+
+    // --- Settings ---
+    openSettings: function () {
+        this.setData({ showSettingsModal: true, isKeyboardOpen: false });
+    },
+
+    closeSettings: function () {
+        this.setData({ showSettingsModal: false });
+    },
+
+    updateSetting: function (e) {
+        const { key, value } = e.currentTarget.dataset;
+        let val = value;
+        // Handle slider values
+        if (e.type === 'change' && e.detail && e.detail.value !== undefined) {
+            val = e.detail.value;
+        }
+
+        const settings = { ...this.data.settings, [key]: val };
+        this.setData({ settings });
+        wx.setStorageSync('settings', settings);
+
+        // Restart logic if needed
+        this.clearAllTimers();
+        this.startModeLogic();
+    },
+
+    toggleSetting: function (e) {
+        const key = e.currentTarget.dataset.key;
+        const settings = { ...this.data.settings, [key]: !this.data.settings[key] };
+        this.setData({ settings });
+        wx.setStorageSync('settings', settings);
+
+        // Restart logic if needed
+        this.clearAllTimers();
+        this.startModeLogic();
+        this.startHintTimer();
+    },
+
+    preventBubble: function () {
+        // Do nothing, just stop propagation
+    },
+
+    // --- Other ---
+    copyWord: function () {
+        if (this.data.currentWord) {
+            wx.setClipboardData({
+                data: this.data.currentWord.word,
+                success: () => {
+                    wx.showToast({ title: '已复制', icon: 'success' });
+                }
+            });
+        }
+    },
+
+    shareWordCard: function () {
+        const word = this.data.currentWord;
+        if (!word) return;
+
+        if (!wx.canIUse || !wx.canIUse('showShareImageMenu')) {
+            wx.showToast({ title: '当前版本不支持卡片分享', icon: 'none' });
+            return;
+        }
+
+        this.generateWordCardImage(word)
+            .then((tempFilePath) => {
+                wx.showShareImageMenu({
+                    path: tempFilePath,
+                    needShowEntrance: true,
+                    entrancePath: '/pages/index/index'
+                });
+            })
+            .catch(() => {
+                wx.showToast({ title: '生成分享图失败', icon: 'none' });
+            });
+    },
+
+    generateWordCardImage: function (word) {
+        return new Promise((resolve, reject) => {
+            const query = wx.createSelectorQuery();
+            query.select('#shareCanvas')
+                .fields({ node: true, size: true })
+                .exec((res) => {
+                    if (!res || !res[0] || !res[0].node) {
+                        reject(new Error('canvas not found'));
+                        return;
+                    }
+
+                    const canvas = res[0].node;
+                    const ctx = canvas.getContext('2d');
+                    const dpr = wx.getSystemInfoSync().pixelRatio || 1;
+
+                    const OUTPUT_WIDTH = 900;
+                    const OUTPUT_HEIGHT = 1260;
+
+                    canvas.width = OUTPUT_WIDTH * dpr;
+                    canvas.height = OUTPUT_HEIGHT * dpr;
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+                    const roundRectPath = (x, y, w, h, r) => {
+                        const rr = Math.min(r, w / 2, h / 2);
+                        ctx.beginPath();
+                        ctx.moveTo(x + rr, y);
+                        ctx.arcTo(x + w, y, x + w, y + h, rr);
+                        ctx.arcTo(x + w, y + h, x, y + h, rr);
+                        ctx.arcTo(x, y + h, x, y, rr);
+                        ctx.arcTo(x, y, x + w, y, rr);
+                        ctx.closePath();
+                    };
+
+                    const wrapText = (text, maxWidth, font) => {
+                        const normalized = (text || '').replace(/\s+/g, ' ').trim();
+                        if (!normalized) return [];
+                        ctx.font = font;
+                        const lines = [];
+                        let line = '';
+                        for (const ch of normalized.split('')) {
+                            const next = line + ch;
+                            if (line && ctx.measureText(next).width > maxWidth) {
+                                lines.push(line);
+                                line = ch;
+                            } else {
+                                line = next;
+                            }
+                        }
+                        if (line) lines.push(line);
+                        return lines;
+                    };
+
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.fillRect(0, 0, OUTPUT_WIDTH, OUTPUT_HEIGHT);
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.font = '800 44px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'alphabetic';
+                    ctx.fillText('阿班单词', 70, 96);
+
+                    const cardX = 70;
+                    const cardY = 160;
+                    const cardW = OUTPUT_WIDTH - 140;
+                    const cardH = 760;
+
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(15, 23, 42, 0.10)';
+                    ctx.shadowBlur = 30;
+                    ctx.shadowOffsetY = 10;
+                    ctx.fillStyle = '#ffffff';
+                    roundRectPath(cardX, cardY, cardW, cardH, 36);
+                    ctx.fill();
+                    ctx.restore();
+
+                    const wordText = (word.word || '').trim() || 'English';
+                    ctx.fillStyle = '#0f172a';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const maxWordWidth = cardW - 120;
+                    let wordFontSize = 96;
+                    ctx.font = `900 ${wordFontSize}px sans-serif`;
+                    while (ctx.measureText(wordText).width > maxWordWidth && wordFontSize > 54) {
+                        wordFontSize -= 4;
+                        ctx.font = `900 ${wordFontSize}px sans-serif`;
+                    }
+
+                    const centerX = cardX + cardW / 2;
+                    const centerY = cardY + cardH / 2 - 40;
+                    ctx.fillText(wordText, centerX, centerY);
+
+                    const meaningText = (word.meaning || '').trim();
+                    if (meaningText) {
+                        const fontSize = 38;
+                        const font = `600 ${fontSize}px sans-serif`;
+                        const maxWidth = cardW - 120;
+                        const lines = wrapText(meaningText, maxWidth, font).slice(0, 3);
+                        ctx.fillStyle = '#475569';
+                        ctx.font = font;
+                        const lineHeight = 54;
+                        const total = lines.length * lineHeight;
+                        const startY = centerY + 120 - total / 2 + lineHeight / 2;
+                        lines.forEach((l, idx) => {
+                            ctx.fillText(l, centerX, startY + idx * lineHeight);
+                        });
+                    }
+
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '600 28px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'alphabetic';
+                    ctx.fillText('把单词变成可坚持的习惯', centerX, cardY + cardH + 90);
+
+                    wx.canvasToTempFilePath({
+                        canvas,
+                        destWidth: OUTPUT_WIDTH,
+                        destHeight: OUTPUT_HEIGHT,
+                        fileType: 'png',
+                        success: (out) => resolve(out.tempFilePath),
+                        fail: (e) => reject(e)
+                    });
+                });
+        });
+    },
+
+    goToWallpaper: function () {
+        // Store current word data for wallpaper page
+        if (this.data.currentWord) {
+            wx.setStorageSync('wallpaper_draft', this.data.currentWord);
+        }
+        wx.switchTab({
+            url: '/pages/wallpaper/index'
+        });
+    },
+
+    focusInput: function () {
+        this.openKeyboard();
+    },
+
+    onShareAppMessage: function () {
+        const word = this.data.currentWord || {};
+        const imageUrl = this.data.shareImageUrl || '';
+        const { checkedInToday, checkInCount } = this.data;
+        const title = checkedInToday ? `我已经打卡${checkInCount}天啦，一起来学单词吧` : '一起来打卡学单词吧';
+        return {
+            title,
+            path: `/pages/index/index`,
+            imageUrl
+        };
+    },
+
+    onShareTimeline: function () {
+        const word = this.data.currentWord || {};
+        const imageUrl = this.data.shareImageUrl || '';
+        const { checkedInToday, checkInCount } = this.data;
+        const title = checkedInToday ? `我已经打卡${checkInCount}天啦，一起来学单词吧` : '一起来打卡学单词吧';
+        return {
+            title,
+            query: '',
+            imageUrl
+        };
+    }
+});

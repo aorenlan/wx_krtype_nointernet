@@ -2,6 +2,14 @@ import { KEYBOARD_LAYOUT } from '../../constants/index';
 
 Component({
   properties: {
+    theme: {
+      type: String,
+      value: 'dark'
+    },
+    variant: {
+      type: String,
+      value: ''
+    },
     nextKeyToPress: {
       type: String,
       value: ''

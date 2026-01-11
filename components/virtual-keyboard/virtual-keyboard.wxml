@@ -1,0 +1,118 @@
+<view class="keyboard-wrapper {{isOpen ? 'visible' : ''}} {{isDarkMode ? 'dark' : ''}}">
+  <view class="keyboard-container">
+    <!-- Handle Bar & Header -->
+    <view class="header-bar">
+      <!-- Left Slot (Optional) -->
+      <view class="header-left">
+        <view class="vk-help-btn {{helpDisabled ? 'disabled' : ''}}" wx:if="{{showHelpBtn}}" bindtap="onHelp">
+          <text class="vk-help-icon">◎</text>
+          <text>Help {{helpCount > 0 ? '(' + helpCount + ')' : ''}}</text>
+        </view>
+        <view class="hint-btn" wx:elif="{{showHintBtn}}" bindtap="onToggleAnswer">
+          <image src="{{iconEye}}" class="icon-eye" />
+          <text wx:if="{{isAnswerShown}}">隐藏提示</text>
+          <text wx:else>查看提示</text>
+        </view>
+      </view>
+
+      <!-- Center Handle -->
+      <view class="handle-area" bindtap="onClose">
+        <view class="handle"></view>
+      </view>
+
+      <!-- Right Actions (Mistake Btn) -->
+      <view class="header-right">
+        <view class="vk-icon-btn vk-icon-skip {{skipDisabled ? 'disabled' : ''}}" wx:if="{{showSkipBtn}}" bindtap="onSkip">
+          <image class="vk-icon-svg" src="/assets/icons/skip.svg" mode="aspectFit" />
+        </view>
+        <view class="vk-icon-btn vk-icon-danmaku" wx:if="{{showDanmakuBtn}}" bindtap="onDanmaku">
+          <image class="vk-icon-svg" src="/assets/icons/danmaku.svg" mode="aspectFit" />
+        </view>
+        <view class="mistake-btn" wx:if="{{showMistakeBtn}}" bindtap="onAddToMistakes">
+          <image src="/assets/tabbar/re_错题本.png" class="icon-mistake" mode="aspectFit" />
+        </view>
+        <view class="mistake-guide" wx:if="{{showMistakeGuide}}" bindtap="onDismissGuide">
+          <view class="mistake-guide-arrow"></view>
+          <text>加入错题本</text>
+          <text class="mistake-guide-close">✕</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="vk-danmaku-bar" wx:if="{{danmakuOpen}}">
+      <scroll-view class="vk-danmaku-scroll" scroll-x show-scrollbar="{{false}}">
+        <view class="vk-danmaku-row">
+          <block wx:for="{{danmakuPresets}}" wx:key="*this">
+            <view class="vk-danmaku-pill" bindtap="onDanmakuPreset" data-text="{{item}}">
+              <text class="vk-danmaku-pill-text">{{item}}</text>
+            </view>
+          </block>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- Keyboard Body -->
+    <view class="keyboard-body">
+      <!-- Row 1 -->
+      <view class="row">
+        <block wx:for="{{rows[0]}}" wx:key="*this">
+          <view 
+            class="key {{item === hintKey ? 'hint-pulse' : ''}}" 
+            hover-class="key-active" 
+            hover-stay-time="100"
+            bindtap="onKeyPress" 
+            data-key="{{item}}"
+          >
+            {{item}}
+          </view>
+        </block>
+      </view>
+
+      <!-- Row 2 -->
+      <view class="row px-4">
+        <block wx:for="{{rows[1]}}" wx:key="*this">
+          <view 
+            class="key {{item === hintKey ? 'hint-pulse' : ''}}" 
+            hover-class="key-active" 
+            hover-stay-time="100"
+            bindtap="onKeyPress" 
+            data-key="{{item}}"
+          >
+            {{item}}
+          </view>
+        </block>
+      </view>
+
+      <!-- Row 3 -->
+      <view class="row">
+        <view class="spacer"></view>
+        <block wx:for="{{rows[2]}}" wx:key="*this">
+          <view 
+            class="key {{item === hintKey ? 'hint-pulse' : ''}}" 
+            hover-class="key-active" 
+            hover-stay-time="100"
+            bindtap="onKeyPress" 
+            data-key="{{item}}"
+          >
+            {{item}}
+          </view>
+        </block>
+        <view class="key action-key delete-key" hover-class="key-active" bindtap="onDelete">
+          <text>⌫</text>
+        </view>
+      </view>
+
+      <!-- Row 4 (Footer) -->
+      <view class="row footer-row">
+        <view class="key action-key hide-key" hover-class="key-active" bindtap="onClose">
+          <text>收起</text>
+        </view>
+        <view class="key action-key submit-key" hover-class="submit-active" bindtap="onSubmit">
+          <text>确认</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="safe-area"></view>
+  </view>
+</view>

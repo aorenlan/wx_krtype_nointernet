@@ -1,0 +1,305 @@
+<custom-nav subtitle="{{displayCategory}}" progress="{{currentIndex + 1}} / {{words.length}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}"></custom-nav>
+
+<view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>Loading...</text>
+  </view>
+
+  <!-- Main Card -->
+  <view class="card-container {{isKeyboardOpen ? 'keyboard-open' : ''}}" wx:elif="{{currentWord}}">
+    
+    <view class="card-stack {{prevWordInfo ? 'has-prev' : ''}}">
+      <!-- Previous Word Indicator (Ticket Style) -->
+      <view class="prev-word-ticket-wrap {{prevWordInfo ? 'show' : ''}}" wx:if="{{prevWordInfo}}">
+          <view class="prev-tag {{prevWordInfo.isCorrect ? 'correct' : 'wrong'}}">PREV</view>
+          <view class="prev-content">
+              <text class="prev-kr">{{prevWordInfo.word}}</text>
+              <text class="prev-cn">{{prevWordInfo.meaning}}</text>
+          </view>
+      </view>
+
+      <view class="card {{isError ? 'shake' : ''}}">
+        <!-- Card Top: Mode & Actions -->
+        <view class="card-top-bar">
+            <text class="mode-badge">Practice</text>
+            <view class="card-actions">
+                <view class="action-icon" bindtap="playWordAudio">
+                    <image src="/assets/icons/volume.svg" style="width: 20px; height: 20px;" mode="aspectFit" />
+                </view>
+                <view class="action-icon" bindtap="removeCurrentFromMistakes" wx:if="{{settings.category === 'Mistakes (错题本)'}}">
+                    <text style="font-size: 12px; color: #ef4444;">移出</text>
+                </view>
+            </view>
+        </view>
+
+        <!-- Card Body -->
+        <view class="card-body">
+            <view class="nav-arrow left" bindtap="prevWord">
+                <text>‹</text>
+            </view>
+            
+            <view class="word-content">
+                <!-- Meaning (Chinese) -->
+                <view class="meaning-container {{settings.cardShowMeaning ? '' : 'keep-space-hidden'}}">
+                  <text class="meaning {{meaningIsSmall ? 'meaning-small' : ''}}">{{currentWord.meaning}}</text>
+                </view>
+
+                <!-- Korean Word Slots -->
+                <view id="nvLineMeasure" class="nv-text-line nv-text-line-measure">
+                  <block wx:for="{{measureChars}}" wx:key="index">
+                    <text class="nv-char text-gray">{{item}}</text>
+                  </block>
+                </view>
+
+                <view wx:if="{{useLegacyWrapMode}}" class="nv-legacy-line {{(settings.cardShowWord || typingState.userInput.length > 0 || helpReveal) ? '' : 'keep-space-hidden'}}">
+                  <block wx:if="{{isWordVisible || typingState.userInput.length > 0 || helpReveal}}">
+                    <block wx:for="{{legacyDisplayChars}}" wx:key="index">
+                      <text
+                        class="nv-char legacy-char {{item.isCenter ? 'legacy-center' : ''}} {{item.status === 'done' ? 'text-green' : (item.status === 'active' ? 'text-yellow' : 'text-gray')}}"
+                        style="{{item.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + item.progress + '%, #94a3b8 ' + item.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
+                      >{{item.char}}</text>
+                    </block>
+                  </block>
+                </view>
+
+                <view wx:else class="nv-text-line {{(settings.cardShowWord || typingState.userInput.length > 0 || helpReveal) ? '' : 'keep-space-hidden'}}">
+                  <block wx:if="{{isWordVisible || typingState.userInput.length > 0 || helpReveal}}">
+                    <block wx:for="{{displayChars}}" wx:key="index">
+                      <text
+                        class="nv-char {{item.status === 'done' ? 'text-green' : (item.status === 'active' ? 'text-yellow' : 'text-gray')}}"
+                        style="{{item.status === 'active' ? 'background: linear-gradient(to right, #34d399 ' + item.progress + '%, #94a3b8 ' + item.progress + '%); -webkit-background-clip: text; color: transparent;' : ''}}"
+                      >{{item.char}}</text>
+                    </block>
+                  </block>
+                </view>
+            </view>
+
+            <view class="nav-arrow right" bindtap="nextWord">
+                <text>›</text>
+            </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- Empty State -->
+  <view class="empty-state" wx:else>
+      <text>No words found.</text>
+      <button bindtap="loadWords" class="retry-btn">Retry</button>
+  </view>
+
+  <!-- Keyboard -->
+  <view class="keyboard-wrapper {{isKeyboardOpen ? 'open' : 'closed'}}">
+      <view class="keyboard-header-row">
+        <view class="keyboard-header-left">
+          <view class="keyboard-icon-btn keyboard-help-btn" bindtap="onHelpReveal">
+            <text class="keyboard-help-text">Help</text>
+          </view>
+          <block wx:if="{{settings.category === 'Mistakes (错题本)'}}">
+            <view class="keyboard-mistake-pill">
+              <image src="/assets/tabbar/re_错题本.png" class="keyboard-action-icon" mode="aspectFit" />
+              <text class="keyboard-pill-text">{{currentIndex + 1}}/{{words.length}}</text>
+            </view>
+          </block>
+        </view>
+
+        <view class="keyboard-header-center" bindtap="toggleKeyboard">
+          <view class="keyboard-handle-bar"></view>
+        </view>
+
+        <view class="keyboard-header-right">
+          <block wx:if="{{settings.category !== 'Mistakes (错题本)'}}">
+            <view class="keyboard-icon-btn" bindtap="addToMistakes">
+              <image src="/assets/tabbar/re_错题本.png" class="keyboard-action-icon" mode="aspectFit" />
+            </view>
+          </block>
+          <view class="keyboard-icon-btn keyboard-close-btn" bindtap="toggleKeyboard">
+            <text class="keyboard-close-text">⌄</text>
+          </view>
+        </view>
+      </view>
+
+      <keyboard 
+        id="keyboard"
+        theme="light"
+        nextKeyToPress="{{typingState.nextKey === 'SPACE' ? 'SPACE' : (settings.enableKeyboardHint ? (typingState.nextKey || '') : '')}}"
+        isShiftActive="{{typingState.isShiftActive}}"
+        visualMode="{{settings.keyboardVisualMode}}"
+        bind:keyPress="onKeyPress"
+      />
+  </view>
+
+  <view class="keyboard-expand-fab" wx:if="{{!isKeyboardOpen}}" bindtap="toggleKeyboard">
+    <text class="keyboard-expand-icon">⌃</text>
+  </view>
+
+  <!-- Settings Modal -->
+  <view class="modal-overlay {{showSettingsModal ? 'show' : ''}}" bindtap="closeSettings">
+    <view class="modal-content" catchtap="preventBubble">
+      <view class="modal-header">
+        <text class="modal-title">设置</text>
+      </view>
+      
+      <scroll-view scroll-y class="modal-body">
+        <view class="setting-section">
+          <view class="section-title">词书</view>
+          <picker mode="selector" range="{{categories}}" value="{{categoryPickerIndex}}" bindchange="onCategoryPickerChange">
+            <view class="category-item picker-item">
+              <text class="picker-label">选择词书</text>
+              <view class="picker-right">
+                <text class="picker-value">{{settings.category}}</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </view>
+          </picker>
+        </view>
+
+        <view class="setting-section" wx:if="{{showTopikSub}}">
+          <view class="section-title">选择二级分类</view>
+          <picker mode="selector" range="{{topikLevels}}" value="{{topikLevelPickerIndex}}" bindchange="onTopikLevelPickerChange">
+            <view class="category-item picker-item">
+              <text class="picker-label">TOPIK 等级</text>
+              <view class="picker-right">
+                <text class="picker-value">TOPIK {{settings.topikLevel}}</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </view>
+          </picker>
+
+          <view class="topik-session" wx:if="{{topikSessions.length}}">
+            <text class="picker-label">Session</text>
+            <scroll-view scroll-x class="topik-session-scroll" show-scrollbar="{{false}}">
+              <view class="topik-session-row">
+                <block wx:for="{{topikSessions}}" wx:key="*this">
+                  <view class="topik-session-chip {{settings.topikSession === item ? 'active' : ''}}" bindtap="selectTopikSession" data-session="{{item}}">
+                    <text>{{item}}</text>
+                  </view>
+                </block>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+
+        <view class="setting-section" wx:if="{{showYonseiSub}}">
+          <view class="section-title">选择二级分类</view>
+          <picker mode="selector" range="{{yonseiLessonOptions}}" value="{{yonseiLessonPickerIndex}}" bindchange="onYonseiLessonPickerChange">
+            <view class="category-item picker-item">
+              <text class="picker-label">课次 (lesson_id)</text>
+              <view class="picker-right">
+                <text class="picker-value">{{yonseiLessonDisplay}}</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </view>
+          </picker>
+        </view>
+
+        <view class="setting-section">
+          <text class="section-title">显示模式</text>
+          <view class="mode-toggles">
+            <view class="mode-btn {{settings.practiceMode === 'study' ? 'active' : ''}}" bindtap="updateSetting" data-key="practiceMode" data-value="study">
+              <text>常驻显示</text>
+              <text class="mode-btn-sub">Always Visible</text>
+            </view>
+            <view class="mode-btn {{settings.practiceMode === 'flash' ? 'active' : ''}}" bindtap="updateSetting" data-key="practiceMode" data-value="flash">
+              <text>闪现模式</text>
+              <text class="mode-btn-sub">Disappear</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="setting-section">
+          <view class="setting-row">
+            <text>重复练习次数</text>
+            <text class="setting-value">{{settings.repeatCount}}</text>
+          </view>
+          <slider min="1" max="10" step="1" value="{{settings.repeatCount}}" bindchange="updateSetting" data-key="repeatCount" activeColor="#fad0c4" block-size="20"/>
+        </view>
+
+        <view class="setting-section">
+          <text class="section-title">键盘显示</text>
+          <view class="mode-toggles">
+            <view class="mode-btn {{settings.keyboardVisualMode === 'korean' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="korean">
+              <text>韩文在上</text>
+              <text class="mode-btn-sub">KR / EN</text>
+            </view>
+            <view class="mode-btn {{settings.keyboardVisualMode === 'english' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="english">
+              <text>英文在上</text>
+              <text class="mode-btn-sub">EN / KR</text>
+            </view>
+            <view class="mode-btn {{settings.keyboardVisualMode === 'korean_hide_english' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="korean_hide_english">
+              <text>只显示韩文</text>
+              <text class="mode-btn-sub">KR Only</text>
+            </view>
+            <view class="mode-btn {{settings.keyboardVisualMode === 'english_only' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="english_only">
+              <text>只显示英文</text>
+              <text class="mode-btn-sub">EN Only</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="setting-section">
+          <view class="setting-row">
+            <text>自动倒计时</text>
+            <switch checked="{{settings.enableTimer}}" color="#fad0c4" bindchange="toggleSetting" data-key="enableTimer"/>
+          </view>
+          <view wx:if="{{settings.enableTimer}}" class="slider-container">
+            <view class="setting-row">
+              <text class="sub-label">倒计时时长</text>
+              <text class="setting-value">{{settings.timerDuration}}秒</text>
+            </view>
+            <slider min="3" max="30" step="1" value="{{settings.timerDuration}}" bindchange="updateSetting" data-key="timerDuration" activeColor="#fad0c4" block-size="20"/>
+          </view>
+        </view>
+
+        <view class="setting-section">
+          <text class="section-title">卡片内容</text>
+          <view class="content-toggles">
+            <view class="toggle-btn {{settings.cardShowWord ? 'active' : ''}}" bindtap="toggleSetting" data-key="cardShowWord">
+              <text>显示单词</text>
+              <view class="toggle-indicator"></view>
+            </view>
+            <view class="toggle-btn {{settings.cardShowMeaning ? 'active' : ''}}" bindtap="toggleSetting" data-key="cardShowMeaning">
+              <text>显示释义</text>
+              <view class="toggle-indicator"></view>
+            </view>
+          </view>
+        </view>
+
+        <view class="setting-section" wx:if="{{settings.practiceMode === 'flash'}}">
+          <view class="setting-row">
+            <text>闪现时长</text>
+            <text class="setting-value">{{settings.flashDuration}}ms</text>
+          </view>
+          <slider min="200" max="3000" step="100" value="{{settings.flashDuration}}" bindchange="updateSetting" data-key="flashDuration" activeColor="#fad0c4" block-size="20"/>
+        </view>
+
+        <view class="setting-section">
+          <text class="section-title">功能选项</text>
+
+          <view class="setting-item" bindtap="toggleSetting" data-key="autoCheckSpelling">
+            <text>自动检查拼写</text>
+            <switch checked="{{settings.autoCheckSpelling}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoCheckSpelling"/>
+          </view>
+
+          <view class="setting-item" bindtap="toggleSetting" data-key="enableKeyboardHint">
+            <text>键盘提示</text>
+            <switch checked="{{settings.enableKeyboardHint}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="enableKeyboardHint"/>
+          </view>
+
+          <view class="setting-item" bindtap="toggleSetting" data-key="autoPronounce">
+            <text>自动朗读单词</text>
+            <switch checked="{{settings.autoPronounce}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPronounce"/>
+          </view>
+
+          <view class="setting-item" bindtap="toggleSetting" data-key="pronounceMeaning">
+            <text>朗读释义</text>
+            <switch checked="{{settings.pronounceMeaning}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="pronounceMeaning"/>
+          </view>
+
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+</view>

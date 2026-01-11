@@ -1,0 +1,7 @@
+<view class="tab-bar {{dark ? 'dark' : ''}}" style="{{hidden ? 'display: none;' : ''}}">
+  <view class="tab-bar-border" style="{{dark ? 'background-color: rgba(255,255,255,0.1);' : ''}}"></view>
+  <view wx:for="{{list}}" wx:key="index" class="tab-bar-item" data-path="{{item.pagePath}}" data-index="{{index}}" bindtap="switchTab">
+    <image class="tab-icon" src="{{selected === index ? item.selectedIconPath : item.iconPath}}" mode="aspectFit"></image>
+    <view class="tab-label" style="color: {{selected === index ? selectedColor : (dark ? '#94a3b8' : color)}}">{{item.text}}</view>
+  </view>
+</view>

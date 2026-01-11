@@ -67,16 +67,36 @@ Page({
 
     // Contact Logic
     showContactModal: false,
-    showContactToast: false
+    showContactToast: false,
+
+    // New Version Logic
+    showNvPopup: false,
+    nvPopupMinimized: false,
+    hasSeenNvPopup: false
   },
 
   onLoad() {
-    const sysInfo = wx.getSystemInfoSync();
-    const rpxToPx = sysInfo.windowWidth / 750; // Calculate ratio
+    // Check if user has already opted in to new version
+    const useNewVersion = wx.getStorageSync('useNewVersion');
+    if (useNewVersion) {
+      wx.switchTab({ url: '/pages/nv-practice/index' });
+      return;
+    }
+
+    const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    const rpxToPx = windowInfo.windowWidth / 750; // Calculate ratio
     
     const now = Date.now();
     let firstInstallTime = wx.getStorageSync('firstInstallTime');
     
+    const nvPopupMinimized = !!wx.getStorageSync('nvPopupMinimized');
+    const hasSeenNvPopup = !!wx.getStorageSync('hasSeenNvPopup_v1');
+    const showNvPopup = !hasSeenNvPopup && !nvPopupMinimized;
+    if (showNvPopup) {
+      wx.setStorageSync('hasSeenNvPopup_v1', true);
+    }
+    this.setData({ showNvPopup, nvPopupMinimized, hasSeenNvPopup: hasSeenNvPopup || showNvPopup });
+
     // Load Auto Read Setting
     const autoRead = wx.getStorageSync('autoRead') || false;
     // Load Text Display Mode (Default: false -> Scroll Mode)
@@ -149,7 +169,7 @@ Page({
 
     // Precise Navbar Calculation
     const menuButton = wx.getMenuButtonBoundingClientRect();
-    const statusBarHeight = sysInfo.statusBarHeight;
+    const statusBarHeight = windowInfo.statusBarHeight || 20;
     
     // Default to standard if menuButton is missing
     let navBarHeight = 44;
@@ -162,16 +182,17 @@ Page({
     }
     
     const totalNavHeight = navBarTop + navBarHeight;
+    const legacyNavExtraTop = 18;
     
     this.setData({
       safeArea: {
-        top: totalNavHeight, // Main content starts after nav bar
+        top: totalNavHeight + legacyNavExtraTop,
         bottom: sysInfo.screenHeight - sysInfo.safeArea.bottom
       },
       navBar: {
         height: navBarHeight,      // Content height
-        paddingTop: navBarTop,     // Status bar height
-        totalHeight: totalNavHeight // Total height to reserve
+        paddingTop: navBarTop + legacyNavExtraTop,
+        totalHeight: totalNavHeight + legacyNavExtraTop
       },
       rpxToPx,
       adsDisabled
@@ -303,7 +324,8 @@ Page({
         const width = res[0].width;
         const height = res[0].height;
         
-        const dpr = wx.getSystemInfoSync().pixelRatio;
+        const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+        const dpr = windowInfo.pixelRatio;
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         ctx.scale(dpr, dpr);
@@ -1299,5 +1321,30 @@ Page({
   toggleVisualMode() {
     const newMode = this.data.preferredKeyboardMode === 'korean' ? 'english' : 'korean';
     this.setData({ preferredKeyboardMode: newMode });
+  },
+
+  minimizeNvPopup() {
+    this.setData({
+      showNvPopup: false,
+      nvPopupMinimized: true
+    });
+    wx.setStorageSync('nvPopupMinimized', true);
+    wx.setStorageSync('hasSeenNvPopup_v1', true);
+  },
+
+  restoreNvPopup() {
+    this.setData({
+      showNvPopup: true,
+      nvPopupMinimized: false
+    });
+    wx.setStorageSync('nvPopupMinimized', false);
+  },
+
+  enterNewVersion() {
+    wx.setStorageSync('hasSeenNvPopup_v1', true);
+    wx.setStorageSync('useNewVersion', true);
+    wx.switchTab({
+      url: '/pages/nv-practice/index'
+    });
   }
 });

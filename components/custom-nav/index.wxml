@@ -1,0 +1,35 @@
+<view class="custom-nav {{theme}} {{(showCheckin && checkinText && progress) ? 'compact' : ''}}" style="height: {{statusBarHeight + navBarHeight}}px;">
+  <view class="nav-content" style="top: {{menuButtonTop}}px; height: {{menuButtonHeight}}px; right: {{capsulePaddingRight}}px;">
+    <view class="nav-back" catchtap="onBackTap" wx:if="{{showBack}}">
+      <text class="back-icon">‹</text>
+    </view>
+    <!-- Left: Title & Subtitle -->
+    <view class="nav-left">
+      <text class="nav-title">{{title}}</text>
+      <text class="nav-subtitle" wx:if="{{subtitle}}">{{subtitle}}</text>
+    </view>
+
+    <!-- Right: Progress & Settings (Aligned with Capsule) -->
+    <!-- We need to position this to the left of the capsule. 
+         Since we can't get exact capsule left position easily without global data,
+         we'll use a fixed right margin or flex layout. 
+         However, the capsule is always on the right. 
+         We'll assume some right padding to avoid overlap. -->
+    <view class="nav-right">
+       <view class="checkin-pill" catchtap="onCheckinTap" wx:if="{{showCheckin && checkinText}}">
+         <text>{{checkinText}}</text>
+       </view>
+       <view class="progress-pill" wx:if="{{progress}}">
+         <text>{{progress}}</text>
+       </view>
+       
+       <view class="settings-btn" catchtap="onSettingsTap" wx:if="{{showSettings}}">
+      <view class="settings-icon"></view>
+      <view class="settings-tooltip {{showSettingsTooltip ? 'visible' : ''}}">
+        <text>可调整显示模式</text>
+        <view class="tooltip-arrow"></view>
+      </view>
+    </view>
+    </view>
+  </view>
+</view>

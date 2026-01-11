@@ -1,6 +1,8 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/index/index",
+    "pages/nv-practice/index",
+    "pages/nv-settings/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -41,5 +43,26 @@
       "pages": ["pages/index/index"]
     }
   ],
+  "tabBar": {
+    "custom": true,
+    "color": "#94a3b8",
+    "selectedColor": "#6366f1",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/nv-practice/index",
+        "text": "练习",
+        "iconPath": "assets/tabbar/re_练习.png",
+        "selectedIconPath": "assets/tabbar/re_练习.png"
+      },
+      {
+        "pagePath": "pages/nv-settings/index",
+        "text": "设置",
+        "iconPath": "assets/tabbar/re_设置.png",
+        "selectedIconPath": "assets/tabbar/re_设置.png"
+      }
+    ]
+  },
   "sitemapLocation": "sitemap.json"
 }

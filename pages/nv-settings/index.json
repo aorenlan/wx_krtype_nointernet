@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "custom-nav": "/components/custom-nav/index"
+  },
+  "navigationBarTitleText": "设置",
+  "navigationStyle": "custom"
+}

@@ -1,14 +1,19 @@
 .keyboard-container {
   width: 100%;
-  background-color: #1e293b; /* slate-800 */
-  padding: 12rpx; /* Reduced from 8px (~16rpx) to save space */
+  background-color: #0f172a;
+  padding: 12rpx;
   padding-bottom: 48rpx;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
   user-select: none;
   transition: background-color 0.3s;
   box-sizing: border-box;
+}
+
+.keyboard-container.light {
+  background-color: rgba(248, 250, 252, 0.92);
+  box-shadow: none;
 }
 
 .keyboard-inner {
@@ -32,37 +37,68 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 110rpx; /* Fixed height in rpx */
+  height: 108rpx;
   border-radius: 12rpx;
   transition: all 0.15s;
-  background-color: #334155; /* slate-700 */
-  border-bottom: 6rpx solid #0f172a; /* slate-900 */
-  color: #cbd5e1; /* slate-300 */
+  background-color: rgba(51, 65, 85, 0.92);
+  border-bottom: 0;
+  color: rgba(226, 232, 240, 0.9);
   flex: 1;
-  /* Removed fixed max-width to allow flex shrinking */
   padding: 0;
   margin: 0;
   line-height: 1.2;
+  box-shadow: 0 8rpx 18rpx rgba(15, 23, 42, 0.22);
+}
+
+.keyboard-container.light .key-btn {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #334155;
+  box-shadow: 0 10rpx 20rpx rgba(15, 23, 42, 0.08);
 }
 
 .key-btn-hover {
   transform: scale(0.95);
-  background-color: #64748b; /* slate-500 */
+  opacity: 0.95;
+}
+
+.keyboard-container.light .key-btn-hover {
+  opacity: 0.92;
 }
 
 .active-target {
-  background-color: #6366f1 !important; /* indigo-500 */
-  border-bottom-color: #4338ca !important; /* indigo-700 */
-  color: #ffffff !important;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+  background-color: rgba(255, 251, 235, 0.98) !important;
+  color: #111827 !important;
+  box-shadow: 0 0 0 4rpx rgba(250, 204, 21, 0.55), 0 14rpx 24rpx rgba(15, 23, 42, 0.14);
   z-index: 10;
-  transform: scale(1.05);
+  animation: breathe 1.15s ease-in-out infinite;
+}
+
+.keyboard-container.legacy .active-target {
+  background-color: rgba(56, 189, 248, 0.98) !important;
+  color: #0b1220 !important;
+  box-shadow: 0 0 0 4rpx rgba(56, 189, 248, 0.55), 0 14rpx 24rpx rgba(15, 23, 42, 0.18);
+}
+
+.keyboard-container.legacy .active-target .key-main,
+.keyboard-container.legacy .active-target .key-sub,
+.keyboard-container.legacy .active-target.text-white {
+  color: #0b1220 !important;
+  opacity: 1;
+}
+
+.keyboard-container.legacy .space-pulse {
+  background-color: rgba(56, 189, 248, 0.98) !important;
+  color: #0b1220 !important;
 }
 
 .key-main {
   font-size: 36rpx;
   font-weight: bold;
-  color: #f1f5f9; /* slate-100 */
+  color: rgba(241, 245, 249, 0.95);
+}
+
+.keyboard-container.light .key-main {
+  color: #0f172a;
 }
 
 .key-sub {
@@ -79,9 +115,16 @@
   justify-content: center;
   border-radius: 12rpx;
   width: 14%;
-  height: 110rpx;
-  background-color: #334155; /* slate-700 */
-  opacity: 0.8; /* Increased opacity for visibility */
+  height: 108rpx;
+  background-color: rgba(51, 65, 85, 0.92);
+  opacity: 0.9;
+  box-shadow: 0 8rpx 18rpx rgba(15, 23, 42, 0.22);
+}
+
+.keyboard-container.light .special-key {
+  background-color: rgba(255, 255, 255, 0.95);
+  opacity: 0.95;
+  box-shadow: 0 10rpx 20rpx rgba(15, 23, 42, 0.08);
 }
 
 .shift-key {
@@ -89,17 +132,21 @@
 }
 
 .shift-active {
-  background-color: #6366f1; /* indigo-500 */
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+  background-color: rgba(255, 251, 235, 0.98);
+  box-shadow: 0 0 0 4rpx rgba(250, 204, 21, 0.55), 0 14rpx 24rpx rgba(15, 23, 42, 0.14);
   z-index: 10;
-  transform: scale(1.05);
-  opacity: 1;
+  animation: breathe 1.15s ease-in-out infinite;
+  opacity: 0.98;
 }
 
 .icon-text {
   font-size: 40rpx;
   color: #e2e8f0;
   font-weight: bold;
+}
+
+.keyboard-container.light .icon-text {
+  color: #475569;
 }
 
 .space-row {
@@ -116,28 +163,43 @@
   align-items: center;
   justify-content: center;
   width: 100%; /* Fill the constrained row */
-  background-color: #334155;
-  border-bottom: 8rpx solid #0f172a; /* Thicker bottom border */
-  border-top: 1px solid rgba(255,255,255,0.1); /* Subtle highlight on top */
-  color: #94a3b8; /* slate-400 */
+  background-color: rgba(51, 65, 85, 0.70);
+  border-bottom: 0;
+  border-top: 0;
+  color: rgba(148, 163, 184, 0.95);
   font-size: 32rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
+  box-shadow: 0 10rpx 22rpx rgba(15, 23, 42, 0.22);
+}
+
+.keyboard-container.light .space-btn {
+  background-color: rgba(255, 255, 255, 0.90);
+  border-bottom: 0;
+  border-top: 0;
+  color: #475569;
+  box-shadow: 0 12rpx 26rpx rgba(15, 23, 42, 0.08);
 }
 
 .space-pulse {
-  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  background-color: #475569; /* Slightly lighter when active */
-  color: #f8fafc;
+  animation: breathe 1.15s ease-in-out infinite;
+  background-color: rgba(255, 251, 235, 0.98) !important;
+  color: #111827 !important;
 }
 
-@keyframes pulse {
+.keyboard-container.light .space-pulse {
+  background-color: rgba(255, 251, 235, 0.98) !important;
+  color: #111827 !important;
+}
+@keyframes breathe {
   0%, 100% {
-    opacity: 1;
     transform: scale(1);
+    filter: saturate(1);
+    box-shadow: 0 0 0 4rpx rgba(250, 204, 21, 0.45), 0 14rpx 24rpx rgba(15, 23, 42, 0.14);
   }
   50% {
-    opacity: 0.8;
-    transform: scale(0.98);
+    transform: scale(1.04);
+    filter: saturate(1.1);
+    box-shadow: 0 0 0 6rpx rgba(250, 204, 21, 0.70), 0 18rpx 30rpx rgba(15, 23, 42, 0.16);
   }
 }

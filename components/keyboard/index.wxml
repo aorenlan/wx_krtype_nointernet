@@ -1,4 +1,4 @@
-<view class="keyboard-container">
+<view class="keyboard-container {{theme === 'light' ? 'light' : 'dark'}} {{variant}}">
   <view class="keyboard-inner">
     <!-- Row 1 -->
     <view class="keyboard-row">
@@ -82,6 +82,16 @@ module.exports = {
     return false;
   },
   getKeyDisplay: function(k, visualMode, isShiftActive) {
+    if (visualMode === 'english_only') {
+      var label = isShiftActive ? (k.shiftChar || k.char.toUpperCase()) : k.char;
+      return { main: label, sub: '' };
+    }
+    if (visualMode === 'korean_hide_english') {
+      if (isShiftActive && k.shiftKorChar) {
+        return { main: k.shiftKorChar, sub: '' };
+      }
+      return { main: k.korChar, sub: '' };
+    }
     if (visualMode === 'english') {
       var label = isShiftActive ? (k.shiftChar || k.char.toUpperCase()) : k.char;
       return { main: label, sub: k.korChar };

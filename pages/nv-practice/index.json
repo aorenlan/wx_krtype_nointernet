@@ -1,0 +1,12 @@
+{
+  "usingComponents": {
+    "custom-nav": "/components/custom-nav/index",
+    "keyboard": "/components/keyboard/index"
+  },
+  "navigationStyle": "custom",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "navigationBarTitleText": "阿班单词",
+  "enablePullDownRefresh": false,
+  "disableScroll": true
+}

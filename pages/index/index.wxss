@@ -80,6 +80,7 @@
   display: flex;
   align-items: center;
   padding: 8px 0;
+  margin-top: 10px;
 }
 
 .back-icon-box {
@@ -653,15 +654,15 @@
   color: #fff; 
   opacity: 1; 
   transform: scale(1.2); /* Larger scale for emphasis */
-  border-bottom: 4rpx solid #6366f1; /* Thinner underline (was 8rpx) */
+  border-bottom: 4rpx solid #facc15;
   padding-bottom: 4rpx; /* Adjusted padding */
-  text-shadow: 0 0 20px rgba(99, 102, 241, 0.5); /* Glow effect */
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.55);
 } /* Active */
 .text-gray { color: #94a3b8; opacity: 0.5; } /* Future: lighter gray, readable */
 
 .space-active {
   background-color: transparent;
-  border-bottom: 4rpx solid #6366f1; /* Matched to text underline */
+  border-bottom: 4rpx solid #facc15;
   width: 80rpx; /* Fixed width for space too */
   height: 60rpx; /* Approximate height match */
   display: inline-block;
@@ -1510,3 +1511,80 @@
   color: #fff;
 }
 
+
+/* New Version Popup */
+.nv-popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nv-popup-content {
+  width: 80%;
+  max-width: 320px;
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  border: 1px solid #334155;
+}
+
+.nv-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.nv-desc {
+  font-size: 16px;
+  color: #94a3b8;
+  margin-bottom: 24px;
+}
+
+.nv-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.nv-btn {
+  flex: 1;
+  font-size: 14px;
+  border-radius: 8px;
+  line-height: 40px;
+  height: 40px;
+  margin: 0;
+}
+
+.nv-btn.cancel {
+  background: #334155;
+  color: #fff;
+}
+
+.nv-btn.confirm {
+  background: #6366f1;
+  color: #fff;
+}
+
+/* Minimized Icon */
+.nv-minimized {
+  position: fixed;
+  left: 0;
+  /* top set inline */
+  background: #6366f1;
+  color: #fff;
+  padding: 6px 12px 6px 8px;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  z-index: 900;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+}
