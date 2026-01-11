@@ -1692,7 +1692,7 @@ module.exports = [
   {
     "id": "4",
     "global_id": "170",
-    "korean": "-치",
+    "korean": "_치",
     "chinese": "份",
     "category": "延世韩国语4",
     "lesson_id": "3",
@@ -3272,7 +3272,7 @@ module.exports = [
   {
     "id": "5",
     "global_id": "328",
-    "korean": "란(난)",
+    "korean": "란_난",
     "chinese": "栏",
     "category": "延世韩国语4",
     "lesson_id": "6",
@@ -3652,7 +3652,7 @@ module.exports = [
   {
     "id": "6",
     "global_id": "366",
-    "korean": "사업*2",
+    "korean": "사업",
     "chinese": "事业",
     "category": "延世韩国语4",
     "lesson_id": "7",
@@ -4592,7 +4592,7 @@ module.exports = [
   {
     "id": "3",
     "global_id": "460",
-    "korean": "세배*2",
+    "korean": "세배",
     "chinese": "拜年",
     "category": "延世韩国语4",
     "lesson_id": "9",
@@ -4762,7 +4762,7 @@ module.exports = [
   {
     "id": "7",
     "global_id": "477",
-    "korean": "햇-",
+    "korean": "햇",
     "chinese": "新出的/新⻓的～",
     "category": "延世韩国语4",
     "lesson_id": "9",
@@ -4772,7 +4772,7 @@ module.exports = [
   {
     "id": "8",
     "global_id": "478",
-    "korean": "맨-",
+    "korean": "맨",
     "chinese": "光/空～",
     "category": "延世韩国语4",
     "lesson_id": "9",
@@ -4782,7 +4782,7 @@ module.exports = [
   {
     "id": "9",
     "global_id": "479",
-    "korean": "맏-",
+    "korean": "맏",
     "chinese": "⼤～/年⻓～",
     "category": "延世韩国语4",
     "lesson_id": "9",
@@ -4792,7 +4792,7 @@ module.exports = [
   {
     "id": "10",
     "global_id": "480",
-    "korean": "첫-",
+    "korean": "첫",
     "chinese": "初～/第⼀次～",
     "category": "延世韩国语4",
     "lesson_id": "9",

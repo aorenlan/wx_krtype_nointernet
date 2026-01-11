@@ -432,7 +432,7 @@ module.exports = [
   {
     "id": "44",
     "global_id": "49",
-    "korean": "하십니까?",
+    "korean": "하십니까",
     "chinese": "做吗（尊敬主语）",
     "category": "延世韩国语1",
     "lesson_id": "1",
@@ -472,7 +472,7 @@ module.exports = [
   {
     "id": "48",
     "global_id": "51",
-    "korean": "을/를",
+    "korean": "을_를",
     "chinese": "宾格助词",
     "category": "延世韩国语1",
     "lesson_id": "1",
@@ -1802,7 +1802,7 @@ module.exports = [
   {
     "id": "181",
     "global_id": "209",
-    "korean": "넷/네",
+    "korean": "넷_네",
     "chinese": "四",
     "category": "延世韩国语1",
     "lesson_id": "3",
@@ -2622,7 +2622,7 @@ module.exports = [
   {
     "id": "263",
     "global_id": "295",
-    "korean": "그럽시다.",
+    "korean": "그럽시다",
     "chinese": "就那样做吧",
     "category": "延世韩国语1",
     "lesson_id": "4",
@@ -2692,7 +2692,7 @@ module.exports = [
   {
     "id": "270",
     "global_id": "310",
-    "korean": "그래요?",
+    "korean": "그래요",
     "chinese": "是吗？",
     "category": "延世韩国语1",
     "lesson_id": "4",
@@ -3642,7 +3642,7 @@ module.exports = [
   {
     "id": "365",
     "global_id": "409",
-    "korean": "알겠습니다.",
+    "korean": "알겠습니다",
     "chinese": "知道了",
     "category": "延世韩国语1",
     "lesson_id": "4",
@@ -3942,7 +3942,7 @@ module.exports = [
   {
     "id": "395",
     "global_id": "439",
-    "korean": "과/와",
+    "korean": "과_와",
     "chinese": "和（助）",
     "category": "延世韩国语1",
     "lesson_id": "5",
@@ -4022,7 +4022,7 @@ module.exports = [
   {
     "id": "403",
     "global_id": "460",
-    "korean": "일(일요일)",
+    "korean": "일요일",
     "chinese": "周⽇",
     "category": "延世韩国语1",
     "lesson_id": "5",
@@ -6622,7 +6622,7 @@ module.exports = [
   {
     "id": "663",
     "global_id": "738",
-    "korean": "다 왔습니다.",
+    "korean": "다 왔습니다",
     "chinese": "快到了",
     "category": "延世韩国语1",
     "lesson_id": "7",
@@ -6992,7 +6992,7 @@ module.exports = [
   {
     "id": "700",
     "global_id": "784",
-    "korean": "아니에요?",
+    "korean": "아니에요",
     "chinese": "不是吗？",
     "category": "延世韩国语1",
     "lesson_id": "8",
@@ -7012,7 +7012,7 @@ module.exports = [
   {
     "id": "702",
     "global_id": "785",
-    "korean": "웬일이세요?",
+    "korean": "웬일이세요",
     "chinese": "有什么事⼉？",
     "category": "延世韩国语1",
     "lesson_id": "8",

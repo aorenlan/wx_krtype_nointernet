@@ -3952,7 +3952,7 @@ module.exports = [
   {
     "id": "4",
     "global_id": "396",
-    "korean": "그럴 리가요.",
+    "korean": "그럴 리가요",
     "chinese": "怎么会呢",
     "category": "延世韩国语3",
     "lesson_id": "7",
@@ -4522,7 +4522,7 @@ module.exports = [
   {
     "id": "5",
     "global_id": "453",
-    "korean": "말 못할-",
+    "korean": "말 못할",
     "chinese": "⽆法⾔喻的",
     "category": "延世韩国语3",
     "lesson_id": "8",
@@ -4642,7 +4642,7 @@ module.exports = [
   {
     "id": "3",
     "global_id": "465",
-    "korean": "접수시키다*2",
+    "korean": "접수시키다",
     "chinese": "交付",
     "category": "延世韩国语3",
     "lesson_id": "8",

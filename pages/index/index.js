@@ -19,6 +19,7 @@ const DEFAULT_SAMPLE_TEXT = "연습은 완벽을 만듭니다. Fighting! 화이�
 
 Page({
   data: {
+    isRedirecting: true,
     safeArea: { top: 44, bottom: 34 },
     mode: 'menu', // menu, typing, custom
     items: [],
@@ -82,6 +83,7 @@ Page({
       wx.switchTab({ url: '/pages/nv-practice/index' });
       return;
     }
+    this.setData({ isRedirecting: false });
 
     const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     const rpxToPx = windowInfo.windowWidth / 750; // Calculate ratio

@@ -1012,7 +1012,7 @@ module.exports = [
   {
     "id": "4",
     "global_id": "102",
-    "korean": "-에 응하다",
+    "korean": "_에 응하다",
     "chinese": "响应…",
     "category": "延世韩国语5",
     "lesson_id": "2",
@@ -5192,7 +5192,7 @@ module.exports = [
   {
     "id": "4",
     "global_id": "520",
-    "korean": "(역)귀성",
+    "korean": "역_귀성",
     "chinese": "（逆）归省",
     "category": "延世韩国语5",
     "lesson_id": "7",
@@ -5952,7 +5952,7 @@ module.exports = [
   {
     "id": "4",
     "global_id": "596",
-    "korean": "-과/와 씨름하다",
+    "korean": "_과_와 씨름하다",
     "chinese": "和…⻆⼒",
     "category": "延世韩国语5",
     "lesson_id": "8",

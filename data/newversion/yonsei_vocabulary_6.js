@@ -1172,7 +1172,7 @@ module.exports = [
   {
     "id": "7",
     "global_id": "118",
-    "korean": "남녀차별/성차별",
+    "korean": "남녀차별_성차별",
     "chinese": "性别歧视",
     "category": "延世韩国语6",
     "lesson_id": "3",
@@ -1212,7 +1212,7 @@ module.exports = [
   {
     "id": "11",
     "global_id": "122",
-    "korean": "남녀평등/양성평등",
+    "korean": "남녀평등_양성평등",
     "chinese": "男⼥平等",
     "category": "延世韩国语6",
     "lesson_id": "3",
@@ -2842,7 +2842,7 @@ module.exports = [
   {
     "id": "17",
     "global_id": "285",
-    "korean": "흑자/적자",
+    "korean": "흑자_적자",
     "chinese": "盈余/⾚字",
     "category": "延世韩国语6",
     "lesson_id": "6",
@@ -2932,7 +2932,7 @@ module.exports = [
   {
     "id": "26",
     "global_id": "294",
-    "korean": "세계무역기구(WTO)",
+    "korean": "세계무역기구_WTO",
     "chinese": "世界贸易组织",
     "category": "延世韩国语6",
     "lesson_id": "6",
@@ -3462,7 +3462,7 @@ module.exports = [
   {
     "id": "8",
     "global_id": "347",
-    "korean": "처마*2",
+    "korean": "처마",
     "chinese": "屋檐",
     "category": "延世韩国语6",
     "lesson_id": "8",
@@ -4262,7 +4262,7 @@ module.exports = [
   {
     "id": "13",
     "global_id": "427",
-    "korean": "극미세기술(나노기술)",
+    "korean": "극미세기술_나노기술",
     "chinese": "纳⽶技术",
     "category": "延世韩国语6",
     "lesson_id": "9",

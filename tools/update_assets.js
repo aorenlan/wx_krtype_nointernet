@@ -5,6 +5,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const AUDIO_SRC = path.join(PROJECT_ROOT, 'assets/audio');
 const SUBPACKAGES_ROOT = path.join(PROJECT_ROOT, 'subpackages');
 const MAPS_DEST = path.join(PROJECT_ROOT, 'assets/audio_maps');
+const NEWVERSION_DIR = path.join(PROJECT_ROOT, 'data/newversion');
 
 // Mapping config
 const MP3_MAPPING = [
@@ -37,7 +38,45 @@ const JSON_FILES = [
     'supportWords.json'
 ];
 
-// 1. Move MP3 files
+const args = process.argv.slice(2);
+const mode = args.includes('--newversion') ? 'newversion' : 'audio';
+
+if (mode === 'newversion') {
+    if (!fs.existsSync(NEWVERSION_DIR)) {
+        console.error(`Directory not found: ${NEWVERSION_DIR}`);
+        process.exit(1);
+    }
+
+    const files = fs.readdirSync(NEWVERSION_DIR).filter((f) => f.endsWith('.json'));
+    if (files.length === 0) {
+        console.log('No JSON files found under data/newversion/');
+        process.exit(0);
+    }
+
+    console.log('Regenerating newversion JS files from JSON...');
+    files.forEach((jsonFile) => {
+        const jsonPath = path.join(NEWVERSION_DIR, jsonFile);
+        const jsFileName = jsonFile.replace(/\.json$/i, '.js');
+        const jsPath = path.join(NEWVERSION_DIR, jsFileName);
+        const raw = fs.readFileSync(jsonPath, 'utf8');
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            console.error(`Invalid JSON: ${jsonFile}`);
+            throw e;
+        }
+
+        const body = JSON.stringify(data, null, 2);
+        const content = `module.exports = ${body};\n`;
+        fs.writeFileSync(jsPath, content);
+        console.log(`Wrote ${path.relative(PROJECT_ROOT, jsPath)}`);
+    });
+
+    console.log('Newversion update complete.');
+    process.exit(0);
+}
+
 console.log('Moving MP3 files...');
 MP3_MAPPING.forEach(item => {
     const src = path.join(AUDIO_SRC, item.file);
@@ -48,11 +87,9 @@ MP3_MAPPING.forEach(item => {
         if (!fs.existsSync(destDir)) {
             fs.mkdirSync(destDir, { recursive: true });
         }
-        // Copy to destination
         fs.copyFileSync(src, dest);
         console.log(`Copied ${item.file} -> ${item.dest}`);
         
-        // Remove from source to prevent main package bloat
         fs.unlinkSync(src);
         console.log(`Removed source ${item.file}`);
     } else {
@@ -60,7 +97,6 @@ MP3_MAPPING.forEach(item => {
     }
 });
 
-// 2. Convert JSON to JS
 console.log('Converting JSON maps to JS...');
 if (!fs.existsSync(MAPS_DEST)) {
     fs.mkdirSync(MAPS_DEST, { recursive: true });
@@ -77,7 +113,7 @@ JSON_FILES.forEach(jsonFile => {
         fs.writeFileSync(dest, jsContent);
         console.log(`Converted ${jsonFile} -> ${jsFileName}`);
     } else {
-        console.warn(`Source JSON not found: ${jsonFile}`);
+        console.warn(`Source JSON not found: ${src}`);
     }
 });
 

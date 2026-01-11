@@ -18,7 +18,7 @@ module.exports = {
 };
 </wxs>
 
-<view class="container" style="padding-top: {{safeArea.top}}px; padding-bottom: {{safeArea.bottom}}px">
+<view wx:if="{{!isRedirecting}}" class="container" style="padding-top: {{safeArea.top}}px; padding-bottom: {{safeArea.bottom}}px">
   
   <!-- Decorative Background -->
   <view class="deco-bg">
@@ -431,3 +431,4 @@ module.exports = {
   </view>
 
 </view>
+<view wx:else style="width: 100vw; height: 100vh;"></view>

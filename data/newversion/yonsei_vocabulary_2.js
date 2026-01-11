@@ -3302,7 +3302,7 @@ module.exports = [
   {
     "id": "9",
     "global_id": "331",
-    "korean": "KTX(케이티엑스)",
+    "korean": "KTX_케이티엑스",
     "chinese": "KTX⾼速列⻋",
     "category": "延世韩国语2",
     "lesson_id": "5",
@@ -4682,7 +4682,7 @@ module.exports = [
   {
     "id": "7",
     "global_id": "469",
-    "korean": "사증(비자)",
+    "korean": "사증_비자",
     "chinese": "签证",
     "category": "延世韩国语2",
     "lesson_id": "6",
@@ -6952,7 +6952,7 @@ module.exports = [
   {
     "id": "9",
     "global_id": "696",
-    "korean": "-박 -일",
+    "korean": "_박 _일",
     "chinese": "-晚-天",
     "category": "延世韩国语2",
     "lesson_id": "9",
