@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "custom-nav": "/components/custom-nav/index"
+  },
+  "navigationStyle": "custom",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "navigationBarTitleText": "语法"
+}

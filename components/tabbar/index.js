@@ -38,16 +38,52 @@ Component({
     ]
   },
   methods: {
-    switchTab(e) {
+    async switchTab(e) {
       const data = e.currentTarget.dataset
       const url = data.path
       const index = data.index
       
       if (index === 1) { // 语法 Tab
-        wx.showToast({
-          title: '正在开发中',
-          icon: 'none'
-        })
+        const settings = wx.getStorageSync('settings') || {};
+        const category = String(settings.category || '');
+        
+        if (category === 'TOPIK Vocabulary') {
+             wx.showToast({ title: '语法功能正在开发', icon: 'none' });
+             return;
+        }
+
+        const m = category.match(/^Yonsei\s*(\d)$/i);
+        if (!m) {
+             wx.showToast({ title: '语法功能正在开发', icon: 'none' });
+             return;
+        }
+        
+        const bookNum = m[1];
+        const book = `yansei${bookNum}`;
+        let lessonId = String(settings.yonseiLessonId || '').trim();
+        
+        // 尝试自动获取第一课
+        if (!lessonId) {
+             try {
+                // 动态引入 api 避免循环依赖或路径问题，尝试简单的 require
+                // 注意：小程序 require 相对路径需要准确
+                const { getYonseiLessons } = require('../../utils_nv/api.js');
+                const lessons = await getYonseiLessons(category);
+                if (lessons && lessons.length > 0) {
+                    lessonId = String(lessons[0].id);
+                }
+             } catch (err) {
+                 console.error('Auto fetch lesson failed', err);
+             }
+        }
+
+        if (!lessonId) {
+            wx.showToast({ title: '请先在练习页选择课次', icon: 'none' });
+            return;
+        }
+        
+        const targetUrl = `/pages/nv-grammar/index?book=${encodeURIComponent(book)}&lessonId=${encodeURIComponent(lessonId)}`;
+        wx.navigateTo({ url: targetUrl });
         return
       }
 

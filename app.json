@@ -2,7 +2,8 @@
   "pages": [
     "pages/index/index",
     "pages/nv-practice/index",
-    "pages/nv-settings/index"
+    "pages/nv-settings/index",
+    "pages/nv-grammar/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

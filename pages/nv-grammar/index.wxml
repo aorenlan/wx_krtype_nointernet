@@ -1,0 +1,67 @@
+<custom-nav subtitle="{{subtitle}}" theme="light" showSettings="{{false}}" bind:back="goBack"></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
+  <view class="header">
+    <view class="header-row">
+      <view class="back-btn-simple" bindtap="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="header-title">{{title}}</text>
+    </view>
+    <text class="header-sub">{{subTitle}}</text>
+  </view>
+
+  <view class="content">
+    <view class="mask" wx:if="{{!sidebarCollapsed}}" bindtap="toggleSidebar"></view>
+    
+    <view class="collapse-trigger-fixed" wx:if="{{items.length > 1}}" bindtap="toggleSidebar">
+      <view class="menu-icon">
+        <view class="line"></view>
+        <view class="line"></view>
+        <view class="line"></view>
+      </view>
+    </view>
+    
+    <view wx:if="{{items.length > 1}}" class="sidebar {{sidebarCollapsed ? 'collapsed' : ''}}">
+      <view class="sidebar-inner">
+        <view class="sidebar-top">
+          <text class="sidebar-title">目录</text>
+          <view class="sidebar-close-btn" bindtap="toggleSidebar">
+            <text>×</text>
+          </view>
+        </view>
+
+        <scroll-view scroll-y class="sidebar-list">
+          <block wx:for="{{items}}" wx:key="key">
+            <view class="dir-item {{currentKey === item.key ? 'active' : ''}}" bindtap="selectItem" data-key="{{item.key}}">
+              <text class="dir-text">{{item.grammar}}</text>
+            </view>
+          </block>
+        </scroll-view>
+      </view>
+    </view>
+
+    <scroll-view scroll-y class="main {{items.length > 1 ? '' : 'full'}}" 
+      bindtouchstart="handleTouchStart"
+      bindtouchend="handleTouchEnd">
+      <view class="card" wx:if="{{current}}">
+        <view class="card-title">
+          <text class="grammar">{{current.grammar}}</text>
+        </view>
+        <view class="meta">
+          <text class="chip">{{current.grammar_category}}</text>
+          <text class="chip">{{current.grammar_scope}}</text>
+        </view>
+        <view class="body">
+          <block wx:for="{{contentParts}}" wx:key="*this">
+            <view class="paragraph">{{item}}</view>
+          </block>
+        </view>
+      </view>
+
+      <view class="empty" wx:else>
+        <text>暂无语法</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>
