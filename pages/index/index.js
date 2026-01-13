@@ -184,12 +184,12 @@ Page({
     }
     
     const totalNavHeight = navBarTop + navBarHeight;
-    const legacyNavExtraTop = 18;
+    const legacyNavExtraTop = 48;
     
     this.setData({
       safeArea: {
         top: totalNavHeight + legacyNavExtraTop,
-        bottom: sysInfo.screenHeight - sysInfo.safeArea.bottom
+        bottom: windowInfo.screenHeight - windowInfo.safeArea.bottom
       },
       navBar: {
         height: navBarHeight,      // Content height

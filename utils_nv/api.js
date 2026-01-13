@@ -17,13 +17,13 @@ const getData = (key) => {
 };
 
 const CATEGORIES = [
-    'TOPIK Vocabulary',
     'Yonsei 1',
     'Yonsei 2',
     'Yonsei 3',
     'Yonsei 4',
     'Yonsei 5',
-    'Yonsei 6'
+    'Yonsei 6',
+    'TOPIK Vocabulary'
 ];
 
 let topikLevelsCache = null;

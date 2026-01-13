@@ -1,0 +1,110 @@
+<custom-nav subtitle="{{subtitle}}" theme="light" showSettings="{{false}}" bind:back="goBack"></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
+  <view class="header">
+    <view class="header-row">
+      <view class="back-btn-simple" bindtap="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="header-title">{{title}}</text>
+    </view>
+    <text class="header-sub">{{subTitle}}</text>
+  </view>
+
+  <view class="content">
+    <view class="mask" wx:if="{{!sidebarCollapsed}}" bindtap="toggleSidebar"></view>
+    
+    <view class="collapse-trigger-fixed" wx:if="{{items.length > 1}}" bindtap="toggleSidebar">
+      <view class="menu-icon">
+        <view class="line"></view>
+        <view class="line"></view>
+        <view class="line"></view>
+      </view>
+    </view>
+    
+    <view wx:if="{{items.length > 1}}" class="sidebar {{sidebarCollapsed ? 'collapsed' : ''}}">
+      <view class="sidebar-inner">
+        <view class="sidebar-top">
+          <text class="sidebar-title">目录</text>
+          <view class="sidebar-close-btn" bindtap="toggleSidebar">
+            <text>×</text>
+          </view>
+        </view>
+
+        <scroll-view scroll-y class="sidebar-list">
+          <block wx:for="{{items}}" wx:key="key">
+            <view class="dir-item {{currentKey === item.key ? 'active' : ''}}" bindtap="selectItem" data-key="{{item.key}}">
+              <text class="dir-text">{{item.grammar}}</text>
+            </view>
+          </block>
+        </scroll-view>
+      </view>
+    </view>
+
+    <scroll-view scroll-y class="main {{items.length > 1 ? '' : 'full'}}" 
+      bindtouchstart="handleTouchStart"
+      bindtouchend="handleTouchEnd">
+      <view class="card" wx:if="{{current}}">
+        <!-- New Header Layout -->
+        <view class="detail-header">
+          <view class="detail-top-row">
+            <view class="tags-row">
+              <text class="tag-pill">{{current.grammar_category}}</text>
+              <text class="tag-pill secondary">{{current.grammar_scope}}</text>
+            </view>
+          </view>
+          <text class="grammar-title">{{current.grammar}}</text>
+          <view class="divider"></view>
+        </view>
+
+        <!-- Meaning Section -->
+        <view class="section-container">
+          <text class="section-label">含义与用法</text>
+          <view class="meaning-card">
+            <view class="meaning-content">
+              <block wx:for="{{meaningParts}}" wx:key="*this">
+                <view class="meaning-text">{{item}}</view>
+              </block>
+            </view>
+            
+            <!-- Info Box for Usage Notes -->
+            <view class="info-box" wx:if="{{usageParts.length > 0}}">
+              <view class="info-badge">提示</view>
+              <view class="info-content">
+                <block wx:for="{{usageParts}}" wx:key="*this">
+                  <view class="info-text">{{item}}</view>
+                </block>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- Example Section -->
+        <view class="section-container" wx:if="{{exampleParts.length > 0}}">
+          <view class="section-header-row">
+            <text class="section-label">例句</text>
+            <text class="section-count">{{exampleParts.length}} 个例句</text>
+          </view>
+          <view class="example-list">
+            <block wx:for="{{exampleParts}}" wx:key="index">
+              <view class="example-card">
+                <view class="ex-kor-row">
+                  <text class="ex-num">{{index + 1}}.</text>
+                  <text class="ex-kor">{{item.kor}}</text>
+                </view>
+                <view class="ex-trans-row" wx:if="{{item.trans}}">
+                  <view class="ex-dash"></view>
+                  <text class="ex-trans">{{item.trans}}</text>
+                </view>
+              </view>
+            </block>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty" wx:else>
+        <text>暂无语法</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

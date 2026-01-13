@@ -664,6 +664,28 @@
   transform: translateY(0);
 }
 
+/* Center Modal Variant */
+.modal-overlay.center {
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.center .modal-content {
+  width: 600rpx;
+  max-width: 600rpx;
+  border-radius: 20px;
+  padding-bottom: 20px;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.3s ease;
+  max-height: 70vh;
+}
+
+.modal-overlay.center.show .modal-content {
+  transform: scale(1);
+  opacity: 1;
+}
+
 .modal-content.dark {
   background: #1e293b;
   color: white;

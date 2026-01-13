@@ -1,4 +1,4 @@
-import { getCategories, getCategoryCounts, getYonseiLessons, getTopikLevels, getTopikSessions } from '../../utils_nv/api';
+import { getCategories, getCategoryCounts, getYonseiLessons, getTopikLevels, getTopikSessions, getWords } from '../../utils_nv/api';
 import { getImportedLists, saveImportedList, updateImportedList, deleteImportedList, getMistakes, removeMistake } from '../../utils_nv/storage';
 
 const DEFAULT_SETTINGS = {
@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   autoCheckSpelling: true,
   autoPronounce: false,
   pronounceMeaning: false,
-  category: 'TOPIK Vocabulary',
+  category: 'Yonsei 1',
   keyboardVisualMode: 'korean',
   yonseiLessonId: '',
   yonseiLessonName: '',
@@ -131,6 +131,8 @@ Page({
     suggestion: null
   },
 
+  videoAd: null, // 激励视频广告实例
+
   switchVersion: function() {
     wx.showModal({
       title: '切换回旧版',
@@ -170,7 +172,49 @@ Page({
     this.loadLists();
   },
 
+  createVideoAd: function() {
+    if (this.videoAd) return;
+    if (wx.createRewardedVideoAd) {
+      this.videoAd = wx.createRewardedVideoAd({
+        adUnitId: 'adunit-1d2566cb7cc546d7'
+      });
+      this.videoAd.onLoad(() => {
+        console.log('激励视频 广告加载成功 (Settings)');
+      });
+      this.videoAd.onError((err) => {
+        console.error('激励视频广告加载失败', err);
+      });
+    }
+  },
+
   onShow: function () {
+    this.createVideoAd();
+    if (this.videoAd) {
+      if (!this.onAdClose) {
+         this.onAdClose = (res) => {
+           if (res && res.isEnded) {
+             if (this.pendingAction) {
+               this.pendingAction();
+               this.pendingAction = null;
+             }
+           } else {
+             wx.showToast({
+               title: '看完广告才能切换哦',
+               icon: 'none'
+             });
+             // 恢复Picker显示
+             this.setData({
+                categoryPickerIndex: this.data.categoryPickerIndex,
+                yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
+                topikLevelPickerIndex: this.data.topikLevelPickerIndex
+             });
+           }
+         };
+      }
+      this.videoAd.offClose(this.onAdClose);
+      this.videoAd.onClose(this.onAdClose);
+    }
+
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 2
@@ -190,10 +234,21 @@ Page({
     }
   },
 
+  onHide: function() {
+    // 不要销毁广告，但要移除监听器
+    if (this.videoAd && this.onAdClose) {
+       this.videoAd.offClose(this.onAdClose);
+    }
+  },
+
   onUnload: function () {
     const app = getApp();
     if (app && typeof app.unregisterThemePage === 'function') {
       app.unregisterThemePage('settings', this);
+    }
+    // 不要销毁广告
+    if (this.videoAd && this.onAdClose) {
+       this.videoAd.offClose(this.onAdClose);
     }
   },
 
@@ -273,6 +328,8 @@ Page({
         yonseiLessonDisplay: '请选择',
         yonseiLessonPickerIndex: 0,
         showYonseiSub: false
+      }, () => {
+        this.updateFilteredTotalWords();
       });
       return;
     }
@@ -308,6 +365,8 @@ Page({
         topikLevels: [],
         topikSessions: [],
         showTopikSub: false
+      }, () => {
+        this.updateFilteredTotalWords();
       });
       return;
     }
@@ -321,12 +380,83 @@ Page({
       yonseiLessonDisplay: '请选择',
       yonseiLessonPickerIndex: 0,
       showYonseiSub: false
+    }, () => {
+      this.updateFilteredTotalWords();
+    });
+  },
+
+  updateFilteredTotalWords: async function() {
+    const s = this.data.settings;
+    const category = this.data.currentCategory;
+    
+    if (category === 'Mistakes (错题本)') {
+       return;
+    }
+
+    const filters = {};
+    if (category === 'TOPIK Vocabulary') {
+       if (s.topikLevel) filters.topikLevel = s.topikLevel;
+       if (s.topikSession) filters.topikSession = s.topikSession;
+    } else if (/^Yonsei\s+\d$/.test(category)) {
+       if (s.yonseiLessonId) filters.lessonId = s.yonseiLessonId;
+    }
+
+    const res = await getWords(category, 1, 0, filters);
+    this.setData({ totalWords: res.total });
+  },
+
+  checkAndShowAd: function(callback) {
+    // 如果没有广告实例，直接执行回调
+    if (!this.videoAd) {
+      callback && callback();
+      return;
+    }
+
+    // 显示确认弹窗
+    wx.showModal({
+      title: '切换词库',
+      content: '切换词库需要观看一次广告，是否继续？',
+      confirmText: '观看广告',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          // 用户点击确定，展示广告
+          this.pendingAction = callback;
+          this.videoAd.show().catch(() => {
+            // 失败重试
+            this.videoAd.load()
+              .then(() => this.videoAd.show())
+              .catch(err => {
+                console.error('激励视频 广告显示失败', err);
+                // 广告显示失败，直接允许切换
+                if (this.pendingAction) {
+                  this.pendingAction();
+                  this.pendingAction = null;
+                }
+              });
+          });
+        } else {
+          // 用户点击取消，不进行切换
+          // 注意：如果是picker触发的，界面上的选项可能已经变了，但这里不执行callback就不会真正切换数据
+          // 如果需要回滚picker的显示，比较复杂，因为picker是bindchange触发的
+          // 但由于我们不调用setData更新currentCategory等，下次刷新页面会恢复
+          console.log('用户取消切换');
+          
+          // 为了更好的体验，如果是在picker中取消，可能需要手动重置picker的index
+          // 重新setData一下当前的index可以强制picker回滚（某些情况下有效）
+          this.setData({
+            categoryPickerIndex: this.data.categoryPickerIndex,
+            yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex
+          });
+        }
+      }
     });
   },
 
   applyCategorySelection: function (category, idx) {
     const nextCategory = String(category || '');
     if (!nextCategory) return;
+
     const nextSettings = sanitizeSettings({ ...this.data.settings, category: nextCategory });
     wx.setStorageSync('settings', nextSettings);
     const counts = this.data.categoryCounts || {};
@@ -367,32 +497,49 @@ Page({
     const index = Number(e.detail && e.detail.value);
     const level = (this.data.topikLevels || [])[index];
     if (!level) return;
+    
     const topikLevel = String(level);
     const topikSessions = await getTopikSessions(topikLevel);
     const topikSession = String(topikSessions[0] || '');
     const nextSettings = sanitizeSettings({ ...this.data.settings, topikLevel, topikSession });
     wx.setStorageSync('settings', nextSettings);
-    this.setData({ settings: nextSettings, topikLevelPickerIndex: index, topikSessions });
+    this.setData({ settings: nextSettings, topikLevelPickerIndex: index, topikSessions }, () => {
+      this.updateFilteredTotalWords();
+    });
   },
 
   selectTopikSession: function (e) {
     const session = e.currentTarget.dataset.session;
-    const topikSession = String(session || '');
-    const nextSettings = sanitizeSettings({ ...this.data.settings, topikSession });
-    wx.setStorageSync('settings', nextSettings);
-    this.setData({ settings: nextSettings });
+    
+    const action = () => {
+      const topikSession = String(session || '');
+      const nextSettings = sanitizeSettings({ ...this.data.settings, topikSession });
+      wx.setStorageSync('settings', nextSettings);
+      this.setData({ settings: nextSettings }, () => {
+        this.updateFilteredTotalWords();
+      });
+    };
+
+    this.checkAndShowAd(action);
   },
 
   onYonseiLessonPickerChange: function (e) {
     const index = Number(e.detail && e.detail.value);
     const lesson = (this.data.yonseiLessons || [])[index];
     if (!lesson) return;
-    const yonseiLessonId = String(lesson.id || '');
-    const yonseiLessonName = String(lesson.original || lesson.name || '');
-    const nextSettings = sanitizeSettings({ ...this.data.settings, yonseiLessonId, yonseiLessonName });
-    wx.setStorageSync('settings', nextSettings);
-    const display = (this.data.yonseiLessonOptions || [])[index] || '请选择';
-    this.setData({ settings: nextSettings, yonseiLessonPickerIndex: index, yonseiLessonDisplay: display });
+
+    const performLessonSwitch = () => {
+      const yonseiLessonId = String(lesson.id || '');
+      const yonseiLessonName = String(lesson.original || lesson.name || '');
+      const nextSettings = sanitizeSettings({ ...this.data.settings, yonseiLessonId, yonseiLessonName });
+      wx.setStorageSync('settings', nextSettings);
+      const display = (this.data.yonseiLessonOptions || [])[index] || '请选择';
+      this.setData({ settings: nextSettings, yonseiLessonPickerIndex: index, yonseiLessonDisplay: display }, () => {
+        this.updateFilteredTotalWords();
+      });
+    };
+
+    this.checkAndShowAd(performLessonSwitch);
   },
 
   updateSetting: function (eOrKey, value) {

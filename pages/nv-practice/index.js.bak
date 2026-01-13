@@ -1042,7 +1042,7 @@ Page({
                     ctx.font = '800 44px sans-serif';
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'alphabetic';
-                    ctx.fillText('阿班单词', 70, 96);
+                    ctx.fillText('韩词练习', 70, 96);
 
                     const cardX = 70;
                     const cardY = 160;

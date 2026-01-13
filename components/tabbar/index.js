@@ -82,7 +82,7 @@ Component({
             return;
         }
         
-        const targetUrl = `/pages/nv-grammar/index?book=${encodeURIComponent(book)}&lessonId=${encodeURIComponent(lessonId)}`;
+        const targetUrl = `/subpackages/grammar/pages/index/index?book=${encodeURIComponent(book)}&lessonId=${encodeURIComponent(lessonId)}`;
         wx.navigateTo({ url: targetUrl });
         return
       }

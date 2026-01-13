@@ -76,7 +76,8 @@
     </view>
 
     <view class="filter-content">
-      <view class="setting-section">
+      <!-- Removed Word Book Picker as per request -->
+      <!-- <view class="setting-section">
         <view class="section-title">词书</view>
         <picker mode="selector" range="{{categories}}" value="{{categoryPickerIndex}}" bindchange="onCategoryPickerChange">
           <view class="category-item picker-item">
@@ -87,7 +88,7 @@
             </view>
           </view>
         </picker>
-      </view>
+      </view> -->
 
       <view class="setting-section" wx:if="{{showTopikSub}}">
         <view class="section-title">选择二级分类</view>
@@ -119,7 +120,7 @@
         <view class="section-title">选择二级分类</view>
         <picker mode="selector" range="{{yonseiLessonOptions}}" value="{{yonseiLessonPickerIndex}}" bindchange="onYonseiLessonPickerChange">
           <view class="category-item picker-item">
-            <text class="picker-label">课次 (lesson_id)</text>
+            <text class="picker-label">课次 </text>
             <view class="picker-right">
               <text class="picker-value">{{yonseiLessonDisplay}}</text>
               <text class="picker-arrow">›</text>

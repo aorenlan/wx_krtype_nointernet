@@ -2,9 +2,18 @@
   "pages": [
     "pages/index/index",
     "pages/nv-practice/index",
-    "pages/nv-settings/index",
-    "pages/nv-grammar/index"
+    "pages/nv-settings/index"
   ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["grammar"]
+    },
+    "pages/nv-practice/index": {
+      "network": "all",
+      "packages": ["grammar"]
+    }
+  },
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#0f172a",
@@ -13,6 +22,13 @@
     "navigationStyle": "custom"
   },
   "subpackages": [
+    {
+      "root": "subpackages/grammar",
+      "name": "grammar",
+      "pages": [
+        "pages/index/index"
+      ]
+    },
     {
       "root": "subpackages/audio_p1",
       "name": "audio_p1",

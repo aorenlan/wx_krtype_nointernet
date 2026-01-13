@@ -1,12 +1,11 @@
-const grammarData = require('../../data/newversion/yansei_grammar.js');
+const grammarData = require('../../data/yansei_grammar.js');
 
 const parseContent = (s) => {
   if (!s) return [];
   const raw = String(s);
   // Replace delimiters with a unique separator
-  // Matches \p followed by optional digits and optional * (e.g., \p, \p*, \p2)
   const normalized = raw
-    .replace(/\\p\d*\*?/g, '###P###') 
+    .replace(/Morphological rules/gi, '形态规则')
     .replace(/\r\n/g, '###P###')
     .replace(/\n/g, '###P###');
   
@@ -27,7 +26,9 @@ Page({
     items: [],
     currentKey: '',
     current: null,
-    contentParts: [],
+    meaningParts: [],
+    usageParts: [],
+    exampleParts: [],
     sidebarCollapsed: false,
     startX: 0,
     startY: 0
@@ -84,10 +85,24 @@ Page({
     const items = this.data.items || [];
     const found = items.find(x => x.key === key);
     if (!found) return;
+
+    // Separate meaning and usage_notes
+    const meaningParts = parseContent(found.meaning);
+    const usageParts = parseContent(found.usage_notes);
+
+    // Map structured examples to {kor, trans}
+    const rawExamples = Array.isArray(found.examples) ? found.examples : [];
+    const exampleParts = rawExamples.map(ex => ({
+      kor: ex.kr || ex.kor || '', // Handle both keys just in case
+      trans: ex.cn || ex.trans || ''
+    }));
+
     this.setData({
       currentKey: key,
       current: found,
-      contentParts: parseContent(found.meaning_examples),
+      meaningParts,
+      usageParts,
+      exampleParts,
       sidebarCollapsed: true
     });
   },
@@ -113,13 +128,30 @@ Page({
     const currentKey = first ? first.key : '';
     const subtitle = book && lessonId ? `${book} · 第${lessonId}课` : '语法';
 
+    let meaningParts = [];
+    let usageParts = [];
+    let exampleParts = [];
+
+    if (first) {
+      meaningParts = parseContent(first.meaning);
+      usageParts = parseContent(first.usage_notes);
+
+      const rawExamples = Array.isArray(first.examples) ? first.examples : [];
+      exampleParts = rawExamples.map(ex => ({
+        kor: ex.kr || ex.kor || '',
+        trans: ex.cn || ex.trans || ''
+      }));
+    }
+
     this.setData({
       statusBarHeight: windowInfo.statusBarHeight || 20,
       navBarHeight: 44,
       items,
       currentKey,
       current: first,
-      contentParts: first ? parseContent(first.meaning_examples) : [],
+      meaningParts,
+      usageParts,
+      exampleParts,
       title: '语法',
       subTitle: book && lessonId ? `第${lessonId}课 · ${items.length}条` : '',
       subtitle

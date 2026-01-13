@@ -4,7 +4,7 @@ Component({
   properties: {
     title: {
       type: String,
-      value: '阿班单词'
+      value: '韩词练习'
     },
     subtitle: {
       type: String,

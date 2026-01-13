@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS = {
     autoCheckSpelling: true,
     autoPronounce: false,
     pronounceMeaning: false,
-    category: 'TOPIK Vocabulary',
+    category: 'Yonsei 1',
     keyboardVisualMode: 'korean',
     yonseiLessonId: '',
     yonseiLessonName: '',
@@ -181,7 +181,8 @@ Page({
         keyboardOffsetBottom: 280, 
         
         statusBarHeight: 20,
-        navBarHeight: 44
+        navBarHeight: 44,
+        showUpdatePopup: false
     },
 
     async onLoad() {
@@ -189,6 +190,14 @@ Page({
         
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
+
+        // Check Update Popup
+        const updateKey = 'hasShownUpdatePopup_v2_new';
+        const hasShown = wx.getStorageSync(updateKey);
+        if (!hasShown) {
+            this.setData({ showUpdatePopup: true });
+            wx.setStorageSync(updateKey, true);
+        }
 
         this.wordAudio = null;
         this.cnAudio = null;
@@ -228,11 +237,112 @@ Page({
         this.loadWords();
     },
 
+    closeUpdatePopup() {
+        this.setData({ showUpdatePopup: false });
+    },
+
+    preventScroll() {},
+
+    createVideoAd() {
+        if (this.videoAd) return;
+        if (wx.createRewardedVideoAd) {
+          this.videoAd = wx.createRewardedVideoAd({
+            adUnitId: 'adunit-1d2566cb7cc546d7'
+          });
+          
+          this.videoAd.onLoad(() => {
+            console.log('激励视频 广告加载成功 (Practice)');
+          });
+          
+          this.videoAd.onError((err) => {
+            console.error('激励视频 广告加载失败', err);
+          });
+        }
+    },
+
+    handleAdClose(res) {
+        // 用户点击了【关闭广告】按钮
+        if (res && res.isEnded) {
+            // 正常播放结束，可以下发奖励
+            if (this.pendingAction) {
+                this.pendingAction();
+                this.pendingAction = null;
+            }
+        } else {
+            // 播放中途退出，不下发奖励
+            console.log('中途关闭，不切换');
+            wx.showToast({
+                title: '需要看完广告才能切换',
+                icon: 'none'
+            });
+            
+            // 恢复Picker的显示（如果在Picker中取消）
+            this.setData({
+                categoryPickerIndex: this.data.categoryPickerIndex,
+                yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
+                topikLevelPickerIndex: this.data.topikLevelPickerIndex
+            });
+        }
+    },
+
+    checkAndShowAd: function(callback) {
+      // 如果没有广告实例，直接执行回调
+      if (!this.videoAd) {
+        callback && callback();
+        return;
+      }
+  
+      // 显示确认弹窗
+      wx.showModal({
+        title: '切换词库',
+        content: '切换词库需要观看一次广告，是否继续？',
+        confirmText: '观看广告',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            // 用户点击确定，展示广告
+            this.pendingAction = callback;
+            this.videoAd.show().catch(() => {
+              // 失败重试
+              this.videoAd.load()
+                .then(() => this.videoAd.show())
+                .catch(err => {
+                  console.error('激励视频 广告显示失败', err);
+                  // 广告显示失败，直接允许切换
+                  if (this.pendingAction) {
+                    this.pendingAction();
+                    this.pendingAction = null;
+                  }
+                });
+            });
+          } else {
+            // 用户点击取消，不进行切换
+            console.log('用户取消切换');
+            // 恢复Picker的显示
+            this.setData({
+              categoryPickerIndex: this.data.categoryPickerIndex,
+              yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
+              topikLevelPickerIndex: this.data.topikLevelPickerIndex
+            });
+          }
+        }
+      });
+    },
+
+    onHide() {
+        if (this.videoAd && this._boundAdClose) {
+            this.videoAd.offClose(this._boundAdClose);
+        }
+    },
+
     onUnload() {
         this.persistCurrentProgress();
         this.cancelAudioPreload();
         this.clearAudioFileLRU();
         this.clearAllTimers();
+        if (this.videoAd && this._boundAdClose) {
+            this.videoAd.offClose(this._boundAdClose);
+        }
         try {
             if (this.wordAudio) this.wordAudio.destroy();
             if (this.cnAudio) this.cnAudio.destroy();
@@ -406,7 +516,16 @@ Page({
         this.setData({ categories, categoryPickerIndex: idx });
     },
 
-    async onShow() {
+    onShow: async function() {
+        this.createVideoAd();
+        if (this.videoAd) {
+            if (!this._boundAdClose) {
+                this._boundAdClose = this.handleAdClose.bind(this);
+            }
+            this.videoAd.offClose(this._boundAdClose);
+            this.videoAd.onClose(this._boundAdClose);
+        }
+
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
             this.getTabBar().setData({ selected: 0 });
         }
@@ -576,7 +695,7 @@ Page({
         if (/^Yonsei\s+\d$/.test(category) && s.yonseiLessonId) filters.lessonId = s.yonseiLessonId;
         if (s.wordLengthFilter) filters.minLength = s.wordLengthFilter;
         if (s.wordStartFilter) filters.firstLetter = s.wordStartFilter;
-        const res = await getWords(category, 50, 0, filters); 
+        const res = await getWords(category, 2000, 0, filters); 
         if (res && res.words) {
             const savedIndex = Number(getProgress(category, subKey) || 0);
             const startIndex = normalizeIndex(savedIndex, res.words.length);
@@ -642,31 +761,41 @@ Page({
     selectYonseiLesson(e) {
         const lessonId = e.currentTarget.dataset.lessonId;
         const lessonName = e.currentTarget.dataset.lessonName || '';
-        const nextSettings = Object.assign({}, this.data.settings || {});
-        nextSettings.yonseiLessonId = String(lessonId);
-        nextSettings.yonseiLessonName = String(lessonName);
-        const idx = Math.max(0, (this.data.yonseiLessons || []).findIndex(l => String(l.id) === String(lessonId)));
-        const display = (this.data.yonseiLessonOptions || [])[idx] || '请选择';
-        this.setData({ settings: sanitizeSettings(nextSettings), yonseiLessonPickerIndex: idx, yonseiLessonDisplay: display });
-        wx.setStorageSync('settings', sanitizeSettings(nextSettings));
-        this.updateDisplayCategory();
-        this.loadWords();
+
+        const action = () => {
+            const nextSettings = Object.assign({}, this.data.settings || {});
+            nextSettings.yonseiLessonId = String(lessonId);
+            nextSettings.yonseiLessonName = String(lessonName);
+            const idx = Math.max(0, (this.data.yonseiLessons || []).findIndex(l => String(l.id) === String(lessonId)));
+            const display = (this.data.yonseiLessonOptions || [])[idx] || '请选择';
+            this.setData({ settings: sanitizeSettings(nextSettings), yonseiLessonPickerIndex: idx, yonseiLessonDisplay: display });
+            wx.setStorageSync('settings', sanitizeSettings(nextSettings));
+            this.updateDisplayCategory();
+            this.loadWords();
+        };
+
+        this.checkAndShowAd(action);
     },
 
     onYonseiLessonPickerChange(e) {
         const index = Number(e.detail && e.detail.value);
         const lesson = (this.data.yonseiLessons || [])[index];
         if (!lesson) return;
-        const lessonId = String(lesson.id);
-        const lessonName = String(lesson.original || lesson.name || '');
-        const nextSettings = Object.assign({}, this.data.settings || {});
-        nextSettings.yonseiLessonId = lessonId;
-        nextSettings.yonseiLessonName = lessonName;
-        const display = (this.data.yonseiLessonOptions || [])[index] || '请选择';
-        this.setData({ settings: sanitizeSettings(nextSettings), yonseiLessonPickerIndex: index, yonseiLessonDisplay: display });
-        wx.setStorageSync('settings', sanitizeSettings(nextSettings));
-        this.updateDisplayCategory();
-        this.loadWords();
+
+        const action = () => {
+            const lessonId = String(lesson.id);
+            const lessonName = String(lesson.original || lesson.name || '');
+            const nextSettings = Object.assign({}, this.data.settings || {});
+            nextSettings.yonseiLessonId = lessonId;
+            nextSettings.yonseiLessonName = lessonName;
+            const display = (this.data.yonseiLessonOptions || [])[index] || '请选择';
+            this.setData({ settings: sanitizeSettings(nextSettings), yonseiLessonPickerIndex: index, yonseiLessonDisplay: display });
+            wx.setStorageSync('settings', sanitizeSettings(nextSettings));
+            this.updateDisplayCategory();
+            this.loadWords();
+        };
+
+        this.checkAndShowAd(action);
     },
 
     async onTopikLevelPickerChange(e) {
@@ -696,14 +825,20 @@ Page({
 
     selectTopikSession(e) {
         const session = e.currentTarget.dataset.session;
-        const topikSession = String(session || '');
-        const nextSettings = Object.assign({}, this.data.settings || {});
-        nextSettings.topikSession = topikSession;
-        const next = sanitizeSettings(nextSettings);
-        this.setData({ settings: next });
-        wx.setStorageSync('settings', next);
-        this.updateDisplayCategory();
-        this.loadWords();
+        
+        const action = () => {
+            const topikSession = String(session || '');
+            const nextSettings = Object.assign({}, this.data.settings || {});
+            nextSettings.topikSession = topikSession;
+            const next = sanitizeSettings(nextSettings);
+            this.setData({ settings: next });
+            wx.setStorageSync('settings', next);
+            this.updateDisplayCategory();
+            this.loadWords();
+        };
+        
+        // TOPIK 切换 Session 也视为收费操作
+        this.checkAndShowAd(action);
     },
 
     clearAllTimers() {
@@ -875,6 +1010,7 @@ Page({
 
         this.tryAutoPronounce();
         setTimeout(() => this.preloadNextWordAudio(), 60);
+        setTimeout(() => this.drawShareImage(), 500);
     },
 
     updateMeaningSize() {
@@ -1622,6 +1758,78 @@ Page({
 
     toggleKeyboard() {
         this.setData({ isKeyboardOpen: !this.data.isKeyboardOpen });
+    },
+
+    onShareAppMessage() {
+        const word = (this.data.currentWord && this.data.currentWord.word) || '韩语单词';
+        const meaning = (this.data.currentWord && this.data.currentWord.meaning) || 'Korean Practice';
+        const path = '/pages/nv-practice/index';
+        
+        return {
+            title: `${word} - ${meaning}`,
+            path: path,
+            imageUrl: this.data.shareImagePath || ''
+        };
+    },
+
+    onShareTimeline() {
+        const word = (this.data.currentWord && this.data.currentWord.word) || '韩语单词';
+        return {
+             title: `我在练习：${word}`,
+             imageUrl: this.data.shareImagePath || ''
+        };
+    },
+
+    drawShareImage() {
+        if (!this.data.currentWord) return;
+        const query = this.createSelectorQuery();
+        query.select('#shareCanvas')
+            .fields({ node: true, size: true })
+            .exec((res) => {
+                if (!res[0] || !res[0].node) return;
+                const canvas = res[0].node;
+                const ctx = canvas.getContext('2d');
+                const dpr = wx.getSystemInfoSync().pixelRatio;
+                
+                const width = res[0].width;
+                const height = res[0].height;
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                ctx.scale(dpr, dpr);
+                
+                // Draw Background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Draw Word (Korean)
+                const word = this.data.currentWord.word;
+                ctx.fillStyle = '#1e293b'; 
+                ctx.font = 'bold 48px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(word, width / 2, height / 2 - 20);
+                
+                // Draw Meaning
+                const meaning = this.data.currentWord.meaning;
+                ctx.fillStyle = '#64748b';
+                ctx.font = '24px sans-serif';
+                ctx.fillText(meaning, width / 2, height / 2 + 40);
+                
+                // Draw Footer
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px sans-serif';
+                ctx.fillText('韩语打字练习', width / 2, height - 20);
+                
+                wx.canvasToTempFilePath({
+                    canvas: canvas,
+                    success: (res) => {
+                        this.setData({ shareImagePath: res.tempFilePath });
+                    },
+                    fail: (err) => {
+                        console.error('Canvas export failed', err);
+                    }
+                });
+            });
     },
 
 });

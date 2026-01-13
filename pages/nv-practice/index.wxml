@@ -185,7 +185,7 @@
           <view class="section-title">选择二级分类</view>
           <picker mode="selector" range="{{yonseiLessonOptions}}" value="{{yonseiLessonPickerIndex}}" bindchange="onYonseiLessonPickerChange">
             <view class="category-item picker-item">
-              <text class="picker-label">课次 (lesson_id)</text>
+              <text class="picker-label">课次 </text>
               <view class="picker-right">
                 <text class="picker-value">{{yonseiLessonDisplay}}</text>
                 <text class="picker-arrow">›</text>
@@ -238,7 +238,7 @@
           </view>
         </view>
 
-        <view class="setting-section">
+        <!-- <view class="setting-section">
           <view class="setting-row">
             <text>自动倒计时</text>
             <switch checked="{{settings.enableTimer}}" color="#fad0c4" bindchange="toggleSetting" data-key="enableTimer"/>
@@ -250,7 +250,7 @@
             </view>
             <slider min="3" max="30" step="1" value="{{settings.timerDuration}}" bindchange="updateSetting" data-key="timerDuration" activeColor="#fad0c4" block-size="20"/>
           </view>
-        </view>
+        </view> -->
 
         <view class="setting-section">
           <text class="section-title">卡片内容</text>
@@ -277,10 +277,10 @@
         <view class="setting-section">
           <text class="section-title">功能选项</text>
 
-          <view class="setting-item" bindtap="toggleSetting" data-key="autoCheckSpelling">
+          <!-- <view class="setting-item" bindtap="toggleSetting" data-key="autoCheckSpelling">
             <text>自动检查拼写</text>
             <switch checked="{{settings.autoCheckSpelling}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoCheckSpelling"/>
-          </view>
+          </view> -->
 
           <view class="setting-item" bindtap="toggleSetting" data-key="enableKeyboardHint">
             <text>键盘提示</text>
@@ -302,4 +302,25 @@
     </view>
   </view>
 
+  <canvas type="2d" id="shareCanvas" style="position: absolute; left: -9999px; top: 0; width: 375px; height: 300px;"></canvas>
+
+  <!-- Update Popup -->
+  <view class="modal-overlay center {{showUpdatePopup ? 'show' : ''}}" catchtouchmove="preventScroll">
+    <view class="modal-content {{settings.darkMode ? 'dark' : ''}}">
+      <view class="modal-header">
+        <text class="modal-title">更新说明</text>
+        <view class="modal-close" bindtap="closeUpdatePopup">✕</view>
+      </view>
+      <view class="modal-body" style="padding: 20px;">
+        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v3.0 全新上线！</view>
+        <view style="line-height: 1.8; color: #64748b; font-size: 14px;">
+          <view>1. 全新设计的练习界面，体验更流畅</view>
+          <view>2. 新增更多词书和详细分类</view>
+          <view>3. 优化了键盘输入体验和提示</view>
+          <view>待更新：语法模块朗读、每日一句、图文版、拍照识别</view>
+        </view>
+        <button bindtap="closeUpdatePopup" style="margin-top: 25px; width: 100%; background: #6366f1; color: white; border-radius: 12px; font-weight: 500;">开始体验</button>
+      </view>
+    </view>
+  </view>
 </view>

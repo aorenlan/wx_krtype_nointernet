@@ -6,7 +6,7 @@
   "navigationStyle": "custom",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "navigationBarTitleText": "阿班单词",
+  "navigationBarTitleText": "韩词练习",
   "enablePullDownRefresh": false,
   "disableScroll": true
 }
