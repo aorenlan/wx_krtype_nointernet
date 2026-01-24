@@ -1,0 +1,114 @@
+
+<custom-nav
+  title="创作新故事"
+  showBack="{{true}}"
+  showSettings="{{false}}"
+></custom-nav>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  
+  <view class="form-section" wx:if="{{!generated && !isGenerating}}">
+    <view class="input-group">
+      <text class="label">主角是谁？</text>
+      <input class="input" placeholder="输入名字 (如: Lisa, 朋友)" bindinput="onInputName" value="{{characterName}}" />
+    </view>
+    
+    <view class="input-group">
+      <view class="label-row">
+        <text class="label">发生什么？</text>
+        <view class="random-btn" bindtap="randomize">
+          <text>🎲 帮我选</text>
+        </view>
+      </view>
+      <picker-view indicator-style="height: 50px;" style="width: 100%; height: 200px;" value="{{pickerValue}}" bindchange="onPickerChange">
+        <picker-view-column>
+          <view wx:for="{{pickerColumns[0]}}" wx:key="*this" class="picker-item">{{item}}</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{pickerColumns[1]}}" wx:key="*this" class="picker-item">{{item}}</view>
+        </picker-view-column>
+        <picker-view-column>
+          <view wx:for="{{pickerColumns[2]}}" wx:key="*this" class="picker-item">{{item}}</view>
+        </picker-view-column>
+      </picker-view>
+      
+      <view class="picker-selection-text">
+        <text>{{pickerColumns[0][pickerValue[0]]}}</text>
+        <text class="separator">·</text>
+        <text>{{pickerColumns[1][pickerValue[1]]}}</text>
+        <text class="separator">·</text>
+        <text>{{pickerColumns[2][pickerValue[2]]}}</text>
+      </view>
+    </view>
+    
+    <button class="btn-primary" bindtap="generate">开始生成</button>
+  </view>
+
+  <view class="preview-section" wx:else>
+    <view class="loading-state" wx:if="{{isGenerating && !segments.length}}">
+      <view class="spinner"></view>
+      <text>AI 正在创作中...</text>
+    </view>
+    
+    <view class="swiper-container" wx:if="{{segments.length}}">
+      <view class="nav-btn left" bindtap="prevSegment" wx:if="{{currentSegmentIndex > 0}}">
+        <text class="nav-icon">❮</text>
+      </view>
+      
+      <swiper 
+        class="story-swiper" 
+        current="{{currentSegmentIndex}}" 
+        bindchange="onSwiperChange"
+        previous-margin="0px"
+        next-margin="0px"
+        duration="500"
+      >
+        <block wx:for="{{segments}}" wx:key="index">
+          <swiper-item>
+            <view class="slide-card">
+              <view class="slide-korean">
+                <block wx:for="{{item.displayKorean}}" wx:key="i" wx:for-item="seg">
+                  <text class="{{seg.bold ? 'bold-text' : ''}}">{{seg.text}}</text>
+                </block>
+              </view>
+              <view class="slide-translation">
+                <text>{{item.chinese}}</text>
+              </view>
+            </view>
+          </swiper-item>
+        </block>
+      </swiper>
+      
+      <view class="nav-btn right" bindtap="nextSegment" wx:if="{{currentSegmentIndex < segments.length - 1}}">
+        <text class="nav-icon">❯</text>
+      </view>
+    </view>
+    
+    <view class="pagination" wx:if="{{segments.length}}">
+      <text>{{currentSegmentIndex + 1}} / {{segments.length}}</text>
+    </view>
+    
+    <scroll-view scroll-y class="analysis-scroll" wx:if="{{wordsSection || grammarSection || isGenerating}}">
+      <view class="analysis-content" wx:if="{{wordsSection || isGenerating}}">
+        <view class="analysis-title">
+          <text>📖 单词解析</text>
+        </view>
+        <text class="body-text">{{wordsSection || (isGenerating ? '解析生成中...' : '')}}</text>
+      </view>
+      
+      <view class="analysis-content" wx:if="{{grammarSection}}">
+        <view class="analysis-title">
+          <text>💡 语法解析</text>
+        </view>
+        <text class="body-text">{{grammarSection}}</text>
+      </view>
+      <view style="height: 100px;"></view>
+    </scroll-view>
+    
+    <view class="footer-bar" wx:if="{{generated}}">
+      <button class="btn-secondary" bindtap="generate">重新生成</button>
+      <button class="btn-primary" bindtap="publish">发布故事</button>
+    </view>
+  </view>
+
+</view>

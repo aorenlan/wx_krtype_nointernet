@@ -1,0 +1,83 @@
+<custom-nav
+  title="每日一句"
+  subtitle="{{sentence.source}}"
+  theme="light"
+  showBack="{{true}}"
+  customBack="{{true}}"
+  showSettings="{{false}}"
+  showCheckin="{{true}}"
+  checkinText="历史"
+  bind:checkin="openHistory"
+  bind:back="onNavBack"
+></custom-nav>
+
+<view class="loading-mask" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+  <text class="loading-text">加载中...</text>
+</view>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;" catchtouchmove="preventMove">
+  <view class="stage" catchtouchmove="preventMove">
+    <image class="bg" src="{{sentence.backgroundImage}}" mode="aspectFill" />
+
+    <view class="cn-top">
+      <view class="cn-badge">
+        <text class="cn-title">{{sentence.source}}</text>
+      </view>
+      <view class="auto-wrap">
+        <view class="auto-btn {{autoPlay ? 'on' : 'off'}}" bindtap="toggleAutoPlay">
+          <image src="/assets/icons/volume.svg" class="auto-icon" mode="aspectFit" />
+          <view class="auto-slash" wx:if="{{!autoPlay}}"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card-stage" catchtouchmove="preventMove" bindtouchstart="onSwipeStart" bindtouchend="onSwipeEnd">
+      <view class="card next {{nextAnimClass}}" hidden="{{!hasNext}}">
+        <view class="card-top">
+          <view class="tone-pill">{{displayNextCard.tone}}</view>
+          <view class="audio-btn">
+            <image src="/assets/icons/volume.svg" class="audio-icon" mode="aspectFit" />
+          </view>
+        </view>
+        <view class="kr-wrap">
+          <text class="kr-text">{{displayNextCard.korean}}</text>
+        </view>
+        <text class="romaji">{{displayNextCard.romaji}}</text>
+      </view>
+
+      <view class="card current {{currentAnimClass}}">
+        <view class="card-top">
+          <view class="tone-pill">{{displayCurrentCard.tone}}</view>
+          <view class="audio-btn" bindtap="playCurrentAudio">
+            <image src="/assets/icons/volume.svg" class="audio-icon" mode="aspectFit" />
+          </view>
+        </view>
+        <view class="kr-wrap">
+          <text class="kr-text">{{displayCurrentCard.korean}}</text>
+        </view>
+        <text class="romaji">{{displayCurrentCard.romaji}}</text>
+
+        <scroll-view scroll-y class="card-body" bounces="{{false}}">
+          <view class="desc">
+            <text class="desc-title">适用语境</text>
+            <text class="desc-text">{{displayCurrentCard.context}}</text>
+          </view>
+          <view class="desc">
+            <text class="desc-title">讲解</text>
+            <text class="desc-text">{{displayCurrentCard.explanation}}</text>
+          </view>
+          <view class="desc" wx:if="{{displayCurrentCard.vocabulary}}">
+            <text class="desc-title">词汇</text>
+            <text class="desc-text">{{displayCurrentCard.vocabulary}}</text>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
+    <view class="floating-controls">
+      <view class="next-fab" bindtap="nextCard">下一句</view>
+    </view>
+  </view>
+
+</view>

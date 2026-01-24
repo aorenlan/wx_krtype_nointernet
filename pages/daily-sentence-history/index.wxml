@@ -1,0 +1,38 @@
+<custom-nav
+  title="每日一句历史"
+  subtitle=""
+  theme="light"
+  showBack="{{true}}"
+  showSettings="{{false}}"
+></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="empty" wx:if="{{loading}}">
+    <text class="empty-title">加载中</text>
+    <text class="empty-sub">正在加载历史记录</text>
+  </view>
+
+  <view class="empty" wx:elif="{{!history.length}}">
+    <text class="empty-title">暂无历史</text>
+    <text class="empty-sub">数据库里还没有数据</text>
+  </view>
+
+  <scroll-view wx:else scroll-y class="list" lower-threshold="120" bindscrolltolower="loadMore">
+    <block wx:for="{{history}}" wx:for-index="idx" wx:key="_id">
+      <view class="item" bindtap="openItem" data-idx="{{idx}}" data-id="{{item._id}}" data-ts="{{item.timestamp}}">
+        <view class="item-main">
+          <text class="item-source">{{item.source}}</text>
+          <text class="item-date">{{item.day || ''}}</text>
+        </view>
+        <text class="item-arrow">›</text>
+      </view>
+    </block>
+
+    <view class="footer" wx:if="{{loadingMore}}">
+      <text class="footer-text">加载中…</text>
+    </view>
+    <view class="footer" wx:elif="{{!hasMore}}">
+      <text class="footer-text">没有更多了</text>
+    </view>
+  </scroll-view>
+</view>

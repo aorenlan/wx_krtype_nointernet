@@ -7,6 +7,10 @@
         <text class="back-icon">‹</text>
       </view>
       <text class="header-title">{{title}}</text>
+      
+      <view class="switch-course-btn" bindtap="goToSettings" style="margin-left: auto;">
+        <text>切换课程</text>
+      </view>
     </view>
     <text class="header-sub">{{subTitle}}</text>
   </view>
@@ -87,10 +91,11 @@
           </view>
           <view class="example-list">
             <block wx:for="{{exampleParts}}" wx:key="index">
-              <view class="example-card">
+              <view class="example-card" bindtap="playExampleAudio" data-text="{{item.kor}}">
                 <view class="ex-kor-row">
                   <text class="ex-num">{{index + 1}}.</text>
                   <text class="ex-kor">{{item.kor}}</text>
+                  <image class="audio-icon" src="/assets/icons/volume.svg" mode="aspectFit" />
                 </view>
                 <view class="ex-trans-row" wx:if="{{item.trans}}">
                   <view class="ex-dash"></view>

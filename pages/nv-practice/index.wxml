@@ -1,9 +1,22 @@
-<custom-nav subtitle="{{displayCategory}}" progress="{{currentIndex + 1}} / {{words.length}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}"></custom-nav>
+<custom-nav subtitle="{{displayCategory}}" progress="{{currentIndex + 1}} / {{words.length}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
 <view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
 
-  <view class="loading" wx:if="{{loading}}">
-    <text>Loading...</text>
+  <!-- 每日一句入口 -->
+  <view class="daily-sentence-entry" bindtap="openDailySentence">
+    <view class="entry-left">
+      <image src="/assets/icons/danmaku.svg" class="entry-icon" mode="aspectFit" />
+      <text class="entry-title">每日一句</text>
+    </view>
+    <view class="entry-right">
+      <text class="entry-source">{{dailySentenceEntrySource || ''}}</text>
+      <text class="entry-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
   </view>
 
   <!-- Main Card -->
@@ -42,7 +55,7 @@
             <view class="word-content">
                 <!-- Meaning (Chinese) -->
                 <view class="meaning-container {{settings.cardShowMeaning ? '' : 'keep-space-hidden'}}">
-                  <text class="meaning {{meaningIsSmall ? 'meaning-small' : ''}}">{{currentWord.meaning}}</text>
+                  <text class="meaning {{meaningIsSmall || currentWord.meaning.length > 7 ? 'meaning-small' : ''}}">{{currentWord.meaning}}</text>
                 </view>
 
                 <!-- Korean Word Slots -->
@@ -93,8 +106,8 @@
   <view class="keyboard-wrapper {{isKeyboardOpen ? 'open' : 'closed'}}">
       <view class="keyboard-header-row">
         <view class="keyboard-header-left">
-          <view class="keyboard-icon-btn keyboard-help-btn" bindtap="onHelpReveal">
-            <text class="keyboard-help-text">Help</text>
+          <view class="keyboard-icon-btn" bindtap="onHelpReveal">
+            <image src="/assets/tabbar/re_eye.png" class="keyboard-action-icon" mode="aspectFit" />
           </view>
           <block wx:if="{{settings.category === 'Mistakes (错题本)'}}">
             <view class="keyboard-mistake-pill">
@@ -132,6 +145,11 @@
 
   <view class="keyboard-expand-fab" wx:if="{{!isKeyboardOpen}}" bindtap="toggleKeyboard">
     <text class="keyboard-expand-icon">⌃</text>
+  </view>
+
+  <view class="guide-bubble" wx:if="{{showGuideBubble}}" bindtap="onGuideBubbleClick">
+    <text>点击唤起键盘</text>
+    <view class="guide-arrow"></view>
   </view>
 
   <!-- Settings Modal -->
@@ -228,11 +246,11 @@
               <text class="mode-btn-sub">EN / KR</text>
             </view>
             <view class="mode-btn {{settings.keyboardVisualMode === 'korean_hide_english' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="korean_hide_english">
-              <text>只显示韩文</text>
+              <text>仅韩文</text>
               <text class="mode-btn-sub">KR Only</text>
             </view>
             <view class="mode-btn {{settings.keyboardVisualMode === 'english_only' ? 'active' : ''}}" bindtap="updateSetting" data-key="keyboardVisualMode" data-value="english_only">
-              <text>只显示英文</text>
+              <text>仅英文</text>
               <text class="mode-btn-sub">EN Only</text>
             </view>
           </view>
@@ -293,7 +311,7 @@
           </view>
 
           <view class="setting-item" bindtap="toggleSetting" data-key="pronounceMeaning">
-            <text>朗读释义</text>
+            <text>朗读中文释义</text>
             <switch checked="{{settings.pronounceMeaning}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="pronounceMeaning"/>
           </view>
 
@@ -312,12 +330,10 @@
         <view class="modal-close" bindtap="closeUpdatePopup">✕</view>
       </view>
       <view class="modal-body" style="padding: 20px;">
-        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v3.0 全新上线！</view>
+        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.0 全新上线！</view>
         <view style="line-height: 1.8; color: #64748b; font-size: 14px;">
-          <view>1. 全新设计的练习界面，体验更流畅</view>
-          <view>2. 新增更多词书和详细分类</view>
-          <view>3. 优化了键盘输入体验和提示</view>
-          <view>待更新：语法模块朗读、每日一句、图文版、拍照识别</view>
+          <view>1. 新增故事坊功能</view>
+          <view>待更新：语法模块朗读、拍照识别</view>
         </view>
         <button bindtap="closeUpdatePopup" style="margin-top: 25px; width: 100%; background: #6366f1; color: white; border-radius: 12px; font-weight: 500;">开始体验</button>
       </view>

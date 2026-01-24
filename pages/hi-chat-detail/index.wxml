@@ -1,0 +1,53 @@
+<custom-nav
+  title="讲解"
+  subtitle=""
+  theme="light"
+  showBack="{{true}}"
+  customBack="{{false}}"
+  showSettings="{{false}}"
+></custom-nav>
+
+<view class="page {{dark ? 'dark' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="empty" wx:if="{{loading}}">
+    <text class="empty-title">加载中</text>
+    <text class="empty-sub">正在获取讲解</text>
+  </view>
+
+  <view class="empty" wx:elif="{{!item}}">
+    <text class="empty-title">记录不存在</text>
+    <text class="empty-sub">可能已被清理或缓存异常</text>
+  </view>
+
+  <view wx:else class="content">
+    <view class="card">
+      <text class="card-title">你说</text>
+      <text class="card-text">{{item.blocked ? '已拦截内容' : item.userText}}</text>
+    </view>
+
+    <view class="card" wx:if="{{item.blocked}}">
+      <text class="card-title">结果</text>
+      <text class="card-text">内容不合规，已拦截</text>
+    </view>
+
+    <view class="card" wx:else>
+      <text class="card-title">韩文</text>
+      <text class="card-text">{{item.status !== 'done' ? '生成中…' : item.korean}}</text>
+    </view>
+
+    <view class="card" wx:if="{{!item.blocked}}">
+      <text class="card-title">讲解</text>
+      <block wx:if="{{item.status !== 'done'}}">
+        <text class="card-text" style="color: #888;">生成中…</text>
+      </block>
+      <block wx:elif="{{item.explanation}}">
+        <text class="card-text" user-select="{{true}}">{{item.explanation}}</text>
+      </block>
+      <block wx:elif="{{item.status === 'done' || item.status === 'failed'}}">
+        <text class="card-text" style="color: #888;">暂无讲解</text>
+      </block>
+      <block wx:else>
+        <text class="card-text" style="color: #888;">正在生成中，请稍后再来</text>
+      </block>
+    </view>
+  </view>
+</view>

@@ -1,6 +1,13 @@
 <view class="custom-nav {{theme}} {{(showCheckin && checkinText && progress) ? 'compact' : ''}}" style="height: {{statusBarHeight + navBarHeight}}px;">
   <view class="nav-content" style="top: {{menuButtonTop}}px; height: {{menuButtonHeight}}px; right: {{capsulePaddingRight}}px;">
-    <view class="nav-back" catchtap="onBackTap" wx:if="{{showBack}}">
+    <view class="nav-back" catchtap="onHomeTap" wx:if="{{showHome}}">
+      <image src="/assets/icons/home.svg" class="home-icon" />
+      <view class="home-guide-tooltip" wx:if="{{homeGuideText}}">
+        <view class="guide-arrow"></view>
+        <text>{{homeGuideText}}</text>
+      </view>
+    </view>
+    <view class="nav-back" catchtap="onBackTap" wx:elif="{{showBack}}">
       <text class="back-icon">‹</text>
     </view>
     <!-- Left: Title & Subtitle -->
@@ -19,6 +26,9 @@
        <view class="checkin-pill" catchtap="onCheckinTap" wx:if="{{showCheckin && checkinText}}">
          <text>{{checkinText}}</text>
        </view>
+       
+       <slot name="right-action"></slot>
+
        <view class="progress-pill" wx:if="{{progress}}">
          <text>{{progress}}</text>
        </view>
@@ -26,7 +36,7 @@
        <view class="settings-btn" catchtap="onSettingsTap" wx:if="{{showSettings}}">
       <view class="settings-icon"></view>
       <view class="settings-tooltip {{showSettingsTooltip ? 'visible' : ''}}">
-        <text>可调整显示模式</text>
+        <text>{{settingsTooltipText}}</text>
         <view class="tooltip-arrow"></view>
       </view>
     </view>

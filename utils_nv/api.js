@@ -1,13 +1,14 @@
-const getData = (key) => {
+
+const getData = async (key) => {
     try {
         switch (key) {
-            case 'TOPIK Vocabulary': return require('../data/newversion/all_topik_vocabulary.js');
-            case 'Yonsei 1': return require('../data/newversion/yonsei_vocabulary_1.js');
-            case 'Yonsei 2': return require('../data/newversion/yonsei_vocabulary_2.js');
-            case 'Yonsei 3': return require('../data/newversion/yonsei_vocabulary_3.js');
-            case 'Yonsei 4': return require('../data/newversion/yonsei_vocabulary_4.js');
-            case 'Yonsei 5': return require('../data/newversion/yonsei_vocabulary_5.js');
-            case 'Yonsei 6': return require('../data/newversion/yonsei_vocabulary_6.js');
+            case 'TOPIK Vocabulary': return await require.async('../subpackages/grammar/data/all_topik_vocabulary.js');
+            case 'Yonsei 1': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_1.js');
+            case 'Yonsei 2': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_2.js');
+            case 'Yonsei 3': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_3.js');
+            case 'Yonsei 4': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_4.js');
+            case 'Yonsei 5': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_5.js');
+            case 'Yonsei 6': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_6.js');
             default: return [];
         }
     } catch (e) {
@@ -36,7 +37,7 @@ export const getCategories = async () => {
 
 export const getTopikLevels = async () => {
     if (Array.isArray(topikLevelsCache)) return topikLevelsCache;
-    const data = getData('TOPIK Vocabulary');
+    const data = await getData('TOPIK Vocabulary');
     const levels = new Set();
     (data || []).forEach((item) => {
         const raw = item && item.category ? String(item.category) : '';
@@ -55,7 +56,7 @@ export const getTopikSessions = async (level) => {
     const cacheKey = lv || '__ALL__';
     if (topikSessionsCache.has(cacheKey)) return topikSessionsCache.get(cacheKey);
 
-    let words = getData('TOPIK Vocabulary') || [];
+    let words = await getData('TOPIK Vocabulary') || [];
     if (lv) {
         const normalizedLevel = lv.replace(/\s+/g, '');
         words = words.filter((w) => {
@@ -85,7 +86,7 @@ export const getTopikSessions = async (level) => {
 export const getYonseiLessons = async (category) => {
     if (!category || !/^Yonsei\s+\d$/.test(category)) return [];
     if (yonseiLessonsCache.has(category)) return yonseiLessonsCache.get(category);
-    const data = getData(category);
+    const data = await getData(category);
     const map = new Map();
     (data || []).forEach((item) => {
         const id = item && item.lesson_id != null ? String(item.lesson_id) : '';
@@ -105,10 +106,10 @@ export const getYonseiLessons = async (category) => {
 
 export const getCategoryCounts = async () => {
     const counts = {};
-    CATEGORIES.forEach(key => {
-        const data = getData(key);
+    for (const key of CATEGORIES) {
+        const data = await getData(key);
         counts[key] = data ? data.length : 0;
-    });
+    }
     return counts;
 };
 
@@ -118,10 +119,10 @@ export const getWords = async (category, limit = 50, offset = 0, filters) => {
          return { words: [], total: 0 };
     } 
     
-    words = getData(category);
+    words = await getData(category);
     if (!words || words.length === 0) {
         if (category === 'TOPIK Vocabulary') return { words: [], total: 0 };
-        words = getData('TOPIK Vocabulary');
+        words = await getData('TOPIK Vocabulary');
     }
 
     if (filters) {
@@ -191,7 +192,7 @@ export const getLetterStats = async (category) => {
 
 export const searchWordExact = async (word) => {
     for (const key of CATEGORIES) {
-        const data = getData(key);
+        const data = await getData(key);
         const found = data.find(w => w.korean === word);
         if (found) {
             return {
@@ -207,7 +208,7 @@ export const searchWordExact = async (word) => {
 export const batchGetWords = async (ids) => {
     const results = [];
     for (const key of CATEGORIES) {
-        const data = getData(key);
+        const data = await getData(key);
         const found = data.filter(w => ids.includes(w.global_id || w.id));
         results.push(...found.map(item => ({
             id: item.global_id || item.id,

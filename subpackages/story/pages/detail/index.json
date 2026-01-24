@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "故事详情",
+  "usingComponents": {
+    "custom-nav": "../../../../components/custom-nav/index"
+  }
+}

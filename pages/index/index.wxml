@@ -163,6 +163,9 @@ module.exports = {
 
   <!-- Custom Input Mode -->
   <view wx:if="{{mode === 'custom'}}" class="custom-container fade-in">
+    <view class="ad-container" wx:if="{{!adsDisabled}}">
+      <ad-custom unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
+    </view>
     <view class="card">
       <view class="input-label">请输入韩语文本 / Enter Korean Text</view>
       <textarea 
@@ -191,8 +194,6 @@ module.exports = {
       <button class="start-btn" bindtap="submitCustom">开始练习</button>
     </view>
 
-    <!-- Custom Mode Ad -->
-    <!-- Removed by user request -->
   </view>
 
   <!-- Typing Mode -->

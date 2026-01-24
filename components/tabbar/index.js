@@ -24,9 +24,21 @@ Component({
         text: "练习"
       },
       {
+        pagePath: "/pages/story-workshop/index",
+        iconPath: "/assets/tabbar/re_story.png",
+        selectedIconPath: "/assets/tabbar/re_story.png",
+        text: "故事坊"
+      },
+      {
+        pagePath: "/pages/hi-chat/index",
+        iconPath: "/assets/tabbar/re_talk.png",
+        selectedIconPath: "/assets/tabbar/re_talk.png",
+        text: "HI~"
+      },
+      {
         pagePath: "",
-        iconPath: "/assets/tabbar/re_偷学.png",
-        selectedIconPath: "/assets/tabbar/re_偷学.png",
+        iconPath: "/assets/tabbar/re_语法.png",
+        selectedIconPath: "/assets/tabbar/re_语法.png",
         text: "语法"
       },
       {
@@ -43,7 +55,7 @@ Component({
       const url = data.path
       const index = data.index
       
-      if (index === 1) { // 语法 Tab
+      if (index === 3) { // 语法 Tab
         const settings = wx.getStorageSync('settings') || {};
         const category = String(settings.category || '');
         

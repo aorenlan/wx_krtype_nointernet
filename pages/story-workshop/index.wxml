@@ -1,0 +1,139 @@
+<custom-nav
+  id="customNav"
+  title="故事坊"
+  theme="light"
+  showBack="{{false}}"
+  showSettings="{{false}}"
+  showCheckin="{{false}}"
+></custom-nav>
+
+<view class="page {{dark ? 'dark' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  
+  <view class="course-header" wx:if="{{currentCourseInfo}}">
+    <view class="course-info">
+      <text class="course-label">当前学习:</text>
+      <text class="course-value">{{currentCourseInfo}}</text>
+    </view>
+    <view class="rules-btn" bindtap="showRules">
+      <text>规则</text>
+      <text class="icon-info">ⓘ</text>
+    </view>
+  </view>
+
+  <view class="controls-row">
+    <view class="tab-bar">
+      <view class="tab-item {{filterMode === 'current' ? 'active' : ''}}" bindtap="setFilter" data-mode="current">当前课程</view>
+      <view class="tab-item {{filterMode === 'all' ? 'active' : ''}}" bindtap="setFilter" data-mode="all">全部课程</view>
+    </view>
+    
+    <view class="sort-bar">
+      <view class="sort-item {{sortMode === 'date' ? 'active' : ''}}" bindtap="setSort" data-mode="date">最新</view>
+      <view class="sort-divider">|</view>
+      <view class="sort-item {{sortMode === 'heat' ? 'active' : ''}}" bindtap="setSort" data-mode="heat">最热</view>
+    </view>
+  </view>
+
+  <view class="search-bar" wx:if="{{filterMode === 'all'}}">
+    <view class="search-wrap">
+      <icon type="search" size="14" color="#94a3b8"></icon>
+      <input 
+        class="search-input" 
+        placeholder="搜索人名（如：朴）" 
+        placeholder-class="search-placeholder"
+        value="{{searchQuery}}"
+        bindinput="onSearchInput"
+        confirm-type="search"
+      />
+      <view class="clear-btn" bindtap="clearSearch" wx:if="{{searchQuery}}">
+        <icon type="clear" size="14" color="#cbd5e1"></icon>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !messages.length}}">
+    <text class="empty-title">{{filterMode === 'current' ? '当前课程暂无故事' : '还没有故事'}}</text>
+    <text class="empty-sub" wx:if="{{filterMode === 'current'}}">
+      <block wx:if="{{canCreate}}">请切换到“全部”查看，或点击下方 + 号创作</block>
+      <block wx:else>当前课程（错题本）暂不支持创作，请切换其他课程</block>
+    </text>
+    <text class="empty-sub" wx:else>
+       <block wx:if="{{canCreate}}">点击右下角 + 号开始创作</block>
+       <block wx:else>当前课程（错题本）暂不支持创作</block>
+    </text>
+  </view>
+
+  <scroll-view
+    wx:else
+    scroll-y
+    class="story-list"
+    show-scrollbar="{{false}}"
+    scroll-into-view="{{scrollIntoView}}"
+    scroll-with-animation="{{true}}"
+    style="height: calc(100vh - {{statusBarHeight + navBarHeight}}px);"
+  >
+    <view class="story-list-padding">
+      <block wx:for="{{messages}}" wx:key="mid">
+        <view id="msg-{{item.mid}}" class="story-card simple-card" bindtap="openDetail" data-id="{{item.mid}}">
+            <view class="card-info">
+              <view class="card-header-row">
+                 <view class="header-left">
+                   <text class="card-time">{{item.timeLabel}}</text>
+                   <text class="card-source" wx:if="{{item.sourceLabel}}"> {{item.sourceLabel}}</text>
+                 </view>
+                 <view class="header-right">
+                   <view class="view-count-wrap">
+                     <image src="/assets/tabbar/re_eye.png" class="icon-eye" mode="aspectFit" />
+                     <text class="view-count-num">{{item.viewCount}}</text>
+                   </view>
+                 </view>
+              </view>
+              <view class="card-title-main" wx:if="{{item.elements}}">
+                <text class="highlight-who">{{item.elements.who}}</text>
+                <text> {{item.elements.when || ''}} {{item.elements.where}} {{item.elements.action}}</text>
+              </view>
+            </view>
+        </view>
+      </block>
+    </view>
+    <view style="height: 100px;"></view>
+  </scroll-view>
+
+  <view class="fab-btn" bindtap="goToCreate" wx:if="{{canCreate}}">
+    <text class="fab-icon">+</text>
+  </view>
+
+  <view class="modal-mask" wx:if="{{showRulesModal}}" bindtap="hideRules">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header">
+        <text class="modal-title">故事坊规则</text>
+        <view class="close-btn" bindtap="hideRules">×</view>
+      </view>
+      <scroll-view scroll-y class="modal-body">
+        <view class="rule-item">
+          <text class="rule-icon">📚</text>
+          <view class="rule-text">
+            <text class="rule-title">基于课程生成</text>
+            <text class="rule-desc">会根据你当前选择的课程进度（如 {{currentCourseInfo}}），智能调用相关的单词和语法点。</text>
+          </view>
+        </view>
+        <view class="rule-item">
+          <text class="rule-icon">🧠</text>
+          <view class="rule-text">
+            <text class="rule-title">科学复习</text>
+            <text class="rule-desc">通过将生词融入有趣的故事场景，帮助你在语境中自然记忆，摆脱死记硬背。</text>
+          </view>
+        </view>
+        <view class="rule-item">
+          <text class="rule-icon">✍️</text>
+          <view class="rule-text">
+            <text class="rule-title">创作与分享</text>
+            <text class="rule-desc">你可以设定主角和情节，创作独一无二的韩语故事，并与社区伙伴分享你的创意。如反复出现违规，请更换人物和情节</text>
+          </view>
+        </view>
+        <view class="rule-footer-tip">快来创作你的第一个韩语故事吧！</view>
+      </scroll-view>
+      <button class="modal-btn" bindtap="hideRules">我知道了</button>
+    </view>
+  </view>
+
+</view>

@@ -1,0 +1,124 @@
+<custom-nav title="故事详情" showBack="{{!isSinglePage}}" showHome="{{isSinglePage}}" showSettings="{{false}}" homeGuideText="返回小程序">
+  <view slot="right-action" class="mode-switch" bindtap="toggleMode">
+    <view class="switch-btn {{mode === 'card' ? 'active' : ''}}">卡片</view>
+    <view class="switch-btn {{mode === 'article' ? 'active' : ''}}">全文</view>
+  </view>
+</custom-nav>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight}}px;" wx:if="{{!loading && story}}">
+
+  <!-- CARD MODE -->
+  <view class="mode-card" wx:if="{{mode === 'card'}}">
+    <view class="swiper-container">
+      <button class="share-float-btn" open-type="share">
+        <image src="/assets/icons/share.svg" class="share-icon" />
+      </button>
+
+      <view class="share-hint-bubble" wx:if="{{showShareHint}}">
+        <text>快分享给好友吧</text>
+        <view class="share-hint-arrow"></view>
+      </view>
+
+      <view class="nav-btn left" bindtap="prevSegment" wx:if="{{currentSegmentIndex > 0}}">
+        <text class="nav-icon">❮</text>
+      </view>
+      
+      <swiper 
+        class="story-swiper" 
+        current="{{currentSegmentIndex}}" 
+        bindchange="onSwiperChange"
+        previous-margin="0px"
+        next-margin="0px"
+        duration="300"
+      >
+        <block wx:for="{{story.segments}}" wx:key="index">
+          <swiper-item>
+            <view class="slide-card">
+              <view class="slide-korean">
+                <block wx:for="{{item.displayKorean}}" wx:key="i" wx:for-item="seg">
+                  <text class="{{seg.bold ? 'bold-text' : ''}}">{{seg.text}}</text>
+                </block>
+              </view>
+              <view class="slide-translation">
+                <text>{{item.chinese}}</text>
+              </view>
+            </view>
+          </swiper-item>
+        </block>
+      </swiper>
+      
+      <view class="nav-btn right" bindtap="nextSegment" wx:if="{{currentSegmentIndex < story.segments.length - 1}}">
+        <text class="nav-icon">❯</text>
+      </view>
+    </view>
+    
+    <view class="pagination">
+      <text>{{currentSegmentIndex + 1}} / {{story.segments.length}}</text>
+    </view>
+    
+    <scroll-view scroll-y class="analysis-scroll" wx:if="{{story.wordsSection || story.grammarSection}}">
+      <view class="analysis-content" wx:if="{{story.wordsSection}}">
+        <view class="analysis-title">
+          <text>📖 单词解析</text>
+        </view>
+        <text class="body-text">{{story.wordsSection}}</text>
+      </view>
+      
+      <view class="analysis-content" wx:if="{{story.grammarSection}}">
+        <view class="analysis-title">
+          <text>💡 语法解析</text>
+        </view>
+        <text class="body-text">{{story.grammarSection}}</text>
+      </view>
+      <view style="height: 100px;"></view>
+    </scroll-view>
+  </view>
+
+  <!-- ARTICLE MODE -->
+  <scroll-view scroll-y class="mode-article" wx:if="{{mode === 'article'}}">
+    <view class="article-content">
+      <view class="article-header">
+        <view class="article-header-row">
+           <text class="article-title">{{story.elements.who}} {{story.elements.when || ''}} {{story.elements.where}} {{story.elements.action}}</text>
+           <button class="share-inline-btn" open-type="share">
+             <image src="/assets/icons/share.svg" class="share-icon-sm" />
+           </button>
+        </view>
+        <view class="article-meta-row">
+           <text class="article-meta">{{story.timeLabel}}</text>
+           <text class="article-source" wx:if="{{story.sourceLabel}}">{{story.sourceLabel}}</text>
+        </view>
+      </view>
+
+      <view class="article-body">
+        <block wx:for="{{story.segments}}" wx:key="index">
+          <view class="article-segment">
+            <view class="segment-korean">
+               <block wx:for="{{item.displayKorean}}" wx:key="i" wx:for-item="seg">
+                  <text class="{{seg.bold ? 'bold-text' : ''}}">{{seg.text}}</text>
+               </block>
+            </view>
+            <view class="segment-chinese">
+              <text>{{item.chinese}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+      
+      <view class="divider"></view>
+
+      <view class="analysis-section" wx:if="{{story.wordsSection}}">
+        <view class="analysis-title">📖 单词解析</view>
+        <text class="body-text">{{story.wordsSection}}</text>
+      </view>
+
+      <view class="analysis-section" wx:if="{{story.grammarSection}}">
+        <view class="analysis-title">💡 语法解析</view>
+        <text class="body-text">{{story.grammarSection}}</text>
+      </view>
+      
+      <view style="height: 100px;"></view>
+    </view>
+  </scroll-view>
+
+</view>

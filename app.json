@@ -2,6 +2,13 @@
   "pages": [
     "pages/index/index",
     "pages/nv-practice/index",
+    "pages/story-workshop/index",
+    "pages/hi-chat/index",
+    "pages/hi-chat-detail/index",
+    "pages/hi-chat-book/index",
+    "pages/daily-sentence/index",
+    "pages/daily-sentence-detail/index",
+    "pages/daily-sentence-history/index",
     "pages/nv-settings/index"
   ],
   "preloadRule": {
@@ -58,6 +65,14 @@
       "root": "subpackages/audio_p6",
       "name": "audio_p6",
       "pages": ["pages/index/index"]
+    },
+    {
+      "root": "subpackages/story",
+      "name": "story",
+      "pages": [
+        "pages/create/index",
+        "pages/detail/index"
+      ]
     }
   ],
   "tabBar": {
@@ -72,6 +87,18 @@
         "text": "练习",
         "iconPath": "assets/tabbar/re_练习.png",
         "selectedIconPath": "assets/tabbar/re_练习.png"
+      },
+      {
+        "pagePath": "pages/story-workshop/index",
+        "text": "故事坊",
+        "iconPath": "assets/tabbar/re_story.png",
+        "selectedIconPath": "assets/tabbar/re_story.png"
+      },
+      {
+        "pagePath": "pages/hi-chat/index",
+        "text": "HI~",
+        "iconPath": "assets/tabbar/re_talk.png",
+        "selectedIconPath": "assets/tabbar/re_talk.png"
       },
       {
         "pagePath": "pages/nv-settings/index",

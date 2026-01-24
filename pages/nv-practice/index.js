@@ -182,7 +182,11 @@ Page({
         
         statusBarHeight: 20,
         navBarHeight: 44,
-        showUpdatePopup: false
+        showUpdatePopup: false,
+        dailySentenceEntrySource: '',
+        showGuideBubble: false,
+        showSettingsTooltip: false,
+        settingsTooltipText: '可调整显示模式'
     },
 
     async onLoad() {
@@ -197,7 +201,50 @@ Page({
         if (!hasShown) {
             this.setData({ showUpdatePopup: true });
             wx.setStorageSync(updateKey, true);
+        } else {
+            const guideKey = 'kr_practice_guide_bubble_shown_v1';
+            const guideShown = !!wx.getStorageSync(guideKey);
+            if (!guideShown && !this.data.isKeyboardOpen) {
+                this.showGuideBubbleWithTimeout();
+            }
         }
+
+        // Settings Tooltip Logic (Daily Rotating)
+        const now = new Date();
+        const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+        const lastShownDate = wx.getStorageSync('settings_tooltip_shown_date');
+
+        if (lastShownDate !== today) {
+            const TIPS = ['设置', '可选择词库', '可修改键盘', '朗读设置', '显示设置'];
+            const lastIndex = wx.getStorageSync('settings_tooltip_index');
+            // If lastIndex is null/undefined (first run), we want to start at 0.
+            // But we increment BEFORE showing? Or increment AFTER showing?
+            // "Rotate these every day" -> Day 1: Tip 0, Day 2: Tip 1...
+            // So if no index exists, use -1 so next is 0.
+            
+            let currentIndex = Number(lastIndex);
+            if (!Number.isFinite(currentIndex)) {
+                currentIndex = -1;
+            }
+            
+            const nextIndex = (currentIndex + 1) % TIPS.length;
+            const nextTip = TIPS[nextIndex];
+
+            this.setData({ 
+                showSettingsTooltip: true,
+                settingsTooltipText: nextTip
+            });
+            
+            wx.setStorageSync('settings_tooltip_shown_date', today);
+            wx.setStorageSync('settings_tooltip_index', nextIndex);
+            
+            if (this._settingsTooltipTimer) clearTimeout(this._settingsTooltipTimer);
+            this._settingsTooltipTimer = setTimeout(() => {
+                this.setData({ showSettingsTooltip: false });
+            }, 2000);
+        }
+
+        this.loadDailySentenceEntry();
 
         this.wordAudio = null;
         this.cnAudio = null;
@@ -237,8 +284,77 @@ Page({
         this.loadWords();
     },
 
+    async loadDailySentenceEntry() {
+        try {
+            const cached = wx.getStorageSync('kr_daily_sentence_entry_cache');
+            const cachedAt = cached && cached.cachedAt != null ? Number(cached.cachedAt) : NaN;
+            const cachedSource = cached && cached.source != null ? String(cached.source) : '';
+            if (cachedSource && Number.isFinite(cachedAt) && Date.now() - cachedAt < 60 * 60 * 1000) {
+                this.setData({ dailySentenceEntrySource: cachedSource });
+                return;
+            }
+            if (!wx.cloud || !wx.cloud.callFunction) return;
+            const res = await new Promise((resolve, reject) => {
+                wx.cloud.callFunction({
+                    name: 'getalldailysentence',
+                    data: { page: 1, pageSize: 1, orderField: 'batchDate', orderDirection: 'desc', brief: true, noCache: true },
+                    success: resolve,
+                    fail: reject
+                });
+            });
+            const result = res && res.result ? res.result : null;
+            const item = result && Array.isArray(result.data) ? result.data[0] : null;
+            const source = item && item.source != null ? String(item.source) : '';
+            this.setData({ dailySentenceEntrySource: source });
+            try {
+                if (source) wx.setStorageSync('kr_daily_sentence_entry_cache', { cachedAt: Date.now(), source });
+            } catch (e) {}
+        } catch (e) {}
+    },
+
+    openDailySentence() {
+        console.log('[nv-practice] openDailySentence clicked');
+        try { this.cancelCurrentAudioPlayback(); } catch (e) {}
+        try { this.cancelAudioPreload(); } catch (e) {}
+        
+        wx.setStorageSync('kr_daily_sentence_force_latest', true);
+        
+        wx.navigateTo({
+            url: '/pages/daily-sentence/index',
+            success: () => {
+                console.log('[nv-practice] navigateTo success');
+            },
+            fail: (err) => {
+                console.error('[nv-practice] navigateTo failed', err);
+                wx.showToast({
+                    title: '跳转失败',
+                    icon: 'none'
+                });
+            }
+        });
+    },
+
     closeUpdatePopup() {
         this.setData({ showUpdatePopup: false });
+        // Check Guide Bubble again after popup closed
+        const guideKey = 'kr_practice_guide_bubble_shown_v1';
+        const guideShown = !!wx.getStorageSync(guideKey);
+        if (!guideShown && !this.data.isKeyboardOpen) {
+            this.showGuideBubbleWithTimeout();
+        }
+    },
+
+    showGuideBubbleWithTimeout() {
+        const guideKey = 'kr_practice_guide_bubble_shown_v1';
+        if (wx.getStorageSync(guideKey)) return;
+        this.setData({ showGuideBubble: true });
+        wx.setStorageSync(guideKey, true);
+    },
+
+    onGuideBubbleClick() {
+        this.setData({ showGuideBubble: false });
+        // Mark as shown only when user clicks/dismisses it
+        wx.setStorageSync('kr_practice_guide_bubble_shown_v1', true);
     },
 
     preventScroll() {},
@@ -262,11 +378,24 @@ Page({
 
     handleAdClose(res) {
         // 用户点击了【关闭广告】按钮
+        console.log('Ad closed (Practice), res:', res);
         if (res && res.isEnded) {
             // 正常播放结束，可以下发奖励
+            console.log('Ad ended success, pendingAction:', !!this.pendingAction, 'contentId:', this.pendingContentId);
             if (this.pendingAction) {
+                // 记录解锁时间
+                if (this.pendingContentId) {
+                    try {
+                        const key = `unlock_${this.pendingContentId}`;
+                        wx.setStorageSync(key, Date.now());
+                        console.log('Unlock saved:', key);
+                    } catch (e) {
+                        console.error('Save unlock status failed', e);
+                    }
+                }
                 this.pendingAction();
                 this.pendingAction = null;
+                this.pendingContentId = null;
             }
         } else {
             // 播放中途退出，不下发奖励
@@ -285,7 +414,34 @@ Page({
         }
     },
 
-    checkAndShowAd: function(callback) {
+    checkAndShowAd: function(contentId, callback) {
+      console.log('checkAndShowAd called with contentId:', contentId);
+      // 如果没有传 contentId，尝试将第一个参数当作 callback (兼容旧代码)
+      if (typeof contentId === 'function') {
+        callback = contentId;
+        contentId = null;
+      }
+
+      // 检查是否在有效期内（7天）
+      if (contentId) {
+        try {
+          const key = `unlock_${contentId}`;
+          const lastUnlock = wx.getStorageSync(key);
+          if (lastUnlock) {
+            const now = Date.now();
+            const diff = now - Number(lastUnlock);
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            if (diff < sevenDays) {
+              // 有效期内，直接通过
+              callback && callback();
+              return;
+            }
+          }
+        } catch (e) {
+          console.error('Check unlock status failed', e);
+        }
+      }
+
       // 如果没有广告实例，直接执行回调
       if (!this.videoAd) {
         callback && callback();
@@ -294,14 +450,15 @@ Page({
   
       // 显示确认弹窗
       wx.showModal({
-        title: '切换词库',
-        content: '切换词库需要观看一次广告，是否继续？',
+        title: '解锁章节',
+        content: '解锁该章节需要观看一次广告，解锁后7天内可自由切换。',
         confirmText: '观看广告',
         cancelText: '取消',
         success: (res) => {
           if (res.confirm) {
             // 用户点击确定，展示广告
             this.pendingAction = callback;
+            this.pendingContentId = contentId; // 记录待解锁ID
             this.videoAd.show().catch(() => {
               // 失败重试
               this.videoAd.load()
@@ -312,6 +469,7 @@ Page({
                   if (this.pendingAction) {
                     this.pendingAction();
                     this.pendingAction = null;
+                    this.pendingContentId = null;
                   }
                 });
             });
@@ -718,7 +876,11 @@ Page({
     },
 
     openSettings() {
-        this.setData({ showSettingsModal: true });
+        this.setData({ showSettingsModal: true, showSettingsTooltip: false });
+        if (this._settingsTooltipTimer) {
+            clearTimeout(this._settingsTooltipTimer);
+            this._settingsTooltipTimer = null;
+        }
     },
 
     closeSettings() {
@@ -774,7 +936,9 @@ Page({
             this.loadWords();
         };
 
-        this.checkAndShowAd(action);
+        const category = this.data.settings.category || 'Yonsei';
+        const contentId = `yonsei_${category.replace(/\s+/g, '_')}_${lessonId}`;
+        this.checkAndShowAd(contentId, action);
     },
 
     onYonseiLessonPickerChange(e) {
@@ -795,7 +959,9 @@ Page({
             this.loadWords();
         };
 
-        this.checkAndShowAd(action);
+        const category = this.data.settings.category || 'Yonsei';
+        const contentId = `yonsei_${category.replace(/\s+/g, '_')}_${lesson.id}`;
+        this.checkAndShowAd(contentId, action);
     },
 
     async onTopikLevelPickerChange(e) {
@@ -838,7 +1004,9 @@ Page({
         };
         
         // TOPIK 切换 Session 也视为收费操作
-        this.checkAndShowAd(action);
+        const level = this.data.settings.topikLevel || '1';
+        const contentId = `topik_${level}_${session}`;
+        this.checkAndShowAd(contentId, action);
     },
 
     clearAllTimers() {
@@ -850,6 +1018,12 @@ Page({
         this.helpRevealTimer = null;
         if (this.completeTimer) clearTimeout(this.completeTimer);
         this.completeTimer = null;
+        if (this._guideBubbleTimer) clearTimeout(this._guideBubbleTimer);
+        this._guideBubbleTimer = null;
+        if (this._settingsTooltipTimer) clearTimeout(this._settingsTooltipTimer);
+        this._settingsTooltipTimer = null;
+        if (this._preloadTimer) clearTimeout(this._preloadTimer);
+        this._preloadTimer = null;
     },
 
     startModeLogic() {
@@ -1009,7 +1183,8 @@ Page({
         this.updateShiftState(initialState);
 
         this.tryAutoPronounce();
-        setTimeout(() => this.preloadNextWordAudio(), 60);
+        if (this._preloadTimer) clearTimeout(this._preloadTimer);
+        this._preloadTimer = setTimeout(() => this.preloadNextWordAudio(), 60);
         setTimeout(() => this.drawShareImage(), 500);
     },
 
@@ -1617,46 +1792,38 @@ Page({
         const words = Array.isArray(this.data.words) ? this.data.words : [];
         if (words.length <= 1) return;
 
-        const nextIndex = normalizeIndex(Number(this.data.currentIndex || 0) + 1, words.length);
-        const next = words[nextIndex];
-        if (!next || !next.word) return;
+        const PRELOAD_COUNT = 5;
+        const currentIndex = Number(this.data.currentIndex || 0);
+        const preloadMeaning = !!s.pronounceMeaning;
 
-        const cacheKey = this.getAudioCacheKey(next.word, false);
-        const existing = cacheKey ? this.getAudioFileFromLRU(cacheKey) : '';
-        if (existing) {
-            this._preloadNextKey = cacheKey;
-            return;
+        for (let i = 1; i <= PRELOAD_COUNT; i++) {
+            const nextIndex = normalizeIndex(currentIndex + i, words.length);
+            const next = words[nextIndex];
+            if (!next || !next.word) continue;
+
+            // Preload Korean
+            this._preloadSingleAudio(next.word, false);
+
+            // Preload Chinese if needed
+            if (preloadMeaning) {
+                this._preloadSingleAudio(next.word, true);
+            }
         }
+    },
 
-        if (this._preloadNextKey === cacheKey) return;
-        this._preloadNextKey = cacheKey;
+    _preloadSingleAudio(word, isChinese) {
+        const cacheKey = this.getAudioCacheKey(word, isChinese);
+        // Check if already in LRU
+        if (this.getAudioFileFromLRU(cacheKey)) return;
+
+        // Check if already in flight
+        if (this._audioFileInFlight && this._audioFileInFlight.has(cacheKey)) return;
 
         const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
-        const candidates = memo ? [memo] : this.buildAudioUrls(next.word, false);
-        const url = candidates && candidates[0] ? candidates[0] : '';
-        if (!url) return;
-
-        try {
-            if (this._preloadTask && typeof this._preloadTask.abort === 'function') {
-                this._preloadTask.abort();
-            }
-        } catch (e) {}
-        this._preloadTask = null;
-
-        try {
-            this._preloadTask = wx.downloadFile({
-                url,
-                success: (res) => {
-                    if (res && res.statusCode === 200 && res.tempFilePath) {
-                        if (cacheKey && this._audioUrlMemo && this._audioUrlMemo.set) {
-                            this._audioUrlMemo.set(cacheKey, url);
-                        }
-                        this.setAudioFileToLRU(cacheKey, res.tempFilePath);
-                    }
-                },
-                fail: () => {}
-            });
-        } catch (e) {}
+        const candidates = memo ? [memo] : this.buildAudioUrls(word, isChinese);
+        
+        // Fire and forget download
+        this.downloadAudioToLRU(cacheKey, candidates).catch(() => {});
     },
 
     async playWordAudio() {
@@ -1757,7 +1924,30 @@ Page({
     },
 
     toggleKeyboard() {
-        this.setData({ isKeyboardOpen: !this.data.isKeyboardOpen });
+        const isOpening = !this.data.isKeyboardOpen;
+        this.setData({ isKeyboardOpen: isOpening, showGuideBubble: false });
+
+        if (isOpening) {
+                const settingsTipKey = 'kr_practice_settings_tooltip_shown_v1';
+                const hasShown = wx.getStorageSync(settingsTipKey);
+                
+                if (!hasShown) {
+                    this.setData({
+                        showSettingsTooltip: true,
+                        settingsTooltipText: '点击修改键盘设置'
+                    });
+                    try {
+                        wx.setStorageSync(settingsTipKey, true);
+                    } catch (e) {
+                        console.error('Storage error:', e);
+                    }
+                    
+                    if (this._settingsTooltipTimer) clearTimeout(this._settingsTooltipTimer);
+                    this._settingsTooltipTimer = setTimeout(() => {
+                        this.setData({ showSettingsTooltip: false });
+                    }, 2000);
+                }
+            }
     },
 
     onShareAppMessage() {

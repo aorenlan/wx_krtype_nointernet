@@ -1,6 +1,9 @@
 const app = getApp()
 
 Component({
+  options: {
+    multipleSlots: true
+  },
   properties: {
     title: {
       type: String,
@@ -34,9 +37,25 @@ Component({
       type: Boolean,
       value: false
     },
+    showHome: {
+      type: Boolean,
+      value: false
+    },
+    customBack: {
+      type: Boolean,
+      value: false
+    },
     showSettingsTooltip: {
       type: Boolean,
       value: false
+    },
+    settingsTooltipText: {
+      type: String,
+      value: '可调整显示模式'
+    },
+    homeGuideText: {
+      type: String,
+      value: ''
     }
   },
 
@@ -74,12 +93,19 @@ Component({
 
   methods: {
     onBackTap() {
+      if (this.properties.customBack) {
+        this.triggerEvent('back')
+        return
+      }
       wx.navigateBack({
         delta: 1,
         fail: () => {
           wx.switchTab({ url: '/pages/index/index' })
         }
       })
+    },
+    onHomeTap() {
+      wx.reLaunch({ url: '/pages/index/index' })
     },
     onSettingsTap() {
       this.triggerEvent('settings')

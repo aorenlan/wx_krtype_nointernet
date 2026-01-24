@@ -49,6 +49,23 @@
   color: #64748b;
 }
 
+.switch-course-btn {
+  padding: 8rpx 20rpx;
+  background: #f1f5f9;
+  border-radius: 30rpx;
+  color: #475569;
+  font-size: 24rpx;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.switch-course-btn:active {
+  background: #e2e8f0;
+  transform: scale(0.98);
+}
+
 .content {
   display: flex;
   height: calc(100vh - 160rpx);
@@ -432,6 +449,11 @@
   border-radius: 20rpx;
   padding: 32rpx;
   /* box-shadow: 0 2rpx 8rpx rgba(148, 163, 184, 0.05); */
+  transition: background-color 0.2s;
+}
+
+.example-card:active {
+  background-color: #f8fafc;
 }
 
 .ex-kor-row {
@@ -439,6 +461,23 @@
   align-items: flex-start;
   gap: 16rpx;
   margin-bottom: 16rpx;
+}
+
+.audio-icon {
+  width: 60rpx;
+  height: 60rpx;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  opacity: 0.6;
+  margin-top: -6rpx; /* Align with text */
+  padding: 10rpx; /* Increase clickable area visually */
+  box-sizing: border-box;
+}
+
+.example-card:active .audio-icon {
+  opacity: 1;
+  transform: scale(1.1);
+  transition: all 0.2s;
 }
 
 .ex-num {

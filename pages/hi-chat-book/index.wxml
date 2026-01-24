@@ -1,0 +1,65 @@
+<custom-nav
+  title="HI~小本本"
+  subtitle=""
+  theme="light"
+  showBack="{{true}}"
+  customBack="{{false}}"
+  showSettings="{{false}}"
+></custom-nav>
+
+<view class="page {{dark ? 'dark' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="filter-bar" wx:if="{{!loading}}">
+    <view class="filter-pill {{onlyMine ? '' : 'active'}}" bindtap="toggleOnlyMine">
+      <text>全部</text>
+    </view>
+    <view class="filter-pill {{onlyMine ? 'active' : ''}}" bindtap="toggleOnlyMine">
+      <text>只看我</text>
+    </view>
+  </view>
+
+  <view class="sync-bar" wx:if="{{!loading}}" bindtap="manualSync">
+    <text class="sync-bar-text">{{syncing ? '同步中…' : (syncFailed ? '同步失败，点击重试' : (lastSyncAt ? ('已同步 ' + lastSyncLabel) : '点击同步'))}}</text>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">
+    <text class="empty-title">加载中</text>
+    <text class="empty-sub">正在从云端获取记录</text>
+  </view>
+
+  <view class="empty" wx:elif="{{!items.length}}">
+    <text class="empty-title">还没有记录</text>
+    <text class="empty-sub">回到 HI~ 发一句话试试</text>
+  </view>
+
+  <scroll-view
+    wx:else
+    scroll-y
+    class="list"
+    show-scrollbar="{{false}}"
+    lower-threshold="120"
+    bindscrolltolower="loadMore"
+    style="height: calc(100vh - {{statusBarHeight + navBarHeight}}px - 96px - env(safe-area-inset-bottom, 0px));"
+  >
+    <block wx:for="{{items}}" wx:key="id">
+      <view class="row" bindtap="openDetail" data-id="{{item.id}}">
+        <view class="avatar {{item.isSelf ? 'self' : ''}}">{{item.avatarText}}</view>
+        <view class="row-main">
+          <view class="row-top">
+            <text class="row-title">{{item.safeTitle}}</text>
+            <text class="row-time">{{item.displayTime}}</text>
+          </view>
+          <view class="row-bottom">
+            <text class="row-preview">{{item.safePreview}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <view class="footer" wx:if="{{loadingMore}}">
+      <text class="footer-text">加载中…</text>
+    </view>
+    <view class="footer" wx:elif="{{!hasMore}}">
+      <text class="footer-text">没有更多了</text>
+    </view>
+  </scroll-view>
+</view>

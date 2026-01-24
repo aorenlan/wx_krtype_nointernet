@@ -192,10 +192,23 @@ Page({
     if (this.videoAd) {
       if (!this.onAdClose) {
          this.onAdClose = (res) => {
+           console.log('Ad closed, res:', res);
            if (res && res.isEnded) {
+             console.log('Ad ended success, pendingAction:', !!this.pendingAction, 'contentId:', this.pendingContentId);
              if (this.pendingAction) {
+               // 记录解锁时间
+               if (this.pendingContentId) {
+                 try {
+                   const key = `unlock_${this.pendingContentId}`;
+                   wx.setStorageSync(key, Date.now());
+                   console.log('Unlock saved:', key);
+                 } catch (e) {
+                   console.error('Save unlock status failed', e);
+                 }
+               }
                this.pendingAction();
                this.pendingAction = null;
+               this.pendingContentId = null;
              }
            } else {
              wx.showToast({
@@ -217,7 +230,7 @@ Page({
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
-        selected: 2
+        selected: 4
       })
     }
     if (this.data.view !== 'importForm') {
@@ -235,10 +248,7 @@ Page({
   },
 
   onHide: function() {
-    // 不要销毁广告，但要移除监听器
-    if (this.videoAd && this.onAdClose) {
-       this.videoAd.offClose(this.onAdClose);
-    }
+    // 即使页面隐藏，也不要移除广告监听器，否则广告关闭回调无法触发
   },
 
   onUnload: function () {
@@ -405,7 +415,34 @@ Page({
     this.setData({ totalWords: res.total });
   },
 
-  checkAndShowAd: function(callback) {
+  checkAndShowAd: function(contentId, callback) {
+    console.log('checkAndShowAd called with contentId:', contentId);
+    // 如果没有传 contentId，尝试将第一个参数当作 callback (兼容旧代码)
+    if (typeof contentId === 'function') {
+      callback = contentId;
+      contentId = null;
+    }
+
+    // 检查是否在有效期内（7天）
+    if (contentId) {
+      try {
+        const key = `unlock_${contentId}`;
+        const lastUnlock = wx.getStorageSync(key);
+        if (lastUnlock) {
+          const now = Date.now();
+          const diff = now - Number(lastUnlock);
+          const sevenDays = 7 * 24 * 60 * 60 * 1000;
+          if (diff < sevenDays) {
+            // 有效期内，直接通过
+            callback && callback();
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Check unlock status failed', e);
+      }
+    }
+
     // 如果没有广告实例，直接执行回调
     if (!this.videoAd) {
       callback && callback();
@@ -414,14 +451,15 @@ Page({
 
     // 显示确认弹窗
     wx.showModal({
-      title: '切换词库',
-      content: '切换词库需要观看一次广告，是否继续？',
+      title: '解锁章节',
+      content: '解锁该章节需要观看一次广告，解锁后7天内可自由切换。',
       confirmText: '观看广告',
       cancelText: '取消',
       success: (res) => {
         if (res.confirm) {
           // 用户点击确定，展示广告
           this.pendingAction = callback;
+          this.pendingContentId = contentId; // 记录待解锁ID
           this.videoAd.show().catch(() => {
             // 失败重试
             this.videoAd.load()
@@ -432,21 +470,17 @@ Page({
                 if (this.pendingAction) {
                   this.pendingAction();
                   this.pendingAction = null;
+                  this.pendingContentId = null;
                 }
               });
           });
         } else {
           // 用户点击取消，不进行切换
-          // 注意：如果是picker触发的，界面上的选项可能已经变了，但这里不执行callback就不会真正切换数据
-          // 如果需要回滚picker的显示，比较复杂，因为picker是bindchange触发的
-          // 但由于我们不调用setData更新currentCategory等，下次刷新页面会恢复
           console.log('用户取消切换');
-          
-          // 为了更好的体验，如果是在picker中取消，可能需要手动重置picker的index
-          // 重新setData一下当前的index可以强制picker回滚（某些情况下有效）
           this.setData({
             categoryPickerIndex: this.data.categoryPickerIndex,
-            yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex
+            yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
+            topikLevelPickerIndex: this.data.topikLevelPickerIndex
           });
         }
       }
@@ -520,7 +554,9 @@ Page({
       });
     };
 
-    this.checkAndShowAd(action);
+    const level = this.data.settings.topikLevel || '1';
+    const contentId = `topik_${level}_${session}`;
+    this.checkAndShowAd(contentId, action);
   },
 
   onYonseiLessonPickerChange: function (e) {
@@ -539,7 +575,9 @@ Page({
       });
     };
 
-    this.checkAndShowAd(performLessonSwitch);
+    const category = this.data.currentCategory || 'Yonsei';
+    const contentId = `yonsei_${category.replace(/\s+/g, '_')}_${lesson.id}`;
+    this.checkAndShowAd(contentId, performLessonSwitch);
   },
 
   updateSetting: function (eOrKey, value) {
