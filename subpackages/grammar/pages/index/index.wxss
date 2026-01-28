@@ -2,10 +2,15 @@
   height: 100vh;
   box-sizing: border-box;
   background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header {
+  flex: none;
   padding: 0 32rpx 12rpx;
+  z-index: 10;
 }
 
 .header-row {
@@ -68,7 +73,8 @@
 
 .content {
   display: flex;
-  height: calc(100vh - 160rpx);
+  flex: 1;
+  height: 0;
   position: relative;
 }
 

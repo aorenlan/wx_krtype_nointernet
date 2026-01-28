@@ -7,9 +7,11 @@ const getData = async (key) => {
             case 'Yonsei 2': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_2.js');
             case 'Yonsei 3': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_3.js');
             case 'Yonsei 4': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_4.js');
+            case 'Mistakes (错题本)': return [];
             case 'Yonsei 5': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_5.js');
             case 'Yonsei 6': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_6.js');
-            default: return [];
+            default: 
+                return [];
         }
     } catch (e) {
         console.error('Failed to load data for key:', key, e);
@@ -32,7 +34,7 @@ const topikSessionsCache = new Map();
 const yonseiLessonsCache = new Map();
 
 export const getCategories = async () => {
-    return CATEGORIES;
+    return Array.isArray(CATEGORIES) ? [...CATEGORIES] : [];
 };
 
 export const getTopikLevels = async () => {
@@ -100,6 +102,7 @@ export const getYonseiLessons = async (category) => {
         }
     });
     const lessons = Array.from(map.values()).sort((a, b) => Number(a.id) - Number(b.id));
+
     yonseiLessonsCache.set(category, lessons);
     return lessons;
 };

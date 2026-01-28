@@ -294,34 +294,7 @@
   line-height: 1.5;
 }
 
-/* FAB */
-.fab-btn {
-  position: fixed;
-  bottom: 120px; /* above tabbar */
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  background: #6366f1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 100;
-}
 
-.fab-btn:active {
-  transform: scale(0.9) rotate(90deg);
-  background: #4f46e5;
-}
-
-.fab-icon {
-  font-size: 32px;
-  color: #ffffff;
-  font-weight: 300;
-  margin-top: -4px;
-}
 
 /* Modal */
 .modal-mask {

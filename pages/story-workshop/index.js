@@ -1,5 +1,3 @@
-import { parseStreamedOutput } from '../../utils_nv/ai_helper';
-
 const formatTime = (ts) => {
   const date = new Date(Number(ts) || Date.now());
   const yy = String(date.getFullYear()).slice(-2);
@@ -21,7 +19,12 @@ Page({
     loading: true,
     showRulesModal: false,
     currentCourseInfo: '',
-    searchQuery: ''
+    searchQuery: '',
+    rules: [
+      { icon: '📚', title: '课程生成', desc: '会根据你当前选择的课程进度，展示对应的文章。' },
+      { icon: '🧠', title: '科学复习', desc: '通过将生词融入有趣的故事场景，帮助你在语境中自然记忆，摆脱死记硬背。' },
+      { icon: '🚫', title: '关于上传', desc: '暂时不支持用户自己上传，后期会根据课程完善相关目录数据。' }
+    ]
   },
 
   onLoad() {
@@ -62,12 +65,13 @@ Page({
         courseInfo = '未选择课程';
     }
     
-    this.setData({ 
+    const dataToSet = { 
         dark: !!settings.darkMode,
         currentCourseInfo: courseInfo,
-        canCreate: !isMistakes,
         settings // Store settings in data to ensure applyFilter uses the same source
-    });
+    };
+
+    this.setData(dataToSet);
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1, hidden: false });
@@ -306,10 +310,6 @@ Page({
     this.setData({ filterMode: mode }, () => {
       this.applyFilter();
     });
-  },
-
-  goToCreate() {
-    wx.navigateTo({ url: '/subpackages/story/pages/create/index' });
   },
 
   openDetail(e) {

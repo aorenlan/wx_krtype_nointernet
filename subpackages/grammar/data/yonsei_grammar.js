@@ -1,7 +1,7 @@
 module.exports = [
   {
     "id": "001",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "1",
     "grammar": "입니다/입니까?",
     "grammar_category": "终结词尾",
@@ -37,7 +37,7 @@ module.exports = [
   },
   {
     "id": "002",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "1",
     "grammar": "습니다/습니까?",
     "grammar_category": "终结词尾",
@@ -93,7 +93,7 @@ module.exports = [
   },
   {
     "id": "003",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "1",
     "grammar": "은/는",
     "grammar_category": "助词",
@@ -149,7 +149,7 @@ module.exports = [
   },
   {
     "id": "004",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "1",
     "grammar": "이/가 아니다",
     "grammar_category": "惯用型",
@@ -193,7 +193,7 @@ module.exports = [
   },
   {
     "id": "005",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "2",
     "grammar": "이/가",
     "grammar_category": "助词",
@@ -237,7 +237,7 @@ module.exports = [
   },
   {
     "id": "006",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "2",
     "grammar": "이/그/저",
     "grammar_category": "指示代词",
@@ -281,7 +281,7 @@ module.exports = [
   },
   {
     "id": "007",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "2",
     "grammar": "도",
     "grammar_category": "助词",
@@ -321,7 +321,7 @@ module.exports = [
   },
   {
     "id": "008",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "2",
     "grammar": "에(있다/없다)",
     "grammar_category": "助词",
@@ -365,7 +365,7 @@ module.exports = [
   },
   {
     "id": "009",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "2",
     "grammar": "하고",
     "grammar_category": "助词",
@@ -401,7 +401,7 @@ module.exports = [
   },
   {
     "id": "010",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "3",
     "grammar": "을/를",
     "grammar_category": "助词",
@@ -441,7 +441,7 @@ module.exports = [
   },
   {
     "id": "011",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "3",
     "grammar": "-으시/시-",
     "grammar_category": "词尾",
@@ -481,7 +481,7 @@ module.exports = [
   },
   {
     "id": "012",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "3",
     "grammar": "-고",
     "grammar_category": "连接词尾",
@@ -517,7 +517,7 @@ module.exports = [
   },
   {
     "id": "013",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "3",
     "grammar": "에서",
     "grammar_category": "助词",
@@ -553,7 +553,7 @@ module.exports = [
   },
   {
     "id": "014",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "에(가다/오다)",
     "grammar_category": "助词",
@@ -589,7 +589,7 @@ module.exports = [
   },
   {
     "id": "015",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "(으)ㄹ까요?",
     "grammar_category": "终结词尾",
@@ -625,7 +625,7 @@ module.exports = [
   },
   {
     "id": "016",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "-읍시다 / -ㅂ시다",
     "grammar_category": "终结词尾",
@@ -665,7 +665,7 @@ module.exports = [
   },
   {
     "id": "017",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "-지 않다",
     "grammar_category": "惯用型",
@@ -701,7 +701,7 @@ module.exports = [
   },
   {
     "id": "018",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "ㄹ不规则变形",
     "grammar_category": "不规则变形",
@@ -733,7 +733,7 @@ module.exports = [
   },
   {
     "id": "019",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "-고 싶다",
     "grammar_category": "惯用型",
@@ -773,7 +773,7 @@ module.exports = [
   },
   {
     "id": "020",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "-겠",
     "grammar_category": "词尾",
@@ -805,7 +805,7 @@ module.exports = [
   },
   {
     "id": "021",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "4",
     "grammar": "-으십시오 / -하십시오",
     "grammar_category": "终结词尾",
@@ -841,7 +841,7 @@ module.exports = [
   },
   {
     "id": "022",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "까지",
     "grammar_category": "助词",
@@ -873,7 +873,7 @@ module.exports = [
   },
   {
     "id": "023",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "아/어/여요",
     "grammar_category": "终结词尾",
@@ -909,7 +909,7 @@ module.exports = [
   },
   {
     "id": "024",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "-지요?",
     "grammar_category": "终结词尾",
@@ -945,7 +945,7 @@ module.exports = [
   },
   {
     "id": "025",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "-으세요/세요",
     "grammar_category": "终结词尾",
@@ -981,7 +981,7 @@ module.exports = [
   },
   {
     "id": "026",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "-에",
     "grammar_category": "助词",
@@ -1013,7 +1013,7 @@ module.exports = [
   },
   {
     "id": "027",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "부터~까지",
     "grammar_category": "搭配使用",
@@ -1045,7 +1045,7 @@ module.exports = [
   },
   {
     "id": "028",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "-고",
     "grammar_category": "连接词尾",
@@ -1077,7 +1077,7 @@ module.exports = [
   },
   {
     "id": "029",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "았/었/였",
     "grammar_category": "词尾",
@@ -1109,7 +1109,7 @@ module.exports = [
   },
   {
     "id": "030",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "5",
     "grammar": "ㅂ不规则变形",
     "grammar_category": "不规则变形",
@@ -1141,7 +1141,7 @@ module.exports = [
   },
   {
     "id": "031",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "으)러 (가다/오다)",
     "grammar_category": "惯用型",
@@ -1185,7 +1185,7 @@ module.exports = [
   },
   {
     "id": "032",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "과/와",
     "grammar_category": "助词",
@@ -1233,7 +1233,7 @@ module.exports = [
   },
   {
     "id": "033",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "지만",
     "grammar_category": "连接词尾",
@@ -1285,7 +1285,7 @@ module.exports = [
   },
   {
     "id": "034",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "은/는/(으)ㄹ",
     "grammar_category": "定词尾",
@@ -1345,7 +1345,7 @@ module.exports = [
   },
   {
     "id": "035",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "ㅎ不规则变形",
     "grammar_category": "不规则变形",
@@ -1377,7 +1377,7 @@ module.exports = [
   },
   {
     "id": "036",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "아/어/여 주다",
     "grammar_category": "惯用型",
@@ -1449,7 +1449,7 @@ module.exports = [
   },
   {
     "id": "037",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "단위 명사",
     "grammar_category": "词汇",
@@ -1489,7 +1489,7 @@ module.exports = [
   },
   {
     "id": "038",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "6",
     "grammar": "에게",
     "grammar_category": "助词",
@@ -1541,7 +1541,7 @@ module.exports = [
   },
   {
     "id": "039",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "으로/로",
     "grammar_category": "助词",
@@ -1585,7 +1585,7 @@ module.exports = [
   },
   {
     "id": "040",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "아/어/여서",
     "grammar_category": "连接词尾",
@@ -1625,7 +1625,7 @@ module.exports = [
   },
   {
     "id": "041",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "에서 ~까지",
     "grammar_category": "搭配使用",
@@ -1669,7 +1669,7 @@ module.exports = [
   },
   {
     "id": "042",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "-으니까/니까",
     "grammar_category": "连接词尾",
@@ -1717,7 +1717,7 @@ module.exports = [
   },
   {
     "id": "043",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "-지 말다",
     "grammar_category": "惯用型",
@@ -1765,7 +1765,7 @@ module.exports = [
   },
   {
     "id": "044",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "ㄷ不规则变形",
     "grammar_category": "不规则变形",
@@ -1797,7 +1797,7 @@ module.exports = [
   },
   {
     "id": "045",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "7",
     "grammar": "르 불규칙 변형",
     "grammar_category": "不规则变形",
@@ -1829,7 +1829,7 @@ module.exports = [
   },
   {
     "id": "046",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "을게요/ㄹ게요",
     "grammar_category": "惯用型",
@@ -1877,7 +1877,7 @@ module.exports = [
   },
   {
     "id": "047",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "이나/나",
     "grammar_category": "助词",
@@ -1925,7 +1925,7 @@ module.exports = [
   },
   {
     "id": "048",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "으)ㄴ데요/는데요",
     "grammar_category": "终结词尾",
@@ -1969,7 +1969,7 @@ module.exports = [
   },
   {
     "id": "049",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "에게서",
     "grammar_category": "助词",
@@ -2017,7 +2017,7 @@ module.exports = [
   },
   {
     "id": "050",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "으)면",
     "grammar_category": "连接词尾",
@@ -2061,7 +2061,7 @@ module.exports = [
   },
   {
     "id": "051",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "-을/ㄹ 거예요",
     "grammar_category": "惯用型",
@@ -2089,7 +2089,7 @@ module.exports = [
   },
   {
     "id": "052",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "8",
     "grammar": "만",
     "grammar_category": "助词",
@@ -2137,7 +2137,7 @@ module.exports = [
   },
   {
     "id": "053",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "는데, -은/ㄴ데",
     "grammar_category": "连接词尾",
@@ -2181,7 +2181,7 @@ module.exports = [
   },
   {
     "id": "054",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "을/를 수 있다",
     "grammar_category": "惯用型",
@@ -2229,7 +2229,7 @@ module.exports = [
   },
   {
     "id": "055",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "은/ㄴ 후에",
     "grammar_category": "惯用型",
@@ -2273,7 +2273,7 @@ module.exports = [
   },
   {
     "id": "056",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "-겠",
     "grammar_category": "词尾",
@@ -2305,7 +2305,7 @@ module.exports = [
   },
   {
     "id": "057",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "보다",
     "grammar_category": "助词",
@@ -2341,7 +2341,7 @@ module.exports = [
   },
   {
     "id": "058",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "-을/ㄹ 것 같다",
     "grammar_category": "惯用型",
@@ -2377,7 +2377,7 @@ module.exports = [
   },
   {
     "id": "059",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "-는군요/군요",
     "grammar_category": "终结词尾",
@@ -2413,7 +2413,7 @@ module.exports = [
   },
   {
     "id": "060",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "9",
     "grammar": "고 있다",
     "grammar_category": "惯用型",
@@ -2449,7 +2449,7 @@ module.exports = [
   },
   {
     "id": "061",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "으려고 하다 / 려고 하다",
     "grammar_category": "惯用型",
@@ -2485,7 +2485,7 @@ module.exports = [
   },
   {
     "id": "062",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "동안",
     "grammar_category": "词汇",
@@ -2521,7 +2521,7 @@ module.exports = [
   },
   {
     "id": "063",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "을 때/ㄹ 때",
     "grammar_category": "惯用型",
@@ -2557,7 +2557,7 @@ module.exports = [
   },
   {
     "id": "064",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "중에서 (~ 제일)",
     "grammar_category": "搭配使用",
@@ -2589,7 +2589,7 @@ module.exports = [
   },
   {
     "id": "065",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "에 ~쯤",
     "grammar_category": "惯用型",
@@ -2621,7 +2621,7 @@ module.exports = [
   },
   {
     "id": "066",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "못",
     "grammar_category": "词汇",
@@ -2653,7 +2653,7 @@ module.exports = [
   },
   {
     "id": "067",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "-기 전에",
     "grammar_category": "惯用型",
@@ -2689,7 +2689,7 @@ module.exports = [
   },
   {
     "id": "068",
-    "category": "yansei1",
+    "category": "Yonsei 1",
     "lesson_id": "10",
     "grammar": "지 못하다",
     "grammar_category": "惯用型",
@@ -2721,7 +2721,7 @@ module.exports = [
   },
   {
     "id": "069",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "기 때문에",
     "grammar_category": "惯用型",
@@ -2769,7 +2769,7 @@ module.exports = [
   },
   {
     "id": "070",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "이)든지",
     "grammar_category": "助词",
@@ -2817,7 +2817,7 @@ module.exports = [
   },
   {
     "id": "071",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "-은/ㄴ 지",
     "grammar_category": "连接词尾",
@@ -2861,7 +2861,7 @@ module.exports = [
   },
   {
     "id": "072",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "-는데, -은데/ㄴ데",
     "grammar_category": "连接词尾",
@@ -2905,7 +2905,7 @@ module.exports = [
   },
   {
     "id": "073",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "아/어/여지다",
     "grammar_category": "惯用型",
@@ -2949,7 +2949,7 @@ module.exports = [
   },
   {
     "id": "074",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "(으)려고",
     "grammar_category": "连接词尾",
@@ -2993,7 +2993,7 @@ module.exports = [
   },
   {
     "id": "075",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "아/어/여하다",
     "grammar_category": "惯用型",
@@ -3037,7 +3037,7 @@ module.exports = [
   },
   {
     "id": "076",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "1",
     "grammar": "-겠군요",
     "grammar_category": "终结词尾",
@@ -3081,7 +3081,7 @@ module.exports = [
   },
   {
     "id": "077",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "아/어/여 보다",
     "grammar_category": "惯用型",
@@ -3125,7 +3125,7 @@ module.exports = [
   },
   {
     "id": "078",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "아/어/여야 하다",
     "grammar_category": "惯用型",
@@ -3169,7 +3169,7 @@ module.exports = [
   },
   {
     "id": "079",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-은/ㄴ 적이 있다",
     "grammar_category": "惯用型",
@@ -3217,7 +3217,7 @@ module.exports = [
   },
   {
     "id": "080",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-는데, -은데/ㄴ데",
     "grammar_category": "连接词尾",
@@ -3253,7 +3253,7 @@ module.exports = [
   },
   {
     "id": "081",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-부터（~까지）",
     "grammar_category": "词汇",
@@ -3301,7 +3301,7 @@ module.exports = [
   },
   {
     "id": "082",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-게",
     "grammar_category": "助词",
@@ -3353,7 +3353,7 @@ module.exports = [
   },
   {
     "id": "083",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-아/어/여도 되다",
     "grammar_category": "惯用型",
@@ -3397,7 +3397,7 @@ module.exports = [
   },
   {
     "id": "084",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "2",
     "grammar": "-으면/면 안 되다",
     "grammar_category": "惯用型",
@@ -3437,7 +3437,7 @@ module.exports = [
   },
   {
     "id": "085",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "을까/ㄹ까 하다",
     "grammar_category": "惯用型",
@@ -3481,7 +3481,7 @@ module.exports = [
   },
   {
     "id": "086",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "-기는 하지만",
     "grammar_category": "惯用型",
@@ -3521,7 +3521,7 @@ module.exports = [
   },
   {
     "id": "087",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "아/어/여 보다",
     "grammar_category": "惯用型",
@@ -3565,7 +3565,7 @@ module.exports = [
   },
   {
     "id": "088",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "-는데, -은데/ㄴ데",
     "grammar_category": "连接词尾",
@@ -3605,7 +3605,7 @@ module.exports = [
   },
   {
     "id": "089",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "-으로/로 하다",
     "grammar_category": "惯用型",
@@ -3633,7 +3633,7 @@ module.exports = [
   },
   {
     "id": "090",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "아/어/여도",
     "grammar_category": "连接词尾",
@@ -3669,7 +3669,7 @@ module.exports = [
   },
   {
     "id": "091",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "-으니까/니까",
     "grammar_category": "连接词尾",
@@ -3705,7 +3705,7 @@ module.exports = [
   },
   {
     "id": "092",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "3",
     "grammar": "았/었/였으면 좋겠다",
     "grammar_category": "惯用型",
@@ -3741,7 +3741,7 @@ module.exports = [
   },
   {
     "id": "093",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "아/어/여, (이)야",
     "grammar_category": "终结词尾",
@@ -3777,7 +3777,7 @@ module.exports = [
   },
   {
     "id": "094",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "이)나 (+名词/助词)",
     "grammar_category": "助词",
@@ -3813,7 +3813,7 @@ module.exports = [
   },
   {
     "id": "095",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "-지 마",
     "grammar_category": "终结词尾",
@@ -3849,7 +3849,7 @@ module.exports = [
   },
   {
     "id": "096",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "으)ㄹ지 (으)ㄹ지",
     "grammar_category": "连接词尾",
@@ -3881,7 +3881,7 @@ module.exports = [
   },
   {
     "id": "097",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "는다/ㄴ다/다, -니?, -어라/아라/여라, -자",
     "grammar_category": "终结词尾",
@@ -3917,7 +3917,7 @@ module.exports = [
   },
   {
     "id": "098",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "-기로 하다",
     "grammar_category": "惯用型",
@@ -3949,7 +3949,7 @@ module.exports = [
   },
   {
     "id": "099",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "4",
     "grammar": "아/어/여 가지고",
     "grammar_category": "惯用型",
@@ -3981,7 +3981,7 @@ module.exports = [
   },
   {
     "id": "100",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-는지/은지/ㄴ지 알다, 모르다",
     "grammar_category": "惯用型",
@@ -4013,7 +4013,7 @@ module.exports = [
   },
   {
     "id": "101",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-으로/로",
     "grammar_category": "助词",
@@ -4045,7 +4045,7 @@ module.exports = [
   },
   {
     "id": "102",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-으려면/려면",
     "grammar_category": "连接词尾",
@@ -4077,7 +4077,7 @@ module.exports = [
   },
   {
     "id": "103",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-이나/나",
     "grammar_category": "助词",
@@ -4109,7 +4109,7 @@ module.exports = [
   },
   {
     "id": "104",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-았/었/였다가",
     "grammar_category": "连接词尾",
@@ -4141,7 +4141,7 @@ module.exports = [
   },
   {
     "id": "105",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-나요, -은가요/ㄴ가요?",
     "grammar_category": "终结词尾",
@@ -4177,7 +4177,7 @@ module.exports = [
   },
   {
     "id": "106",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "아/어/여 보이다",
     "grammar_category": "惯用型",
@@ -4209,7 +4209,7 @@ module.exports = [
   },
   {
     "id": "107",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "5",
     "grammar": "-다가",
     "grammar_category": "连接词尾",
@@ -4241,7 +4241,7 @@ module.exports = [
   },
   {
     "id": "108",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "에 대해서",
     "grammar_category": "惯用型",
@@ -4285,7 +4285,7 @@ module.exports = [
   },
   {
     "id": "109",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "-을지/ㄹ지 모르겠다",
     "grammar_category": "惯用型",
@@ -4333,7 +4333,7 @@ module.exports = [
   },
   {
     "id": "110",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "에 비해서",
     "grammar_category": "惯用型",
@@ -4373,7 +4373,7 @@ module.exports = [
   },
   {
     "id": "111",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "-는 동안",
     "grammar_category": "惯用型",
@@ -4421,7 +4421,7 @@ module.exports = [
   },
   {
     "id": "112",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "-거나",
     "grammar_category": "连接词尾",
@@ -4469,7 +4469,7 @@ module.exports = [
   },
   {
     "id": "113",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "-습니다만 / -ㅂ니다만",
     "grammar_category": "连接词尾",
@@ -4517,7 +4517,7 @@ module.exports = [
   },
   {
     "id": "114",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "아/어/여 있다",
     "grammar_category": "惯用型",
@@ -4561,7 +4561,7 @@ module.exports = [
   },
   {
     "id": "115",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "6",
     "grammar": "-지 않으면 안 되다",
     "grammar_category": "句型",
@@ -4605,7 +4605,7 @@ module.exports = [
   },
   {
     "id": "116",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "자고 하다",
     "grammar_category": "惯用型",
@@ -4653,7 +4653,7 @@ module.exports = [
   },
   {
     "id": "117",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "-냐고 하다",
     "grammar_category": "惯用型",
@@ -4709,7 +4709,7 @@ module.exports = [
   },
   {
     "id": "118",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "ㄴ/는다고 하다, 이)라고 하다",
     "grammar_category": "惯用型",
@@ -4765,7 +4765,7 @@ module.exports = [
   },
   {
     "id": "119",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "-(으)라고 하다",
     "grammar_category": "惯用型",
@@ -4821,7 +4821,7 @@ module.exports = [
   },
   {
     "id": "120",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "달라고/주라고 하다",
     "grammar_category": "惯用型",
@@ -4869,7 +4869,7 @@ module.exports = [
   },
   {
     "id": "121",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "-을래요/ㄹ래요?",
     "grammar_category": "终结词尾",
@@ -4917,7 +4917,7 @@ module.exports = [
   },
   {
     "id": "122",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "아/어/여야겠다",
     "grammar_category": "惯用型",
@@ -4961,7 +4961,7 @@ module.exports = [
   },
   {
     "id": "123",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "-게 되다",
     "grammar_category": "惯用型",
@@ -5005,7 +5005,7 @@ module.exports = [
   },
   {
     "id": "124",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "7",
     "grammar": "-는 대로",
     "grammar_category": "惯用型",
@@ -5049,7 +5049,7 @@ module.exports = [
   },
   {
     "id": "125",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "에다가",
     "grammar_category": "连接词尾",
@@ -5093,7 +5093,7 @@ module.exports = [
   },
   {
     "id": "126",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "ㅅ不规则变形",
     "grammar_category": "不规则变形",
@@ -5125,7 +5125,7 @@ module.exports = [
   },
   {
     "id": "127",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "-는/은/ㄴ 데다가",
     "grammar_category": "连接词尾",
@@ -5173,7 +5173,7 @@ module.exports = [
   },
   {
     "id": "128",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "-지 말고",
     "grammar_category": "连接词尾",
@@ -5217,7 +5217,7 @@ module.exports = [
   },
   {
     "id": "129",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "-기 위해서",
     "grammar_category": "连接词尾",
@@ -5261,7 +5261,7 @@ module.exports = [
   },
   {
     "id": "130",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "아무",
     "grammar_category": "词汇",
@@ -5309,7 +5309,7 @@ module.exports = [
   },
   {
     "id": "131",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "얼마나 -는지 모르다",
     "grammar_category": "惯用表达（强调句式）",
@@ -5353,7 +5353,7 @@ module.exports = [
   },
   {
     "id": "132",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "8",
     "grammar": "-나, -은가/ㄴ가 보다",
     "grammar_category": "连接词尾",
@@ -5405,7 +5405,7 @@ module.exports = [
   },
   {
     "id": "133",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "밖에",
     "grammar_category": "助词",
@@ -5453,7 +5453,7 @@ module.exports = [
   },
   {
     "id": "134",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "았/었/였던",
     "grammar_category": "定语词尾（冠形词尾）",
@@ -5501,7 +5501,7 @@ module.exports = [
   },
   {
     "id": "135",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "의",
     "grammar_category": "助词",
@@ -5549,7 +5549,7 @@ module.exports = [
   },
   {
     "id": "136",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "-던",
     "grammar_category": "定语词尾（冠形词尾）",
@@ -5593,7 +5593,7 @@ module.exports = [
   },
   {
     "id": "137",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "만에",
     "grammar_category": "助词",
@@ -5637,7 +5637,7 @@ module.exports = [
   },
   {
     "id": "138",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "만큼",
     "grammar_category": "词汇",
@@ -5673,7 +5673,7 @@ module.exports = [
   },
   {
     "id": "139",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "아/어/여서 그런지",
     "grammar_category": "惯用型",
@@ -5705,7 +5705,7 @@ module.exports = [
   },
   {
     "id": "140",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "9",
     "grammar": "더군요",
     "grammar_category": "终结词尾",
@@ -5737,7 +5737,7 @@ module.exports = [
   },
   {
     "id": "141",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "接续词",
     "grammar_category": "词汇",
@@ -5769,7 +5769,7 @@ module.exports = [
   },
   {
     "id": "142",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "-으면/면 -을수록/ㄹ수록",
     "grammar_category": "句型",
@@ -5801,7 +5801,7 @@ module.exports = [
   },
   {
     "id": "143",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "-는/은/ㄴ/을/ㄹ 줄 알다/모르다",
     "grammar_category": "句型",
@@ -5833,7 +5833,7 @@ module.exports = [
   },
   {
     "id": "144",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "처럼",
     "grammar_category": "助词",
@@ -5865,7 +5865,7 @@ module.exports = [
   },
   {
     "id": "145",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "덕분에",
     "grammar_category": "惯用型",
@@ -5897,7 +5897,7 @@ module.exports = [
   },
   {
     "id": "146",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "으)면서",
     "grammar_category": "连接词尾",
@@ -5929,7 +5929,7 @@ module.exports = [
   },
   {
     "id": "147",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "아/어/여지다",
     "grammar_category": "惯用型",
@@ -5961,7 +5961,7 @@ module.exports = [
   },
   {
     "id": "148",
-    "category": "yansei2",
+    "category": "Yonsei 2",
     "lesson_id": "10",
     "grammar": "-을/ㄹ 테니까",
     "grammar_category": "连接词尾",
@@ -5993,7 +5993,7 @@ module.exports = [
   },
   {
     "id": "149",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-던데요",
     "grammar_category": "终结词尾",
@@ -6045,7 +6045,7 @@ module.exports = [
   },
   {
     "id": "150",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-네요",
     "grammar_category": "终结词尾",
@@ -6097,7 +6097,7 @@ module.exports = [
   },
   {
     "id": "151",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-는/은/ㄴ 편이다",
     "grammar_category": "惯用型",
@@ -6149,7 +6149,7 @@ module.exports = [
   },
   {
     "id": "152",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-고요",
     "grammar_category": "终结词尾",
@@ -6189,7 +6189,7 @@ module.exports = [
   },
   {
     "id": "153",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-는데도 / -은데도 / -ㄴ데도",
     "grammar_category": "连接词尾",
@@ -6237,7 +6237,7 @@ module.exports = [
   },
   {
     "id": "154",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "-기만 하다, -만 하다",
     "grammar_category": "惯用型",
@@ -6285,7 +6285,7 @@ module.exports = [
   },
   {
     "id": "155",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "자마자",
     "grammar_category": "连接词尾",
@@ -6325,7 +6325,7 @@ module.exports = [
   },
   {
     "id": "156",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "1",
     "grammar": "는/ㄴ대요",
     "grammar_category": "终结词尾",
@@ -6377,7 +6377,7 @@ module.exports = [
   },
   {
     "id": "157",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "-으려던/려던 참이다",
     "grammar_category": "惯用型",
@@ -6417,7 +6417,7 @@ module.exports = [
   },
   {
     "id": "158",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "-을/ㄹ 텐데",
     "grammar_category": "连接词尾",
@@ -6465,7 +6465,7 @@ module.exports = [
   },
   {
     "id": "159",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "-거든/거든요",
     "grammar_category": "终结词尾",
@@ -6509,7 +6509,7 @@ module.exports = [
   },
   {
     "id": "160",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "-고 말고요",
     "grammar_category": "终结词尾",
@@ -6549,7 +6549,7 @@ module.exports = [
   },
   {
     "id": "161",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "았/었/였었",
     "grammar_category": "词尾",
@@ -6589,7 +6589,7 @@ module.exports = [
   },
   {
     "id": "162",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "-던데",
     "grammar_category": "连接词尾",
@@ -6633,7 +6633,7 @@ module.exports = [
   },
   {
     "id": "163",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "피동",
     "grammar_category": "惯用型",
@@ -6665,7 +6665,7 @@ module.exports = [
   },
   {
     "id": "164",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "2",
     "grammar": "아/어/여 놓다",
     "grammar_category": "惯用型",
@@ -6713,7 +6713,7 @@ module.exports = [
   },
   {
     "id": "165",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "아/어/여야",
     "grammar_category": "连接词尾",
@@ -6757,7 +6757,7 @@ module.exports = [
   },
   {
     "id": "166",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "-는다면 / -ㄴ다면 / -다면 / -(이)라면",
     "grammar_category": "连接词尾",
@@ -6805,7 +6805,7 @@ module.exports = [
   },
   {
     "id": "167",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "아/어/여야지요",
     "grammar_category": "终结词尾",
@@ -6853,7 +6853,7 @@ module.exports = [
   },
   {
     "id": "168",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "사동",
     "grammar_category": "惯用型",
@@ -6885,7 +6885,7 @@ module.exports = [
   },
   {
     "id": "169",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "이라든가/라든가",
     "grammar_category": "连接词尾",
@@ -6925,7 +6925,7 @@ module.exports = [
   },
   {
     "id": "170",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "-는다고/ㄴ다고/다고 하던데",
     "grammar_category": "连接词尾",
@@ -6969,7 +6969,7 @@ module.exports = [
   },
   {
     "id": "171",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "-는다고/ㄴ다고/다고/(이)라고 보다",
     "grammar_category": "惯用型",
@@ -7013,7 +7013,7 @@ module.exports = [
   },
   {
     "id": "172",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "3",
     "grammar": "-는답니다/ㄴ답니다/답니다/(이)랍니다",
     "grammar_category": "终结词尾",
@@ -7053,7 +7053,7 @@ module.exports = [
   },
   {
     "id": "173",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "만 못하다",
     "grammar_category": "惯用型",
@@ -7093,7 +7093,7 @@ module.exports = [
   },
   {
     "id": "174",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "-는/은/ㄴ 대신에",
     "grammar_category": "惯用型",
@@ -7145,7 +7145,7 @@ module.exports = [
   },
   {
     "id": "175",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "-는다고 해서, -ㄴ다고 해서, -다고 해서, -(으)라고 해서, -자고 해서",
     "grammar_category": "连接词尾",
@@ -7189,7 +7189,7 @@ module.exports = [
   },
   {
     "id": "176",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "-고서",
     "grammar_category": "连接词尾",
@@ -7233,7 +7233,7 @@ module.exports = [
   },
   {
     "id": "177",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "-을/ㄹ 뿐만 아니라",
     "grammar_category": "惯用型",
@@ -7277,7 +7277,7 @@ module.exports = [
   },
   {
     "id": "178",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "아/어/여야지요",
     "grammar_category": "终结词尾",
@@ -7325,7 +7325,7 @@ module.exports = [
   },
   {
     "id": "179",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "으)ㄹ 만하다",
     "grammar_category": "惯用型",
@@ -7373,7 +7373,7 @@ module.exports = [
   },
   {
     "id": "180",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "4",
     "grammar": "-을/ㄹ걸요 / -ㄹ걸요",
     "grammar_category": "终结词尾",
@@ -7417,7 +7417,7 @@ module.exports = [
   },
   {
     "id": "181",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "는/은/ㄴ/ㄹ 모양이다",
     "grammar_category": "惯用型",
@@ -7469,7 +7469,7 @@ module.exports = [
   },
   {
     "id": "182",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "-을/를 뿐이다",
     "grammar_category": "惯用型",
@@ -7521,7 +7521,7 @@ module.exports = [
   },
   {
     "id": "183",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "-는다면서요? / -ㄴ다면서요? / -다면서요? / -(이)라면서요?",
     "grammar_category": "终结词尾",
@@ -7569,7 +7569,7 @@ module.exports = [
   },
   {
     "id": "184",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "만하다",
     "grammar_category": "惯用型",
@@ -7617,7 +7617,7 @@ module.exports = [
   },
   {
     "id": "185",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "-기란",
     "grammar_category": "惯用型",
@@ -7657,7 +7657,7 @@ module.exports = [
   },
   {
     "id": "186",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "-았/었/였던 것 같다",
     "grammar_category": "惯用型",
@@ -7701,7 +7701,7 @@ module.exports = [
   },
   {
     "id": "187",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "았/었/였을 텐데",
     "grammar_category": "连接词尾",
@@ -7749,7 +7749,7 @@ module.exports = [
   },
   {
     "id": "188",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "5",
     "grammar": "-거든",
     "grammar_category": "连接词尾",
@@ -7793,7 +7793,7 @@ module.exports = [
   },
   {
     "id": "189",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "아/어/여다가",
     "grammar_category": "惯用型",
@@ -7833,7 +7833,7 @@ module.exports = [
   },
   {
     "id": "190",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "(이)라도",
     "grammar_category": "连接词尾",
@@ -7885,7 +7885,7 @@ module.exports = [
   },
   {
     "id": "191",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-더라",
     "grammar_category": "终结词尾",
@@ -7929,7 +7929,7 @@ module.exports = [
   },
   {
     "id": "192",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-다니요? / (이)라니요?",
     "grammar_category": "终结词尾",
@@ -7969,7 +7969,7 @@ module.exports = [
   },
   {
     "id": "193",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-고 나서",
     "grammar_category": "连接词尾",
@@ -8013,7 +8013,7 @@ module.exports = [
   },
   {
     "id": "194",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-지",
     "grammar_category": "终结词尾",
@@ -8053,7 +8053,7 @@ module.exports = [
   },
   {
     "id": "195",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-는다니까 / -ㄴ다니까 / -다니까 / -(이)라니까",
     "grammar_category": "连接词尾",
@@ -8105,7 +8105,7 @@ module.exports = [
   },
   {
     "id": "196",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "6",
     "grammar": "-지요",
     "grammar_category": "终结词尾",
@@ -8153,7 +8153,7 @@ module.exports = [
   },
   {
     "id": "197",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-는/ㄴ다는 것이(게)",
     "grammar_category": "惯用型",
@@ -8193,7 +8193,7 @@ module.exports = [
   },
   {
     "id": "198",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "을까/ㄹ까 봐",
     "grammar_category": "连接词尾",
@@ -8241,7 +8241,7 @@ module.exports = [
   },
   {
     "id": "199",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "아/어/여 버리다",
     "grammar_category": "惯用型",
@@ -8285,7 +8285,7 @@ module.exports = [
   },
   {
     "id": "200",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-잖아 / -잖아요",
     "grammar_category": "终结词尾",
@@ -8329,7 +8329,7 @@ module.exports = [
   },
   {
     "id": "201",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-고 해서",
     "grammar_category": "连接词尾",
@@ -8369,7 +8369,7 @@ module.exports = [
   },
   {
     "id": "202",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-지 그래요 / -지 그래",
     "grammar_category": "惯用型",
@@ -8409,7 +8409,7 @@ module.exports = [
   },
   {
     "id": "203",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-고도",
     "grammar_category": "连接词尾",
@@ -8457,7 +8457,7 @@ module.exports = [
   },
   {
     "id": "204",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "7",
     "grammar": "-는단/ㄴ단/단/(이)란 말이에요?",
     "grammar_category": "惯用型",
@@ -8497,7 +8497,7 @@ module.exports = [
   },
   {
     "id": "205",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "으면서도/면서도",
     "grammar_category": "连接词尾",
@@ -8537,7 +8537,7 @@ module.exports = [
   },
   {
     "id": "206",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "-도록 하다",
     "grammar_category": "惯用型",
@@ -8589,7 +8589,7 @@ module.exports = [
   },
   {
     "id": "207",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "어찌나 -는지",
     "grammar_category": "句型",
@@ -8637,7 +8637,7 @@ module.exports = [
   },
   {
     "id": "208",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "-고 말다",
     "grammar_category": "惯用型",
@@ -8677,7 +8677,7 @@ module.exports = [
   },
   {
     "id": "209",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "-고는",
     "grammar_category": "连接词尾",
@@ -8721,7 +8721,7 @@ module.exports = [
   },
   {
     "id": "210",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "-을/ㄹ지도 모르다",
     "grammar_category": "惯用型",
@@ -8765,7 +8765,7 @@ module.exports = [
   },
   {
     "id": "211",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "-으면/면 되다",
     "grammar_category": "惯用型",
@@ -8809,7 +8809,7 @@ module.exports = [
   },
   {
     "id": "212",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "8",
     "grammar": "이)라서",
     "grammar_category": "连接词尾",
@@ -8849,7 +8849,7 @@ module.exports = [
   },
   {
     "id": "213",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-기는요",
     "grammar_category": "惯用型",
@@ -8893,7 +8893,7 @@ module.exports = [
   },
   {
     "id": "214",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "느라고",
     "grammar_category": "连接词尾",
@@ -8941,7 +8941,7 @@ module.exports = [
   },
   {
     "id": "215",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "담화표지",
     "grammar_category": "表达",
@@ -8977,7 +8977,7 @@ module.exports = [
   },
   {
     "id": "216",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-게",
     "grammar_category": "助词",
@@ -9017,7 +9017,7 @@ module.exports = [
   },
   {
     "id": "217",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-다니 / -(이)라니",
     "grammar_category": "连接词尾",
@@ -9065,7 +9065,7 @@ module.exports = [
   },
   {
     "id": "218",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-게 하다",
     "grammar_category": "惯用型",
@@ -9117,7 +9117,7 @@ module.exports = [
   },
   {
     "id": "219",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-는다지요? / -ㄴ다지요? / -다지요? / -(이)라지요?",
     "grammar_category": "终结词尾",
@@ -9161,7 +9161,7 @@ module.exports = [
   },
   {
     "id": "220",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "9",
     "grammar": "-을/ㄹ 건가요?",
     "grammar_category": "终结词尾",
@@ -9205,7 +9205,7 @@ module.exports = [
   },
   {
     "id": "221",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "-다가도",
     "grammar_category": "连接词尾",
@@ -9249,7 +9249,7 @@ module.exports = [
   },
   {
     "id": "222",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "-곤 하다",
     "grammar_category": "惯用型",
@@ -9293,7 +9293,7 @@ module.exports = [
   },
   {
     "id": "223",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "전만 해도",
     "grammar_category": "惯用型",
@@ -9333,7 +9333,7 @@ module.exports = [
   },
   {
     "id": "224",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "-는다고/ㄴ다고/다고/(이)라고 할 수 있다",
     "grammar_category": "惯用型",
@@ -9373,7 +9373,7 @@ module.exports = [
   },
   {
     "id": "225",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "았/었/였다면",
     "grammar_category": "连接词尾",
@@ -9417,7 +9417,7 @@ module.exports = [
   },
   {
     "id": "226",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "-았/었/였을 것이다",
     "grammar_category": "惯用型",
@@ -9465,7 +9465,7 @@ module.exports = [
   },
   {
     "id": "227",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "듯이",
     "grammar_category": "连接词尾",
@@ -9509,7 +9509,7 @@ module.exports = [
   },
   {
     "id": "228",
-    "category": "yansei3",
+    "category": "Yonsei 3",
     "lesson_id": "10",
     "grammar": "-은/는 물론",
     "grammar_category": "惯用型",
@@ -9549,7 +9549,7 @@ module.exports = [
   },
   {
     "id": "229",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-다가 보니",
     "grammar_category": "连接词尾",
@@ -9593,7 +9593,7 @@ module.exports = [
   },
   {
     "id": "230",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-긴 하는데 / -긴 한데",
     "grammar_category": "连接词尾",
@@ -9633,7 +9633,7 @@ module.exports = [
   },
   {
     "id": "231",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "았/었/였더라면",
     "grammar_category": "连接词尾",
@@ -9677,7 +9677,7 @@ module.exports = [
   },
   {
     "id": "232",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-이나/나 다름없다",
     "grammar_category": "惯用型",
@@ -9717,7 +9717,7 @@ module.exports = [
   },
   {
     "id": "233",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-도록",
     "grammar_category": "连接词尾",
@@ -9757,7 +9757,7 @@ module.exports = [
   },
   {
     "id": "234",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-는다고/ㄴ다고/다고 해서",
     "grammar_category": "连接词尾",
@@ -9793,7 +9793,7 @@ module.exports = [
   },
   {
     "id": "235",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "-ㄴ/는다 -ㄴ/는다 하는 게",
     "grammar_category": "惯用型",
@@ -9829,7 +9829,7 @@ module.exports = [
   },
   {
     "id": "236",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "1",
     "grammar": "아/어/여 가면서",
     "grammar_category": "连接词尾",
@@ -9861,7 +9861,7 @@ module.exports = [
   },
   {
     "id": "237",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-는지/은지/ㄴ지",
     "grammar_category": "连接词尾",
@@ -9897,7 +9897,7 @@ module.exports = [
   },
   {
     "id": "238",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-다가 보면",
     "grammar_category": "连接词尾",
@@ -9929,7 +9929,7 @@ module.exports = [
   },
   {
     "id": "239",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "더니",
     "grammar_category": "连接词尾",
@@ -9965,7 +9965,7 @@ module.exports = [
   },
   {
     "id": "240",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-(으)면 뭘 해요?",
     "grammar_category": "句型",
@@ -9997,7 +9997,7 @@ module.exports = [
   },
   {
     "id": "241",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "을/ㄹ 게 아니라",
     "grammar_category": "惯用型",
@@ -10029,7 +10029,7 @@ module.exports = [
   },
   {
     "id": "242",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-았/었/였다면",
     "grammar_category": "连接词尾",
@@ -10061,7 +10061,7 @@ module.exports = [
   },
   {
     "id": "243",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-을/ㄹ 뻔하다",
     "grammar_category": "惯用型",
@@ -10093,7 +10093,7 @@ module.exports = [
   },
   {
     "id": "244",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "2",
     "grammar": "-는다기에/ㄴ다기에/다기에",
     "grammar_category": "连接词尾",
@@ -10125,7 +10125,7 @@ module.exports = [
   },
   {
     "id": "245",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "-기에는",
     "grammar_category": "惯用型",
@@ -10157,7 +10157,7 @@ module.exports = [
   },
   {
     "id": "246",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "-고 보니",
     "grammar_category": "连接词尾",
@@ -10189,7 +10189,7 @@ module.exports = [
   },
   {
     "id": "247",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "-아/어/여서야 어디 -겠어요?",
     "grammar_category": "句型",
@@ -10221,7 +10221,7 @@ module.exports = [
   },
   {
     "id": "248",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "는다고/ㄴ다고/다고 해도",
     "grammar_category": "连接词尾",
@@ -10253,7 +10253,7 @@ module.exports = [
   },
   {
     "id": "249",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "았/었/였더니",
     "grammar_category": "连接词尾",
@@ -10285,7 +10285,7 @@ module.exports = [
   },
   {
     "id": "250",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "(으)ㄹ 수가 있어야지요",
     "grammar_category": "句型",
@@ -10317,7 +10317,7 @@ module.exports = [
   },
   {
     "id": "251",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "아/어/여야지 그렇지 않으면",
     "grammar_category": "句型",
@@ -10349,7 +10349,7 @@ module.exports = [
   },
   {
     "id": "252",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "3",
     "grammar": "-았/었/였으면 -고 얼마나 좋았겠어요",
     "grammar_category": "? 句型",
@@ -10381,7 +10381,7 @@ module.exports = [
   },
   {
     "id": "253",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "-을/를 겸",
     "grammar_category": "惯用型",
@@ -10413,7 +10413,7 @@ module.exports = [
   },
   {
     "id": "254",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "ㄴ/는다던데",
     "grammar_category": "连接词尾",
@@ -10445,7 +10445,7 @@ module.exports = [
   },
   {
     "id": "255",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "-는걸요 / -은걸요 / -ㄴ걸요 / 인걸요",
     "grammar_category": "终结词尾",
@@ -10481,7 +10481,7 @@ module.exports = [
   },
   {
     "id": "256",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "에 비하면",
     "grammar_category": "连接词尾",
@@ -10513,7 +10513,7 @@ module.exports = [
   },
   {
     "id": "257",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "-는다고들/ㄴ다고들/다고들 하다",
     "grammar_category": "惯用型",
@@ -10545,7 +10545,7 @@ module.exports = [
   },
   {
     "id": "258",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "-건 -건",
     "grammar_category": "惯用型",
@@ -10577,7 +10577,7 @@ module.exports = [
   },
   {
     "id": "259",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "이며/며",
     "grammar_category": "连接词尾",
@@ -10609,7 +10609,7 @@ module.exports = [
   },
   {
     "id": "260",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "4",
     "grammar": "여간 -지 않다",
     "grammar_category": "句型",
@@ -10641,7 +10641,7 @@ module.exports = [
   },
   {
     "id": "261",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "만 해도",
     "grammar_category": "惯用型",
@@ -10673,7 +10673,7 @@ module.exports = [
   },
   {
     "id": "262",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "다가",
     "grammar_category": "连接词尾",
@@ -10705,7 +10705,7 @@ module.exports = [
   },
   {
     "id": "263",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "에 의하면",
     "grammar_category": "连接词尾",
@@ -10737,7 +10737,7 @@ module.exports = [
   },
   {
     "id": "264",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "-고서는",
     "grammar_category": "连接词尾",
@@ -10769,7 +10769,7 @@ module.exports = [
   },
   {
     "id": "265",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "-으로/로 인해",
     "grammar_category": "连接词尾",
@@ -10801,7 +10801,7 @@ module.exports = [
   },
   {
     "id": "266",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "-에/에게 달려 있다",
     "grammar_category": "句型",
@@ -10833,7 +10833,7 @@ module.exports = [
   },
   {
     "id": "267",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "더니",
     "grammar_category": "连接词尾",
@@ -10865,7 +10865,7 @@ module.exports = [
   },
   {
     "id": "268",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "5",
     "grammar": "-는/은/ㄴ 법이다",
     "grammar_category": "惯用型",
@@ -10897,7 +10897,7 @@ module.exports = [
   },
   {
     "id": "269",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "만으로는",
     "grammar_category": "惯用型",
@@ -10929,7 +10929,7 @@ module.exports = [
   },
   {
     "id": "270",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "-는 수가 있다",
     "grammar_category": "惯用型",
@@ -10961,7 +10961,7 @@ module.exports = [
   },
   {
     "id": "271",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "-(는/은/ㄴ) 축에 들다",
     "grammar_category": "惯用型",
@@ -10993,7 +10993,7 @@ module.exports = [
   },
   {
     "id": "272",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "-든(지)",
     "grammar_category": "连接词尾",
@@ -11025,7 +11025,7 @@ module.exports = [
   },
   {
     "id": "273",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "마치 -는 것처럼",
     "grammar_category": "句型",
@@ -11057,7 +11057,7 @@ module.exports = [
   },
   {
     "id": "274",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "-는다고 / -ㄴ다고 / -다고",
     "grammar_category": "连接词尾",
@@ -11089,7 +11089,7 @@ module.exports = [
   },
   {
     "id": "275",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "-는가/은가/ㄴ가 하면",
     "grammar_category": "连接词尾",
@@ -11121,7 +11121,7 @@ module.exports = [
   },
   {
     "id": "276",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "6",
     "grammar": "는 게 틀림없다",
     "grammar_category": "惯用型",
@@ -11153,7 +11153,7 @@ module.exports = [
   },
   {
     "id": "277",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "따라",
     "grammar_category": "惯用型",
@@ -11185,7 +11185,7 @@ module.exports = [
   },
   {
     "id": "278",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "-을/ㄹ 걸 그랬다, -지 말걸 그랬다",
     "grammar_category": "惯用型",
@@ -11217,7 +11217,7 @@ module.exports = [
   },
   {
     "id": "279",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "-는다더라 / -ㄴ다더라 / -다더라",
     "grammar_category": "终结词尾",
@@ -11249,7 +11249,7 @@ module.exports = [
   },
   {
     "id": "280",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "-네 -네 해도",
     "grammar_category": "连接词尾",
@@ -11281,7 +11281,7 @@ module.exports = [
   },
   {
     "id": "281",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "-는/은/ㄴ 김에",
     "grammar_category": "惯用型",
@@ -11313,7 +11313,7 @@ module.exports = [
   },
   {
     "id": "282",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "설마 -는/은/ㄴ 건 아니겠지요?",
     "grammar_category": "句型",
@@ -11345,7 +11345,7 @@ module.exports = [
   },
   {
     "id": "283",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "도 ~이지만, -기도 ~지만",
     "grammar_category": "句型",
@@ -11377,7 +11377,7 @@ module.exports = [
   },
   {
     "id": "284",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "7",
     "grammar": "-는다면야 / -ㄴ다면야 / -(이)라면야",
     "grammar_category": "连接词尾",
@@ -11409,7 +11409,7 @@ module.exports = [
   },
   {
     "id": "285",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-을/를 따름이다",
     "grammar_category": "惯用型",
@@ -11441,7 +11441,7 @@ module.exports = [
   },
   {
     "id": "286",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-으니만큼/니만큼",
     "grammar_category": "连接词尾",
@@ -11473,7 +11473,7 @@ module.exports = [
   },
   {
     "id": "287",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "자면",
     "grammar_category": "连接词尾",
@@ -11505,7 +11505,7 @@ module.exports = [
   },
   {
     "id": "288",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "대로",
     "grammar_category": "助词",
@@ -11537,7 +11537,7 @@ module.exports = [
   },
   {
     "id": "289",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-는 바람에",
     "grammar_category": "惯用型",
@@ -11569,7 +11569,7 @@ module.exports = [
   },
   {
     "id": "290",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-았/었/였으면야",
     "grammar_category": "连接词尾",
@@ -11601,7 +11601,7 @@ module.exports = [
   },
   {
     "id": "291",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-으나마나/나마나",
     "grammar_category": "连接词尾",
@@ -11633,7 +11633,7 @@ module.exports = [
   },
   {
     "id": "292",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "8",
     "grammar": "-게 마련이다 / -기 마련이다",
     "grammar_category": "惯用型",
@@ -11665,7 +11665,7 @@ module.exports = [
   },
   {
     "id": "293",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "-으라고, -라고",
     "grammar_category": "连接词尾",
@@ -11697,7 +11697,7 @@ module.exports = [
   },
   {
     "id": "294",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "-는다든가/ㄴ다든가/다든가",
     "grammar_category": "连接词尾",
@@ -11729,7 +11729,7 @@ module.exports = [
   },
   {
     "id": "295",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "왜 -지 않겠어요?",
     "grammar_category": "句型",
@@ -11761,7 +11761,7 @@ module.exports = [
   },
   {
     "id": "296",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "(으)로 봐서는",
     "grammar_category": "惯用型",
@@ -11793,7 +11793,7 @@ module.exports = [
   },
   {
     "id": "297",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "-던가요?",
     "grammar_category": "终结词尾",
@@ -11825,7 +11825,7 @@ module.exports = [
   },
   {
     "id": "298",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "도록",
     "grammar_category": "连接词尾",
@@ -11857,7 +11857,7 @@ module.exports = [
   },
   {
     "id": "299",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "그러고 보니",
     "grammar_category": "惯用型",
@@ -11889,7 +11889,7 @@ module.exports = [
   },
   {
     "id": "300",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "9",
     "grammar": "그렇다고 (으)ㄹ 수는 없지요",
     "grammar_category": "句型",
@@ -11921,7 +11921,7 @@ module.exports = [
   },
   {
     "id": "301",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-게",
     "grammar_category": "助词",
@@ -11953,7 +11953,7 @@ module.exports = [
   },
   {
     "id": "302",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "(으)ㄹ까 보다",
     "grammar_category": "惯用型",
@@ -11985,7 +11985,7 @@ module.exports = [
   },
   {
     "id": "303",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-는/(으)ㄴ 셈이다",
     "grammar_category": "惯用型",
@@ -12017,7 +12017,7 @@ module.exports = [
   },
   {
     "id": "304",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "이라야/라야",
     "grammar_category": "连接词尾",
@@ -12049,7 +12049,7 @@ module.exports = [
   },
   {
     "id": "305",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-으로는/로는",
     "grammar_category": "助词",
@@ -12081,7 +12081,7 @@ module.exports = [
   },
   {
     "id": "306",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-을/를 필요가 있다/없다",
     "grammar_category": "句型",
@@ -12113,7 +12113,7 @@ module.exports = [
   },
   {
     "id": "307",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-고자",
     "grammar_category": "连接词尾",
@@ -12145,7 +12145,7 @@ module.exports = [
   },
   {
     "id": "308",
-    "category": "yansei4",
+    "category": "Yonsei 4",
     "lesson_id": "10",
     "grammar": "-음에 따라 / -ㅁ에 따라",
     "grammar_category": "惯用型",
@@ -12177,7 +12177,7 @@ module.exports = [
   },
   {
     "id": "309",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "1",
     "grammar": "조차",
     "grammar_category": "助词",
@@ -12233,7 +12233,7 @@ module.exports = [
   },
   {
     "id": "310",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "1",
     "grammar": "-(으)ㄹ수록 -아/어/여지다",
     "grammar_category": "句型",
@@ -12285,7 +12285,7 @@ module.exports = [
   },
   {
     "id": "311",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "1",
     "grammar": "오/소/구려(하오체)",
     "grammar_category": "终结词尾",
@@ -12333,7 +12333,7 @@ module.exports = [
   },
   {
     "id": "312",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "1",
     "grammar": "네/나?/게/세(하게체)",
     "grammar_category": "终结词尾",
@@ -12385,7 +12385,7 @@ module.exports = [
   },
   {
     "id": "313",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "2",
     "grammar": "-(으)ㅁ에도 불구하고",
     "grammar_category": "惯用型",
@@ -12441,7 +12441,7 @@ module.exports = [
   },
   {
     "id": "314",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "2",
     "grammar": "거니와",
     "grammar_category": "句型",
@@ -12493,7 +12493,7 @@ module.exports = [
   },
   {
     "id": "315",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "2",
     "grammar": "에다가",
     "grammar_category": "助词",
@@ -12537,7 +12537,7 @@ module.exports = [
   },
   {
     "id": "316",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "2",
     "grammar": "아/어/여야 -지",
     "grammar_category": "句型",
@@ -12585,7 +12585,7 @@ module.exports = [
   },
   {
     "id": "317",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "3",
     "grammar": "-긴 -나/(으)ㄴ가 보다",
     "grammar_category": "句型",
@@ -12629,7 +12629,7 @@ module.exports = [
   },
   {
     "id": "318",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "3",
     "grammar": "길래",
     "grammar_category": "连接词尾",
@@ -12673,7 +12673,7 @@ module.exports = [
   },
   {
     "id": "319",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "3",
     "grammar": "은/는커녕",
     "grammar_category": "惯用型",
@@ -12721,7 +12721,7 @@ module.exports = [
   },
   {
     "id": "320",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "3",
     "grammar": "-ㄹ/을 뿐더러",
     "grammar_category": "连接词尾",
@@ -12765,7 +12765,7 @@ module.exports = [
   },
   {
     "id": "321",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "4",
     "grammar": "-데요",
     "grammar_category": "终结词尾",
@@ -12809,7 +12809,7 @@ module.exports = [
   },
   {
     "id": "322",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "4",
     "grammar": "더라고요",
     "grammar_category": "终结词尾",
@@ -12857,7 +12857,7 @@ module.exports = [
   },
   {
     "id": "323",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "4",
     "grammar": "-되, -으되, -로되",
     "grammar_category": "连接词尾",
@@ -12913,7 +12913,7 @@ module.exports = [
   },
   {
     "id": "324",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "4",
     "grammar": "-는 한",
     "grammar_category": "惯用型",
@@ -12961,7 +12961,7 @@ module.exports = [
   },
   {
     "id": "325",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "5",
     "grammar": "-을/ㄹ래야",
     "grammar_category": "连接词尾",
@@ -13005,7 +13005,7 @@ module.exports = [
   },
   {
     "id": "326",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "5",
     "grammar": "(으)ㄹ까 말까 생각 중이다",
     "grammar_category": "句型",
@@ -13049,7 +13049,7 @@ module.exports = [
   },
   {
     "id": "327",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "5",
     "grammar": "-는다고 / -ㄴ다고 / -다고",
     "grammar_category": "连接词尾",
@@ -13097,7 +13097,7 @@ module.exports = [
   },
   {
     "id": "328",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "5",
     "grammar": "-더라도",
     "grammar_category": "连接词尾",
@@ -13145,7 +13145,7 @@ module.exports = [
   },
   {
     "id": "329",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "6",
     "grammar": "-는/은/ㄴ/인 듯싶다",
     "grammar_category": "惯用型",
@@ -13189,7 +13189,7 @@ module.exports = [
   },
   {
     "id": "330",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "6",
     "grammar": "-는다고도/ㄴ다고도/다고도/(이)라고도 할 수 있다",
     "grammar_category": "句型",
@@ -13237,7 +13237,7 @@ module.exports = [
   },
   {
     "id": "331",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "6",
     "grammar": "(으)ㄴ들 -겠어요?",
     "grammar_category": "句型",
@@ -13285,7 +13285,7 @@ module.exports = [
   },
   {
     "id": "332",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "6",
     "grammar": "-(으)니 어쩌니 해도 / -(이)니 뭐니 해도",
     "grammar_category": "句型",
@@ -13337,7 +13337,7 @@ module.exports = [
   },
   {
     "id": "333",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "7",
     "grammar": "-ㄴ다기보다는 / -는다기보다는 / -다기보다는 / (이)라기보다는",
     "grammar_category": "连接词尾",
@@ -13385,7 +13385,7 @@ module.exports = [
   },
   {
     "id": "334",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "7",
     "grammar": "-자니",
     "grammar_category": "句型",
@@ -13429,7 +13429,7 @@ module.exports = [
   },
   {
     "id": "335",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "7",
     "grammar": "같아선",
     "grammar_category": "惯用型",
@@ -13473,7 +13473,7 @@ module.exports = [
   },
   {
     "id": "336",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "7",
     "grammar": "-을/ㄹ 것까지는 없겠지만",
     "grammar_category": "句型",
@@ -13525,7 +13525,7 @@ module.exports = [
   },
   {
     "id": "337",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "8",
     "grammar": "-으랴/랴",
     "grammar_category": "连接词尾",
@@ -13569,7 +13569,7 @@ module.exports = [
   },
   {
     "id": "338",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "8",
     "grammar": "-(으)로 인해",
     "grammar_category": "惯用型",
@@ -13617,7 +13617,7 @@ module.exports = [
   },
   {
     "id": "339",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "8",
     "grammar": "인/은/ㄴ/는 만큼",
     "grammar_category": "惯用型",
@@ -13661,7 +13661,7 @@ module.exports = [
   },
   {
     "id": "340",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "8",
     "grammar": "-고서는/-지 않고서는",
     "grammar_category": "连接词尾",
@@ -13701,7 +13701,7 @@ module.exports = [
   },
   {
     "id": "341",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "9",
     "grammar": "(으)리라",
     "grammar_category": "连接词尾",
@@ -13741,7 +13741,7 @@ module.exports = [
   },
   {
     "id": "342",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "9",
     "grammar": "만치",
     "grammar_category": "助词",
@@ -13777,7 +13777,7 @@ module.exports = [
   },
   {
     "id": "343",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "9",
     "grammar": "-을/ㄹ 줄만 알았지",
     "grammar_category": "句型",
@@ -13825,7 +13825,7 @@ module.exports = [
   },
   {
     "id": "344",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "9",
     "grammar": "-을/ㄹ 게 아니라",
     "grammar_category": "句型",
@@ -13869,7 +13869,7 @@ module.exports = [
   },
   {
     "id": "345",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "10",
     "grammar": "-다시피 하다",
     "grammar_category": "惯用型",
@@ -13909,7 +13909,7 @@ module.exports = [
   },
   {
     "id": "346",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "10",
     "grammar": "-을/ㄹ까 보다",
     "grammar_category": "句型",
@@ -13957,7 +13957,7 @@ module.exports = [
   },
   {
     "id": "347",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "10",
     "grammar": "(으)를 통해",
     "grammar_category": "惯用型",
@@ -14005,7 +14005,7 @@ module.exports = [
   },
   {
     "id": "348",
-    "category": "yansei5",
+    "category": "Yonsei 5",
     "lesson_id": "10",
     "grammar": "-음으로써 / -ㅁ으로써",
     "grammar_category": "惯用型",
@@ -14049,7 +14049,7 @@ module.exports = [
   },
   {
     "id": "349",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "1",
     "grammar": "-느니",
     "grammar_category": "连接词尾",
@@ -14093,7 +14093,7 @@ module.exports = [
   },
   {
     "id": "350",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "1",
     "grammar": "을/를지라도",
     "grammar_category": "连接词尾",
@@ -14137,7 +14137,7 @@ module.exports = [
   },
   {
     "id": "351",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "1",
     "grammar": "는다거나/ㄴ다거나/다거나",
     "grammar_category": "连接词尾",
@@ -14181,7 +14181,7 @@ module.exports = [
   },
   {
     "id": "352",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "1",
     "grammar": "-는 데",
     "grammar_category": "惯用型",
@@ -14229,7 +14229,7 @@ module.exports = [
   },
   {
     "id": "353",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "2",
     "grammar": "아/어/여 주십사 하고",
     "grammar_category": "惯用型",
@@ -14273,7 +14273,7 @@ module.exports = [
   },
   {
     "id": "354",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "2",
     "grammar": "았/었/였던들",
     "grammar_category": "连接词尾",
@@ -14313,7 +14313,7 @@ module.exports = [
   },
   {
     "id": "355",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "2",
     "grammar": "으)면 몰라도",
     "grammar_category": "连接词尾",
@@ -14357,7 +14357,7 @@ module.exports = [
   },
   {
     "id": "356",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "2",
     "grammar": "-겠거니 하고",
     "grammar_category": "惯用型",
@@ -14401,7 +14401,7 @@ module.exports = [
   },
   {
     "id": "357",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "3",
     "grammar": "-은/ㄴ 채",
     "grammar_category": "惯用型",
@@ -14445,7 +14445,7 @@ module.exports = [
   },
   {
     "id": "358",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "3",
     "grammar": "-으리라는 / -리라는",
     "grammar_category": "惯用型",
@@ -14493,7 +14493,7 @@ module.exports = [
   },
   {
     "id": "359",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "3",
     "grammar": "아무리 -기로서니",
     "grammar_category": "连接词尾",
@@ -14541,7 +14541,7 @@ module.exports = [
   },
   {
     "id": "360",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "3",
     "grammar": "-은/ㄴ 끝에",
     "grammar_category": "惯用型",
@@ -14589,7 +14589,7 @@ module.exports = [
   },
   {
     "id": "361",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "4",
     "grammar": "-는다뿐이지 / -ㄴ다뿐이지 / -다뿐이지",
     "grammar_category": "惯用型",
@@ -14633,7 +14633,7 @@ module.exports = [
   },
   {
     "id": "362",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "4",
     "grammar": "-을/를 법하다",
     "grammar_category": "惯用型",
@@ -14681,7 +14681,7 @@ module.exports = [
   },
   {
     "id": "363",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "4",
     "grammar": "-는 가운데",
     "grammar_category": "惯用型",
@@ -14729,7 +14729,7 @@ module.exports = [
   },
   {
     "id": "364",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "4",
     "grammar": "-(으)ㄹ 테지만",
     "grammar_category": "惯用型",
@@ -14777,7 +14777,7 @@ module.exports = [
   },
   {
     "id": "365",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "5",
     "grammar": "-는/은/ㄴ 셈치고",
     "grammar_category": "惯用型",
@@ -14825,7 +14825,7 @@ module.exports = [
   },
   {
     "id": "366",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "5",
     "grammar": "-으)련만",
     "grammar_category": "连接词尾",
@@ -14869,7 +14869,7 @@ module.exports = [
   },
   {
     "id": "367",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "5",
     "grammar": "-는/(으)ㄴ 탓에",
     "grammar_category": "惯用型",
@@ -14917,7 +14917,7 @@ module.exports = [
   },
   {
     "id": "368",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "5",
     "grammar": "-이라도/라도, -(으)ㄹ라치면",
     "grammar_category": "连接词尾",
@@ -14965,7 +14965,7 @@ module.exports = [
   },
   {
     "id": "369",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "6",
     "grammar": "ㄴ/는다는 듯이",
     "grammar_category": "惯用型",
@@ -15013,7 +15013,7 @@ module.exports = [
   },
   {
     "id": "370",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "6",
     "grammar": "건만",
     "grammar_category": "连接词尾",
@@ -15053,7 +15053,7 @@ module.exports = [
   },
   {
     "id": "371",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "6",
     "grammar": "ㄴ/는답시고",
     "grammar_category": "连接词尾",
@@ -15097,7 +15097,7 @@ module.exports = [
   },
   {
     "id": "372",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "6",
     "grammar": "-는 날엔",
     "grammar_category": "惯用型",
@@ -15141,7 +15141,7 @@ module.exports = [
   },
   {
     "id": "373",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "7",
     "grammar": "은/는/인 이상",
     "grammar_category": "惯用型",
@@ -15193,7 +15193,7 @@ module.exports = [
   },
   {
     "id": "374",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "7",
     "grammar": "-는다는/ㄴ다는/다는 점에서",
     "grammar_category": "句型",
@@ -15237,7 +15237,7 @@ module.exports = [
   },
   {
     "id": "375",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "7",
     "grammar": "-는/은/ㄴ/인 반면",
     "grammar_category": "惯用型",
@@ -15285,7 +15285,7 @@ module.exports = [
   },
   {
     "id": "376",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "7",
     "grammar": "(으)로 말미암아",
     "grammar_category": "惯用型",
@@ -15333,7 +15333,7 @@ module.exports = [
   },
   {
     "id": "377",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "8",
     "grammar": "-다 못해",
     "grammar_category": "惯用型",
@@ -15381,7 +15381,7 @@ module.exports = [
   },
   {
     "id": "378",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "8",
     "grammar": "-기에 망정이지",
     "grammar_category": "惯用型",
@@ -15425,7 +15425,7 @@ module.exports = [
   },
   {
     "id": "379",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "8",
     "grammar": "-는 둥 마는 둥 하다",
     "grammar_category": "句型",
@@ -15469,7 +15469,7 @@ module.exports = [
   },
   {
     "id": "380",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "8",
     "grammar": "-던 차이다",
     "grammar_category": "惯用型",
@@ -15521,7 +15521,7 @@ module.exports = [
   },
   {
     "id": "381",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "9",
     "grammar": "-기 나름이다",
     "grammar_category": "惯用型",
@@ -15565,7 +15565,7 @@ module.exports = [
   },
   {
     "id": "382",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "9",
     "grammar": "-는다손 치더라도 / -ㄴ다손 치더라도 / -다손 치더라도 / -았/었/였다손 치더라도 / -이라손 치더라도 / -라손 치더라도",
     "grammar_category": "连接词尾",
@@ -15609,7 +15609,7 @@ module.exports = [
   },
   {
     "id": "383",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "9",
     "grammar": "-는 한이 있더라도",
     "grammar_category": "连接词尾",
@@ -15633,7 +15633,7 @@ module.exports = [
   },
   {
     "id": "384",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "9",
     "grammar": "은/는 고사하고",
     "grammar_category": "惯用型",
@@ -15677,7 +15677,7 @@ module.exports = [
   },
   {
     "id": "385",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "10",
     "grammar": "-으려고/려고 들다",
     "grammar_category": "惯用型",
@@ -15721,7 +15721,7 @@ module.exports = [
   },
   {
     "id": "386",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "10",
     "grammar": "-노라면",
     "grammar_category": "连接词尾",
@@ -15765,7 +15765,7 @@ module.exports = [
   },
   {
     "id": "387",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "10",
     "grammar": "는/은/ㄴ 바",
     "grammar_category": "惯用型",
@@ -15809,7 +15809,7 @@ module.exports = [
   },
   {
     "id": "388",
-    "category": "yansei6",
+    "category": "Yonsei 6",
     "lesson_id": "10",
     "grammar": "-을/를 바에야",
     "grammar_category": "惯用型",

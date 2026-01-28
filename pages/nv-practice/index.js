@@ -122,6 +122,8 @@ const sanitizeSettings = (raw) => {
     }
     if (merged.topikLevel != null) merged.topikLevel = String(merged.topikLevel);
     if (merged.topikSession != null) merged.topikSession = String(merged.topikSession);
+    if (merged.yonseiLessonId != null) merged.yonseiLessonId = String(merged.yonseiLessonId);
+    if (merged.yonseiLessonName != null) merged.yonseiLessonName = String(merged.yonseiLessonName);
     let repeatCount = Number(merged.repeatCount);
     if (!Number.isFinite(repeatCount)) repeatCount = DEFAULT_SETTINGS.repeatCount;
     repeatCount = Math.max(1, Math.min(10, Math.round(repeatCount)));
@@ -186,11 +188,38 @@ Page({
         dailySentenceEntrySource: '',
         showGuideBubble: false,
         showSettingsTooltip: false,
-        settingsTooltipText: '可调整显示模式'
+        settingsTooltipText: '可调整显示模式',
+
+        // PC Support
+        isPC: false,
+        hiddenInputValue: ' ',
+        inputFocus: false
     },
 
     async onLoad() {
         const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+        
+        let platform = '';
+        try {
+            if (wx.getDeviceInfo) {
+                const deviceInfo = wx.getDeviceInfo();
+                platform = deviceInfo.platform;
+            }
+            if (!platform) {
+                // Fallback if getDeviceInfo returns empty platform or is unavailable
+                const sysInfo = wx.getSystemInfoSync();
+                platform = sysInfo.platform;
+            }
+        } catch (e) {
+            console.error('Platform detection failed:', e);
+            try { platform = wx.getSystemInfoSync().platform; } catch (e) {}
+        }
+        
+        // Normalize
+        platform = (platform || '').toLowerCase();
+        
+        // Add 'devtools' for simulator testing
+        const isPC = platform === 'mac' || platform === 'windows' || platform === 'devtools';
         
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
@@ -266,7 +295,9 @@ Page({
             navBarHeight: 44, 
             settings: mergedSettings,
             isKeyboardOpen: false,
-            timeLeft: mergedSettings.timerDuration || DEFAULT_SETTINGS.timerDuration
+            timeLeft: mergedSettings.timerDuration || DEFAULT_SETTINGS.timerDuration,
+            isPC,
+            inputFocus: isPC // Auto focus on PC
         });
 
         try {
@@ -277,7 +308,7 @@ Page({
                 });
             }
         } catch (e) {}
-        
+
         await this.loadCategories();
         await this.loadSubcategories();
         this.updateDisplayCategory();
@@ -313,7 +344,6 @@ Page({
     },
 
     openDailySentence() {
-        console.log('[nv-practice] openDailySentence clicked');
         try { this.cancelCurrentAudioPlayback(); } catch (e) {}
         try { this.cancelAudioPreload(); } catch (e) {}
         
@@ -321,9 +351,6 @@ Page({
         
         wx.navigateTo({
             url: '/pages/daily-sentence/index',
-            success: () => {
-                console.log('[nv-practice] navigateTo success');
-            },
             fail: (err) => {
                 console.error('[nv-practice] navigateTo failed', err);
                 wx.showToast({
@@ -367,7 +394,6 @@ Page({
           });
           
           this.videoAd.onLoad(() => {
-            console.log('激励视频 广告加载成功 (Practice)');
           });
           
           this.videoAd.onError((err) => {
@@ -378,17 +404,14 @@ Page({
 
     handleAdClose(res) {
         // 用户点击了【关闭广告】按钮
-        console.log('Ad closed (Practice), res:', res);
         if (res && res.isEnded) {
             // 正常播放结束，可以下发奖励
-            console.log('Ad ended success, pendingAction:', !!this.pendingAction, 'contentId:', this.pendingContentId);
             if (this.pendingAction) {
                 // 记录解锁时间
                 if (this.pendingContentId) {
                     try {
                         const key = `unlock_${this.pendingContentId}`;
                         wx.setStorageSync(key, Date.now());
-                        console.log('Unlock saved:', key);
                     } catch (e) {
                         console.error('Save unlock status failed', e);
                     }
@@ -399,7 +422,6 @@ Page({
             }
         } else {
             // 播放中途退出，不下发奖励
-            console.log('中途关闭，不切换');
             wx.showToast({
                 title: '需要看完广告才能切换',
                 icon: 'none'
@@ -415,7 +437,6 @@ Page({
     },
 
     checkAndShowAd: function(contentId, callback) {
-      console.log('checkAndShowAd called with contentId:', contentId);
       // 如果没有传 contentId，尝试将第一个参数当作 callback (兼容旧代码)
       if (typeof contentId === 'function') {
         callback = contentId;
@@ -475,7 +496,6 @@ Page({
             });
           } else {
             // 用户点击取消，不进行切换
-            console.log('用户取消切换');
             // 恢复Picker的显示
             this.setData({
               categoryPickerIndex: this.data.categoryPickerIndex,
@@ -654,6 +674,17 @@ Page({
         return '';
     },
 
+    getWordsContentKey(settings) {
+        const s = settings || DEFAULT_SETTINGS;
+        const category = s.category || DEFAULT_SETTINGS.category;
+        const lessonId = s.yonseiLessonId != null ? String(s.yonseiLessonId) : '';
+        const topikLevel = s.topikLevel != null ? String(s.topikLevel) : '';
+        const topikSession = s.topikSession != null ? String(s.topikSession) : '';
+        const wordLengthFilter = s.wordLengthFilter != null ? String(s.wordLengthFilter) : '';
+        const wordStartFilter = s.wordStartFilter != null ? String(s.wordStartFilter) : '';
+        return `${category}__${lessonId}__${topikLevel}__${topikSession}__${wordLengthFilter}__${wordStartFilter}`;
+    },
+
     persistCurrentProgress(indexOverride) {
         try {
             const s = this.data.settings || DEFAULT_SETTINGS;
@@ -665,10 +696,9 @@ Page({
     },
 
     async loadCategories() {
-        const categories = await getCategories();
-        if (!categories.includes('Mistakes (错题本)')) {
-            categories.push('Mistakes (错题本)');
-        }
+        const base = await getCategories();
+        const categories = Array.isArray(base) ? [...base] : [];
+        if (!categories.includes('Mistakes (错题本)')) categories.push('Mistakes (错题本)');
         const current = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
         const idx = Math.max(0, categories.indexOf(current));
         this.setData({ categories, categoryPickerIndex: idx });
@@ -689,39 +719,45 @@ Page({
         }
         const newSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(newSettings);
-        const prevCategory = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
+        const prevSettings = sanitizeSettings(this.data.settings || {});
+        const prevKey = this.getWordsContentKey(prevSettings);
         const nextCategory = mergedSettings.category || DEFAULT_SETTINGS.category;
-        const categoryChanged = prevCategory !== nextCategory;
         const categoryIndex = Math.max(0, (this.data.categories || []).indexOf(nextCategory));
 
         this.setData({ settings: mergedSettings, categoryPickerIndex: categoryIndex });
-        await this.loadSubcategories();
+        const finalSettings = await this.loadSubcategories(mergedSettings);
         this.updateDisplayCategory();
 
-        if (categoryChanged) {
-            this.loadWords();
+        const nextKey = this.getWordsContentKey(finalSettings || mergedSettings);
+        if (prevKey !== nextKey || !Array.isArray(this.data.words) || this.data.words.length === 0) {
+            this.loadWords(finalSettings || mergedSettings);
+        }
+        
+        if (this.data.isPC) {
+            this.setData({ inputFocus: true });
         }
     },
 
-    async loadSubcategories() {
-        const category = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
+    async loadSubcategories(settingsOverride) {
+        const currentSettings = settingsOverride || this.data.settings || {};
+        const category = currentSettings.category || DEFAULT_SETTINGS.category;
 
         if (category === 'TOPIK Vocabulary') {
             const topikLevels = await getTopikLevels();
-            let topikLevel = (this.data.settings && this.data.settings.topikLevel) || '';
+            let topikLevel = currentSettings.topikLevel || '';
             topikLevel = String(topikLevel || topikLevels[0] || DEFAULT_SETTINGS.topikLevel || '1');
             if (topikLevels.length > 0 && !topikLevels.includes(topikLevel)) {
                 topikLevel = String(topikLevels[0]);
             }
 
             const topikSessions = await getTopikSessions(topikLevel);
-            let topikSession = (this.data.settings && this.data.settings.topikSession) || '';
+            let topikSession = currentSettings.topikSession || '';
             topikSession = String(topikSession || topikSessions[0] || '');
             if (topikSession && topikSessions.length > 0 && !topikSessions.includes(topikSession)) {
                 topikSession = String(topikSessions[0] || '');
             }
 
-            const nextSettings = Object.assign({}, this.data.settings || {});
+            const nextSettings = Object.assign({}, currentSettings);
             nextSettings.topikLevel = topikLevel;
             nextSettings.topikSession = topikSession;
             nextSettings.yonseiLessonId = '';
@@ -743,16 +779,21 @@ Page({
                 settings: next
             });
             wx.setStorageSync('settings', next);
-            return;
+            return next;
         }
 
         if (/^Yonsei\s+\d$/.test(category)) {
             const yonseiLessons = await getYonseiLessons(category);
-            const currentLessonId = (this.data.settings && this.data.settings.yonseiLessonId) || '';
+            
+            const currentLessonId = currentSettings.yonseiLessonId || '';
+            
             let yonseiLessonId = currentLessonId;
-            let yonseiLessonName = (this.data.settings && this.data.settings.yonseiLessonName) || '';
+            let yonseiLessonName = currentSettings.yonseiLessonName || '';
 
-            if (!yonseiLessonId && yonseiLessons.length > 0) {
+            // Validate Lesson ID range
+            const exists = yonseiLessons && yonseiLessons.some(l => String(l.id) === String(yonseiLessonId));
+
+            if ((!yonseiLessonId || !exists) && yonseiLessons.length > 0) {
                 yonseiLessonId = yonseiLessons[0].id;
                 yonseiLessonName = yonseiLessons[0].name || yonseiLessons[0].original || '';
             } else if (yonseiLessonId) {
@@ -760,7 +801,7 @@ Page({
                 if (match) yonseiLessonName = match.name || match.original || '';
             }
 
-            const newSettings = Object.assign({}, this.data.settings || {});
+            const newSettings = Object.assign({}, currentSettings);
             newSettings.yonseiLessonId = yonseiLessonId;
             newSettings.yonseiLessonName = yonseiLessonName;
             const yonseiLessonOptions = (yonseiLessons || []).map((l) => {
@@ -782,10 +823,10 @@ Page({
                 settings: sanitizeSettings(newSettings)
             });
             wx.setStorageSync('settings', sanitizeSettings(newSettings));
-            return;
+            return sanitizeSettings(newSettings);
         }
 
-        const newSettings = Object.assign({}, this.data.settings || {});
+        const newSettings = Object.assign({}, currentSettings);
         newSettings.yonseiLessonId = '';
         newSettings.yonseiLessonName = '';
         this.setData({
@@ -801,6 +842,7 @@ Page({
             settings: sanitizeSettings(newSettings)
         });
         wx.setStorageSync('settings', sanitizeSettings(newSettings));
+        return sanitizeSettings(newSettings);
     },
 
     updateDisplayCategory() {
@@ -817,12 +859,13 @@ Page({
         this.setData({ displayCategory: text });
     },
 
-    async loadWords() {
+    async loadWords(settingsOverride) {
         this.clearAllTimers();
         this.cancelAudioPreload();
         this.setData({ loading: true, prevWordInfo: null });
-        const s = this.data.settings || DEFAULT_SETTINGS;
+        const s = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
         const category = s.category || 'TOPIK Vocabulary';
+        
         const subKey = this.getProgressSubKey(s);
         
         if (category === 'Mistakes (错题本)') {
@@ -853,7 +896,9 @@ Page({
         if (/^Yonsei\s+\d$/.test(category) && s.yonseiLessonId) filters.lessonId = s.yonseiLessonId;
         if (s.wordLengthFilter) filters.minLength = s.wordLengthFilter;
         if (s.wordStartFilter) filters.firstLetter = s.wordStartFilter;
+        
         const res = await getWords(category, 2000, 0, filters); 
+        
         if (res && res.words) {
             const savedIndex = Number(getProgress(category, subKey) || 0);
             const startIndex = normalizeIndex(savedIndex, res.words.length);
@@ -885,6 +930,9 @@ Page({
 
     closeSettings() {
         this.setData({ showSettingsModal: false });
+        if (this.data.isPC) {
+            this.focusHiddenInput();
+        }
     },
 
     preventBubble() {},
@@ -895,16 +943,19 @@ Page({
         nextSettings.category = category;
         nextSettings.yonseiLessonId = '';
         nextSettings.yonseiLessonName = '';
+        
+        const sanitized = sanitizeSettings(nextSettings);
+
         this.setData({
-            settings: sanitizeSettings(nextSettings),
+            settings: sanitized,
             categoryPickerIndex: typeof categoryIndex === 'number' ? categoryIndex : this.data.categoryPickerIndex,
             prevWordInfo: null,
             currentWord: null
         });
-        wx.setStorageSync('settings', sanitizeSettings(nextSettings));
-        this.loadSubcategories().then(() => {
+        wx.setStorageSync('settings', sanitized);
+        this.loadSubcategories(sanitized).then((finalSettings) => {
             this.updateDisplayCategory();
-            this.loadWords();
+            this.loadWords(finalSettings);
         });
     },
 
@@ -1326,6 +1377,41 @@ Page({
         }, 1500);
     },
 
+    onHiddenInput(e) {
+        if (!this.data.isPC) return;
+        const val = e.detail.value;
+        
+        // Reset immediately to keep capturing
+        this.setData({ hiddenInputValue: ' ' });
+
+        if (!val || val.length === 0) {
+            // Backspace handling if needed
+            return;
+        }
+
+        if (val.length >= 2) {
+            const char = val.slice(1);
+            // Process each new character (in case multiple were pasted or typed fast)
+            for (const c of char) {
+                // Special case for Space
+                const key = c === ' ' ? 'SPACE' : c;
+                this.handleKeyPress(key);
+            }
+        }
+    },
+
+    onHiddenInputBlur() {
+        if (this.data.isPC) {
+            this.setData({ inputFocus: false });
+        }
+    },
+
+    focusHiddenInput() {
+        if (this.data.isPC) {
+            this.setData({ inputFocus: true });
+        }
+    },
+
     onKeyPress(e) {
         const key = e.detail.key;
         this.handleKeyPress(key);
@@ -1661,7 +1747,7 @@ Page({
         });
         const uniqueVariants = Array.from(new Set(variants.filter(Boolean)));
         const folder = this.getAudioFolder();
-        const folders = folder === 'yansei' ? ['yansei', 'yonsei'] : folder === 'yonsei' ? ['yonsei', 'yansei'] : [folder];
+        const folders = [folder];
         const suffix = isChinese ? '_cn' : '';
         const urls = [];
         uniqueVariants.forEach((v) => {

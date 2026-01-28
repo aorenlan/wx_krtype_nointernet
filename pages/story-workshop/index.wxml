@@ -53,13 +53,9 @@
   <view class="empty" wx:if="{{!loading && !messages.length}}">
     <text class="empty-title">{{filterMode === 'current' ? '当前课程暂无故事' : '还没有故事'}}</text>
     <text class="empty-sub" wx:if="{{filterMode === 'current'}}">
-      <block wx:if="{{canCreate}}">请切换到“全部”查看，或点击下方 + 号创作</block>
-      <block wx:else>当前课程（错题本）暂不支持创作，请切换其他课程</block>
+      <block>请切换到“全部”查看</block>
     </text>
-    <text class="empty-sub" wx:else>
-       <block wx:if="{{canCreate}}">点击右下角 + 号开始创作</block>
-       <block wx:else>当前课程（错题本）暂不支持创作</block>
-    </text>
+
   </view>
 
   <scroll-view
@@ -98,10 +94,6 @@
     <view style="height: 100px;"></view>
   </scroll-view>
 
-  <view class="fab-btn" bindtap="goToCreate" wx:if="{{canCreate}}">
-    <text class="fab-icon">+</text>
-  </view>
-
   <view class="modal-mask" wx:if="{{showRulesModal}}" bindtap="hideRules">
     <view class="modal-content" catchtap="true">
       <view class="modal-header">
@@ -109,28 +101,19 @@
         <view class="close-btn" bindtap="hideRules">×</view>
       </view>
       <scroll-view scroll-y class="modal-body">
-        <view class="rule-item">
-          <text class="rule-icon">📚</text>
-          <view class="rule-text">
-            <text class="rule-title">基于课程生成</text>
-            <text class="rule-desc">会根据你当前选择的课程进度（如 {{currentCourseInfo}}），智能调用相关的单词和语法点。</text>
+        <block wx:for="{{rules}}" wx:key="title">
+          <view class="rule-item">
+            <text class="rule-icon">{{item.icon}}</text>
+            <view class="rule-text">
+              <text class="rule-title">{{item.title}}</text>
+              <view class="rule-desc">
+                 <block wx:if="{{item.title === '基于课程生成'}}">会根据你当前选择的课程进度（如 {{currentCourseInfo}}），智能调用相关的单词和语法点。</block>
+                 <block wx:else>{{item.desc}}</block>
+              </view>
+            </view>
           </view>
-        </view>
-        <view class="rule-item">
-          <text class="rule-icon">🧠</text>
-          <view class="rule-text">
-            <text class="rule-title">科学复习</text>
-            <text class="rule-desc">通过将生词融入有趣的故事场景，帮助你在语境中自然记忆，摆脱死记硬背。</text>
-          </view>
-        </view>
-        <view class="rule-item">
-          <text class="rule-icon">✍️</text>
-          <view class="rule-text">
-            <text class="rule-title">创作与分享</text>
-            <text class="rule-desc">你可以设定主角和情节，创作独一无二的韩语故事，并与社区伙伴分享你的创意。如反复出现违规，请更换人物和情节</text>
-          </view>
-        </view>
-        <view class="rule-footer-tip">快来创作你的第一个韩语故事吧！</view>
+        </block>
+        <view class="rule-footer-tip">快来学习吧~</view>
       </scroll-view>
       <button class="modal-btn" bindtap="hideRules">我知道了</button>
     </view>

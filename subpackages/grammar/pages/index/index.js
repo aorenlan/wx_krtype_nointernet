@@ -1,4 +1,4 @@
-const grammarData = require('../../data/yansei_grammar.js');
+const grammarData = require('../../data/yonsei_grammar.js');
 
 const sortLessons = (a, b) => {
   const na = parseInt(a, 10);
@@ -220,8 +220,9 @@ Page({
 
   buildAudioUrl(text) {
       const baseUrl = 'https://enoss.aorenlan.fun/kr_yansei_grammar/audio/';
-      // Replace punctuation and spaces with underscore
-      let processed = text.replace(/[ \.,?!~:;"'’“”]+/g, '_');
+      // Replace punctuation (including CJK) and spaces with underscore
+      // CJK Punctuation: 。(3002) ，(FF0C) ？(FF1F) ！(FF01) …(2026) 、(3001) ：(FF1A) ；(FF1B)
+      let processed = text.replace(/[ \.,?!~:;"'’“”\u3002\uff0c\uff1f\uff01\u2026\u3001\uff1a\uff1b]+/g, '_');
       // Encode
       const encoded = encodeURIComponent(processed);
       return `${baseUrl}${encoded}.mp3`;
@@ -235,22 +236,20 @@ Page({
 
   renderData(book, lessonId) {
     const all = Array.isArray(grammarData) ? grammarData : [];
-    // If lessonId is provided, filter by it. If not, maybe show all for the book?
-    // If lessonId is empty, we might show all lessons for that book.
     
-    let filtered = all.filter((x) => String(x.category || '') === book);
+    // Helper to normalize strings for comparison (ignore case and spaces)
+    const normalize = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+    
+    // Decode book param to handle encoded spaces (e.g. "Yonsei%202" -> "Yonsei 2")
+    const decodedBook = book ? decodeURIComponent(book) : '';
+    const targetBook = normalize(decodedBook);
+    
+    let filtered = all.filter((x) => normalize(x.category) === targetBook);
     
     if (lessonId) {
-        filtered = filtered.filter((x) => String(x.lesson_id || '') === lessonId);
-    } else {
-        // If no lessonId, maybe sort by lesson_id?
-        // They are likely already sorted.
+        filtered = filtered.filter((x) => String(x.lesson_id || '') === String(lessonId));
     }
     
-    if (filtered.length === 0 && !lessonId) {
-        // Try to find if the book name format is different or just empty
-    }
-
     const items = filtered.map((x) => ({ ...x, key: buildKey(x) }));
     const first = items[0] || null;
     const currentKey = first ? first.key : '';
@@ -259,7 +258,7 @@ Page({
     // If we are refreshing, we might want to keep current if possible? 
     // For now simple: reset to first.
     
-    const subtitle = book && lessonId ? `${book} · 第${lessonId}课` : (book ? `${book} · 全部` : '语法');
+    const subtitle = decodedBook && lessonId ? `${decodedBook} · 第${lessonId}课` : (decodedBook ? `${decodedBook} · 全部` : '语法');
 
     let meaningParts = [];
     let usageParts = [];

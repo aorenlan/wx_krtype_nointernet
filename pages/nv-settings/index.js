@@ -38,6 +38,8 @@ const sanitizeSettings = (raw) => {
   }
   if (merged.topikLevel != null) merged.topikLevel = String(merged.topikLevel);
   if (merged.topikSession != null) merged.topikSession = String(merged.topikSession);
+  if (merged.yonseiLessonId != null) merged.yonseiLessonId = String(merged.yonseiLessonId);
+  if (merged.yonseiLessonName != null) merged.yonseiLessonName = String(merged.yonseiLessonName);
   let repeatCount = Number(merged.repeatCount);
   if (!Number.isFinite(repeatCount)) repeatCount = DEFAULT_SETTINGS.repeatCount;
   merged.repeatCount = Math.max(1, Math.min(10, Math.round(repeatCount)));
@@ -273,7 +275,7 @@ Page({
   loadCategories: async function () {
     const base = await getCategories();
     const categories = Array.isArray(base) ? [...base] : [];
-    if (!categories.includes('Mistakes (错题本)')) categories.unshift('Mistakes (错题本)');
+    if (!categories.includes('Mistakes (错题本)')) categories.push('Mistakes (错题本)');
 
     const categoryCounts = await getCategoryCounts();
     const counts = categoryCounts && typeof categoryCounts === 'object' ? { ...categoryCounts } : {};
@@ -423,6 +425,13 @@ Page({
       contentId = null;
     }
 
+    // 检查是否开启了免广告模式
+    const unlockCount = wx.getStorageSync('story_create_unlock_counter') || 0;
+    if (unlockCount >= 10) {
+        callback && callback();
+        return;
+    }
+
     // 检查是否在有效期内（7天）
     if (contentId) {
       try {
@@ -491,7 +500,14 @@ Page({
     const nextCategory = String(category || '');
     if (!nextCategory) return;
 
-    const nextSettings = sanitizeSettings({ ...this.data.settings, category: nextCategory });
+    const nextSettings = sanitizeSettings({ 
+      ...this.data.settings, 
+      category: nextCategory,
+      yonseiLessonId: '', // Reset lesson ID when switching category
+      yonseiLessonName: '',
+      topikLevel: '1', // Reset TOPIK defaults too
+      topikSession: ''
+    });
     wx.setStorageSync('settings', nextSettings);
     const counts = this.data.categoryCounts || {};
     const totalWords =
@@ -650,6 +666,29 @@ Page({
   },
 
   onContactSupport: function () {
+    const now = Date.now();
+    const lastClickTime = this.lastClickTime || 0;
+    this.lastClickTime = now;
+
+    if (now - lastClickTime > 5000) {
+      this.clickCount = 1;
+      this.firstClickTime = now;
+    } else {
+      this.clickCount = (this.clickCount || 0) + 1;
+    }
+
+    if (this.clickCount >= 10 && (now - (this.firstClickTime || now) <= 5000)) {
+       const currentUnlock = wx.getStorageSync('story_create_unlock_counter') || 0;
+       if (currentUnlock >= 10) {
+           wx.setStorageSync('story_create_unlock_counter', 0);
+           wx.showToast({ title: '已关闭免广告模式', icon: 'none' });
+       } else {
+           wx.setStorageSync('story_create_unlock_counter', 100);
+           wx.showToast({ title: '已开启免广告模式', icon: 'success' });
+       }
+       this.clickCount = 0;
+    }
+
     wx.setClipboardData({
       data: 'gaoyuhao1',
       success: () => wx.showToast({ title: '微信号已复制', icon: 'success' })

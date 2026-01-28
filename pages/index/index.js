@@ -73,7 +73,12 @@ Page({
     // New Version Logic
     showNvPopup: false,
     nvPopupMinimized: false,
-    hasSeenNvPopup: false
+    hasSeenNvPopup: false,
+    
+    // PC Support
+    isPC: false,
+    inputFocus: false,
+    hiddenInputValue: ''
   },
 
   onLoad() {
@@ -84,6 +89,12 @@ Page({
       return;
     }
     this.setData({ isRedirecting: false });
+
+    // Platform detection
+    const device = wx.getDeviceInfo ? wx.getDeviceInfo() : (wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync());
+    const platform = (device.platform || '').toLowerCase();
+    const isPC = platform === 'mac' || platform === 'windows' || platform === 'devtools';
+    this.setData({ isPC });
 
     const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     const rpxToPx = windowInfo.windowWidth / 750; // Calculate ratio
@@ -610,7 +621,7 @@ Page({
   },
 
   goBack() {
-    this.setData({ mode: 'menu' });
+    this.setData({ mode: 'menu', inputFocus: false });
   },
 
   // --- Custom Input ---
@@ -794,7 +805,15 @@ Page({
       items: itemsToUse,
       currentItemIndex: 0,
       mode: 'typing',
-      isTopAdVisible: false // Reset ad state
+      isTopAdVisible: false, // Reset ad state
+      hiddenInputValue: ' ' // Initialize with space for robust capture
+    }, () => {
+      if (this.data.isPC) {
+        // Delay focus to ensure view is ready
+        setTimeout(() => {
+            this.setData({ inputFocus: true });
+        }, 100);
+      }
     });
 
     this.loadItem(itemsToUse[0]);
@@ -1009,6 +1028,29 @@ Page({
   },
 
   copyContactInfo() {
+    const now = Date.now();
+    const lastClickTime = this.lastClickTime || 0;
+    this.lastClickTime = now;
+
+    if (now - lastClickTime > 5000) {
+      this.clickCount = 1;
+      this.firstClickTime = now;
+    } else {
+      this.clickCount = (this.clickCount || 0) + 1;
+    }
+
+    if (this.clickCount >= 10 && (now - (this.firstClickTime || now) <= 5000)) {
+       const currentUnlock = wx.getStorageSync('story_create_unlock_counter') || 0;
+       if (currentUnlock >= 10) {
+           wx.setStorageSync('story_create_unlock_counter', 0);
+           wx.showToast({ title: '已关闭免广告模式', icon: 'none' });
+       } else {
+           wx.setStorageSync('story_create_unlock_counter', 100);
+           wx.showToast({ title: '已开启免广告模式', icon: 'success' });
+       }
+       this.clickCount = 0;
+    }
+
     const wxId = "zaizaikf007"; // Replace with actual ID
     wx.setClipboardData({
       data: wxId,
@@ -1050,6 +1092,46 @@ Page({
   closeTooltip() {
     this.setData({ showTooltip: false });
     wx.setStorageSync('hasSeenAutoReadTooltip_v3', true);
+  },
+
+  // --- PC Support ---
+  focusHiddenInput() {
+    if (this.data.isPC) {
+      this.setData({ inputFocus: true });
+    }
+  },
+
+  onHiddenInputBlur() {
+    if (this.data.isPC && this.data.mode === 'typing') {
+      this.setData({ inputFocus: false });
+    }
+  },
+
+  onHiddenInput(e) {
+    if (!this.data.isPC || this.data.mode !== 'typing') return;
+    const val = e.detail.value;
+    
+    // Reset immediately to keep capturing
+    this.setData({ hiddenInputValue: ' ' });
+
+    if (!val) return;
+    
+    let charsToProcess = '';
+    
+    if (val.length >= 2 && val.startsWith(' ')) {
+        // Standard case: ' ' + 'char'
+        charsToProcess = val.slice(1);
+    } else if (val.length > 0 && val !== ' ') {
+        // Fallback (e.g. if space was deleted or init was empty)
+        charsToProcess = val;
+    }
+    
+    if (charsToProcess) {
+        for (const c of charsToProcess) {
+            const key = c === ' ' ? 'SPACE' : c;
+            this.handleKeyPress(key);
+        }
+    }
   },
 
   onVirtualKeyPress(e) {

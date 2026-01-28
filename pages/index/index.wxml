@@ -52,6 +52,9 @@ module.exports = {
     </view>
   </view>
 
+  <!-- Hidden Input for PC Support -->
+  <input class="hidden-input" value="{{hiddenInputValue}}" focus="{{inputFocus}}" bindinput="onHiddenInput" bindblur="onHiddenInputBlur" maxlength="-1" />
+
   <!-- Menu Mode -->
   <view wx:if="{{mode === 'menu'}}" class="menu-container fade-in">
     <view class="contact-wrapper">
@@ -197,7 +200,7 @@ module.exports = {
   </view>
 
   <!-- Typing Mode -->
-  <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in {{isTopAdVisible ? 'has-ad' : ''}}">
+  <view wx:if="{{mode === 'typing'}}" class="typing-container fade-in {{isTopAdVisible ? 'has-ad' : ''}}" bindtap="focusHiddenInput">
     <!-- Custom Ad -->
     <ad-custom wx:if="{{!adsDisabled}}" unit-id="adunit-63b6149bfd4cd62b" bindload="adLoad" binderror="adError" bindclose="adClose"></ad-custom>
 

@@ -1,0 +1,12 @@
+{
+  "usingComponents": {
+    "custom-nav": "/components/custom-nav/index",
+    "keyboard": "/components/keyboard/index"
+  },
+  "navigationStyle": "custom",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "navigationBarTitleText": "韩词练习",
+  "enablePullDownRefresh": false,
+  "disableScroll": true
+}

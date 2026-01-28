@@ -105,15 +105,7 @@ Page({
     }
   },
 
-  onGenerateSameStyle() {
-    if (!this.data.story || !this.data.story.elements) return;
-    const { who, when, where, action } = this.data.story.elements;
-    
-    // Navigate to create page with parameters
-    wx.navigateTo({
-      url: `/subpackages/story/pages/create/index?who=${encodeURIComponent(who)}&when=${encodeURIComponent(when)}&where=${encodeURIComponent(where)}&action=${encodeURIComponent(action)}`
-    });
-  },
+
 
   processStoryData(item) {
     // Standardize segments

@@ -71,7 +71,7 @@ Component({
         }
         
         const bookNum = m[1];
-        const book = `yansei${bookNum}`;
+        const book = `Yonsei ${bookNum}`;
         let lessonId = String(settings.yonseiLessonId || '').trim();
         
         // 尝试自动获取第一课

@@ -1,6 +1,7 @@
 <custom-nav subtitle="{{displayCategory}}" progress="{{currentIndex + 1}} / {{words.length}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
-<view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
+<view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;" bindtap="focusHiddenInput">
+  <input class="hidden-input" value="{{hiddenInputValue}}" focus="{{inputFocus}}" bindinput="onHiddenInput" bindblur="onHiddenInputBlur" maxlength="-1" />
 
   <!-- 每日一句入口 -->
   <view class="daily-sentence-entry" bindtap="openDailySentence">
@@ -330,10 +331,10 @@
         <view class="modal-close" bindtap="closeUpdatePopup">✕</view>
       </view>
       <view class="modal-body" style="padding: 20px;">
-        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.0 全新上线！</view>
+        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.1 全新上线！</view>
         <view style="line-height: 1.8; color: #64748b; font-size: 14px;">
-          <view>1. 新增故事坊功能</view>
-          <view>待更新：语法模块朗读、拍照识别</view>
+          <view>1. 语法模块朗读</view>
+          <view>待更新：拍照识别</view>
         </view>
         <button bindtap="closeUpdatePopup" style="margin-top: 25px; width: 100%; background: #6366f1; color: white; border-radius: 12px; font-weight: 500;">开始体验</button>
       </view>
