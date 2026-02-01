@@ -151,21 +151,28 @@ Page({
   },
 
   onLoad: function () {
+    const app = getApp();
     const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    let { statusBarHeight, navBarHeight } = app.globalData;
+
+    if (!statusBarHeight || !navBarHeight) {
+        const menuButtonInfo = wx.getMenuButtonBoundingClientRect();
+        statusBarHeight = windowInfo.statusBarHeight || 20;
+        navBarHeight = (menuButtonInfo.top - statusBarHeight) * 2 + menuButtonInfo.height;
+    }
     
     this.setData({
-      statusBarHeight: windowInfo.statusBarHeight || 20,
-      navBarHeight: 44,
+      statusBarHeight,
+      navBarHeight: navBarHeight || 44,
     });
 
-    const app = getApp();
     if (app && typeof app.registerThemePage === 'function') {
       app.registerThemePage('settings', this);
     }
 
     try {
       const windowHeight = windowInfo.windowHeight || 0;
-      const scrollHeight = Math.max(0, windowHeight - this.data.statusBarHeight - this.data.navBarHeight);
+      const scrollHeight = Math.max(0, windowHeight - this.data.statusBarHeight - this.data.navBarHeight - 20);
       this.setData({ scrollHeight });
     } catch (e) { }
     this.normalizeMistakesStorage();
@@ -283,13 +290,30 @@ Page({
 
     const current = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
     const idx = Math.max(0, categories.indexOf(current));
-    this.setData({ categories, categoryCounts: counts, categoryPickerIndex: idx });
+
+    // Check if data actually changed to avoid unnecessary re-renders (flickering)
+    const isCategoriesChanged = JSON.stringify(categories) !== JSON.stringify(this.data.categories);
+    const isCountsChanged = JSON.stringify(counts) !== JSON.stringify(this.data.categoryCounts);
+    const isIdxChanged = idx !== this.data.categoryPickerIndex;
+
+    if (isCategoriesChanged || isCountsChanged || isIdxChanged) {
+        this.setData({ categories, categoryCounts: counts, categoryPickerIndex: idx });
+    }
   },
 
   loadMistakesCount: function () {
     const mistakes = getMistakes();
     const list = Array.isArray(mistakes) ? mistakes : [];
-    this.setData({ mistakesCount: list.length, mistakesList: list, totalWords: this.data.currentCategory === 'Mistakes (错题本)' ? list.length : this.data.totalWords });
+    const newCount = list.length;
+    
+    const isCountChanged = newCount !== this.data.mistakesCount;
+    // Simple array length check for list change approximation, or deep check if needed. 
+    // Since we mostly care about count and list content for display:
+    const isListChanged = JSON.stringify(list) !== JSON.stringify(this.data.mistakesList);
+    
+    if (isCountChanged || isListChanged) {
+        this.setData({ mistakesCount: newCount, mistakesList: list, totalWords: this.data.currentCategory === 'Mistakes (错题本)' ? newCount : this.data.totalWords });
+    }
   },
 
   refreshMistakesList: function () {
@@ -303,7 +327,15 @@ Page({
     const settings = sanitizeSettings(stored);
     const category = settings.category || DEFAULT_SETTINGS.category;
     const idx = Math.max(0, (this.data.categories || []).indexOf(category));
-    this.setData({ settings, currentCategory: category, categoryPickerIndex: idx });
+    
+    // Check if settings changed
+    const isSettingsChanged = JSON.stringify(settings) !== JSON.stringify(this.data.settings);
+    const isCategoryChanged = category !== this.data.currentCategory;
+    const isIdxChanged = idx !== this.data.categoryPickerIndex;
+
+    if (isSettingsChanged || isCategoryChanged || isIdxChanged) {
+        this.setData({ settings, currentCategory: category, categoryPickerIndex: idx });
+    }
   },
 
   loadSubcategories: async function () {

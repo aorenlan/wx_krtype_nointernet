@@ -1,0 +1,58 @@
+<custom-nav
+  title="短文详情"
+  theme="light"
+  showBack="{{true}}"
+></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <scroll-view wx:else scroll-y class="content" style="height: calc(100vh - {{statusBarHeight + navBarHeight}}px);">
+    <view class="card" wx:if="{{work}}">
+      <view class="header">
+        <view class="header-left">
+          <view class="course-tag {{work.courseClass}}">{{work.courseLabel}}</view>
+          <text class="time-label">{{work.timeLabel}}</text>
+        </view>
+        <view class="score-badge {{work.scoreClass}}">{{work.result.score}}分</view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">原文</text>
+        <text class="section-text" user-select>{{work.content}}</text>
+      </view>
+
+      <view class="section" wx:if="{{work.prompts}}">
+        <text class="section-title">要求单词</text>
+        <view class="tags">
+          <view class="tag" wx:for="{{work.prompts.words}}" wx:key="id">{{item.word}}</view>
+        </view>
+        <text class="section-title" style="margin-top: 12px;">要求语法</text>
+        <view class="tags">
+          <view class="tag tag-grammar" wx:for="{{work.prompts.grammars}}" wx:key="id">{{item.grammar}}</view>
+        </view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">老师点评</text>
+        <text class="section-text">{{work.result.comment}}</text>
+      </view>
+
+      <view class="section" wx:if="{{work.result.score >= 80 && work.result.sentence_explanations.length}}">
+        <text class="section-title">拆句讲解</text>
+        <view class="explain-item" wx:for="{{work.result.sentence_explanations}}" wx:key="index">
+          <text class="explain-sentence">{{item.sentence}}</text>
+          <text class="explain-text">{{item.explanation}}</text>
+        </view>
+      </view>
+
+      <view class="section" wx:if="{{work.result.score < 80 && work.result.rewrite}}">
+        <text class="section-title">合格改写</text>
+        <text class="section-text">{{work.result.rewrite}}</text>
+      </view>
+    </view>
+    <view style="height: 60rpx;"></view>
+  </scroll-view>
+</view>

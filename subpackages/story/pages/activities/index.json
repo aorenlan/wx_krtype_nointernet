@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "活动中心",
+  "navigationBarBackgroundColor": "#0f172a",
+  "navigationBarTextStyle": "white",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "custom-nav": "/components/custom-nav/index"
+  }
+}

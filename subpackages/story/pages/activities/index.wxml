@@ -1,0 +1,23 @@
+<custom-nav title="活动中心" showBack="{{true}}"></custom-nav>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight + 20}}px;">
+  <view class="header">
+    <text class="title">精彩活动</text>
+    <text class="subtitle">探索更多有趣的韩语学习内容</text>
+  </view>
+
+  <view class="activity-list">
+    <block wx:for="{{activities}}" wx:key="id">
+      <view class="card activity-card" bindtap="navigateToActivity" data-path="{{item.path}}">
+        <view class="icon-box">
+          <text class="icon">{{item.icon}}</text>
+        </view>
+        <view class="content">
+          <text class="card-title">{{item.title}}</text>
+          <text class="card-desc">{{item.desc}}</text>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </block>
+  </view>
+</view>

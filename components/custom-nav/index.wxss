@@ -152,7 +152,7 @@
   box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
 }
 
-.checkin-pill text {
+.checkin-text {
   font-size: 12px;
   color: #ffffff;
   font-weight: 600;
@@ -177,15 +177,13 @@
   background: rgba(30, 41, 59, 0.9);
 }
 
-.progress-pill text {
+.progress-text {
   font-size: 12px;
   color: #475569;
   font-weight: 600;
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
 }
 
-.custom-nav.dark .progress-pill text {
+.custom-nav.dark .progress-text {
   color: #94a3b8;
 }
 

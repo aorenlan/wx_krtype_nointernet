@@ -70,7 +70,11 @@
       "root": "subpackages/story",
       "name": "story",
       "pages": [
-        "pages/detail/index"
+        "pages/detail/index",
+        "pages/essay-detail/index",
+        "pages/essay-history/index",
+        "pages/activities/index",
+        "pages/counter-attack/index"
       ]
     }
   ],

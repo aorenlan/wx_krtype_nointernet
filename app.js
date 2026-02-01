@@ -8,8 +8,23 @@ App({
         traceUser: true,
       });
     }
+
+    // Calculate Navigation Bar Height
+    const systemInfo = wx.getSystemInfoSync();
+    const menuButtonInfo = wx.getMenuButtonBoundingClientRect();
+    const statusBarHeight = systemInfo.statusBarHeight;
+    const navBarHeight = (menuButtonInfo.top - statusBarHeight) * 2 + menuButtonInfo.height;
+
+    this.globalData = {
+      userInfo: null,
+      statusBarHeight,
+      navBarHeight,
+      menuButtonInfo
+    };
   },
   globalData: {
-    userInfo: null
+    userInfo: null,
+    statusBarHeight: 0,
+    navBarHeight: 0
   }
 })

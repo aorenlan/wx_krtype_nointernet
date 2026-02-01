@@ -1,4 +1,4 @@
-<custom-nav subtitle="{{displayCategory}}" progress="{{currentIndex + 1}} / {{words.length}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
+<custom-nav subtitle="{{displayCategory}}" progress="{{words.length > 0 ? (currentIndex + 1) + ' / ' + words.length : ''}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
 <view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;" bindtap="focusHiddenInput">
   <input class="hidden-input" value="{{hiddenInputValue}}" focus="{{inputFocus}}" bindinput="onHiddenInput" bindblur="onHiddenInputBlur" maxlength="-1" />
@@ -36,10 +36,13 @@
       <view class="card {{isError ? 'shake' : ''}}">
         <!-- Card Top: Mode & Actions -->
         <view class="card-top-bar">
-            <text class="mode-badge">Practice</text>
+            <view class="top-left-group">
+                <view class="focus-mode-btn" bindtap="toggleFocusMode">F</view>
+                <text class="mode-badge">Practice</text>
+            </view>
             <view class="card-actions">
-                <view class="action-icon" bindtap="playWordAudio">
-                    <image src="/assets/icons/volume.svg" style="width: 20px; height: 20px;" mode="aspectFit" />
+                <view class="action-icon" bindtap="playWordAudio" hover-class="none">
+                    <image src="/assets/icons/volume.svg" style="width: 24px; height: 24px;" mode="aspectFit" />
                 </view>
                 <view class="action-icon" bindtap="removeCurrentFromMistakes" wx:if="{{settings.category === 'Mistakes (错题本)'}}">
                     <text style="font-size: 12px; color: #ef4444;">移出</text>
@@ -53,7 +56,12 @@
                 <text>‹</text>
             </view>
             
-            <view class="word-content">
+            <view class="word-content" bindtap="showWordDetail">
+                <view class="word-tooltip" wx:if="{{showWordTooltip}}" catchtap="dismissWordTooltip">
+                    <text>点击单词可查看例句</text>
+                    <view class="tooltip-arrow"></view>
+                </view>
+
                 <!-- Meaning (Chinese) -->
                 <view class="meaning-container {{settings.cardShowMeaning ? '' : 'keep-space-hidden'}}">
                   <text class="meaning {{meaningIsSmall || currentWord.meaning.length > 7 ? 'meaning-small' : ''}}">{{currentWord.meaning}}</text>
@@ -151,6 +159,33 @@
   <view class="guide-bubble" wx:if="{{showGuideBubble}}" bindtap="onGuideBubbleClick">
     <text>点击唤起键盘</text>
     <view class="guide-arrow"></view>
+  </view>
+
+  <!-- Word Detail Modal -->
+  <view class="detail-overlay {{showDetailModal ? 'show' : ''}} {{isKeyboardOpen ? 'keyboard-open' : ''}}" bindtap="closeDetailModal">
+    <view class="detail-card" catchtap="playSentenceAudio">
+      <view class="detail-header">
+        <text class="detail-title">例句学习</text>
+        <view class="detail-close" catchtap="closeDetailModal">×</view>
+      </view>
+      <scroll-view scroll-y class="detail-body">
+        <view class="detail-section">
+            <view class="detail-row">
+                <view class="detail-label-row">
+                  <text class="detail-label">例句</text>
+                  <image src="../../assets/icons/volume.svg" class="detail-audio-icon" />
+                </view>
+                <text class="detail-text korean">{{currentWord.example_sentence || '暂无例句'}}</text>
+            </view>
+        </view>
+        <view class="detail-section" wx:if="{{currentWord.sentence_translation}}">
+             <view class="detail-row">
+                <text class="detail-label">释义</text>
+                <text class="detail-text chinese">{{currentWord.sentence_translation}}</text>
+            </view>
+        </view>
+      </scroll-view>
+    </view>
   </view>
 
   <!-- Settings Modal -->
@@ -316,6 +351,11 @@
             <switch checked="{{settings.pronounceMeaning}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="pronounceMeaning"/>
           </view>
 
+          <view class="setting-item" bindtap="toggleSetting" data-key="autoPlaySentence">
+            <text>自动朗读例句</text>
+            <switch checked="{{settings.autoPlaySentence}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPlaySentence"/>
+          </view>
+
         </view>
       </scroll-view>
     </view>
@@ -331,13 +371,55 @@
         <view class="modal-close" bindtap="closeUpdatePopup">✕</view>
       </view>
       <view class="modal-body" style="padding: 20px;">
-        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.1 全新上线！</view>
+        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.3 全新上线！</view>
         <view style="line-height: 1.8; color: #64748b; font-size: 14px;">
-          <view>1. 语法模块朗读</view>
+          <view>1. 卡片左上角F模式</view>
+          <view>2. 点击单词 新增例句</view>
+          <view>3. 新增写作矫正模式</view>
           <view>待更新：拍照识别</view>
         </view>
         <button bindtap="closeUpdatePopup" style="margin-top: 25px; width: 100%; background: #6366f1; color: white; border-radius: 12px; font-weight: 500;">开始体验</button>
       </view>
     </view>
+  </view>
+
+  <!-- Nagging Mode Overlay -->
+  <view class="nagging-overlay" wx:if="{{isNaggingMode}}" catchtouchmove="preventScroll" bindtap="toggleSetting" data-key="naggingMode">
+    
+    <!-- Toggle Style Button -->
+    <view class="nagging-style-switch" catchtap="toggleNaggingStyle">
+        <text>{{naggingStyle === 'scatter' ? '切换:文章模式' : '切换:散落模式'}}</text>
+    </view>
+
+    <!-- SCATTER MODE -->
+    <block wx:if="{{naggingStyle === 'scatter'}}">
+        <view class="nagging-bg">
+            <block wx:for="{{naggingItems}}" wx:key="id">
+                <view class="nagging-bg-item" 
+                        style="top:{{item.top}}%; left:{{item.left}}%; font-size:{{item.fontSize}}px; opacity:0; --rotate:{{item.rotate}}deg">
+                        {{item.word}}
+                </view>
+            </block>
+        </view>
+        <view class="nagging-center">
+            <view class="nagging-cn-main">{{currentWord.meaning}}</view>
+        </view>
+    </block>
+
+    <!-- FLOW MODE -->
+    <block wx:if="{{naggingStyle === 'flow'}}">
+        <scroll-view scroll-y class="nagging-flow-scroll" scroll-into-view="item-{{naggingItems.length > 0 ? naggingItems.length - 1 : ''}}">
+            <view class="nagging-flow-container">
+                <view class="nagging-flow-title">【{{currentWord.meaning}}】</view>
+                <view class="nagging-flow-content">
+                    <block wx:for="{{naggingItems}}" wx:key="id">
+                        <text class="nagging-flow-word" id="item-{{index}}">{{item.word}}</text>
+                    </block>
+                </view>
+            </view>
+        </scroll-view>
+    </block>
+
+    <view class="nagging-tip">点击任意处退出唠叨模式</view>
   </view>
 </view>

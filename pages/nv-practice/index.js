@@ -18,13 +18,17 @@ const DEFAULT_SETTINGS = {
     autoCheckSpelling: true,
     autoPronounce: false,
     pronounceMeaning: false,
+    autoPlaySentence: false,
     category: 'Yonsei 1',
     keyboardVisualMode: 'korean',
     yonseiLessonId: '',
     yonseiLessonName: '',
     topikLevel: '1',
-    topikSession: ''
+    topikSession: '',
+    naggingMode: false
 };
+
+const TOOLTIP_STORAGE_KEY = 'has_shown_word_detail_tooltip';
 
 const KEY_TO_KOR = (() => {
     const map = Object.create(null);
@@ -122,6 +126,8 @@ const sanitizeSettings = (raw) => {
     }
     if (merged.topikLevel != null) merged.topikLevel = String(merged.topikLevel);
     if (merged.topikSession != null) merged.topikSession = String(merged.topikSession);
+    merged.naggingMode = !!merged.naggingMode;
+    merged.autoPlaySentence = !!merged.autoPlaySentence;
     if (merged.yonseiLessonId != null) merged.yonseiLessonId = String(merged.yonseiLessonId);
     if (merged.yonseiLessonName != null) merged.yonseiLessonName = String(merged.yonseiLessonName);
     let repeatCount = Number(merged.repeatCount);
@@ -189,11 +195,21 @@ Page({
         showGuideBubble: false,
         showSettingsTooltip: false,
         settingsTooltipText: '可调整显示模式',
+        showWordTooltip: false,
 
         // PC Support
         isPC: false,
         hiddenInputValue: ' ',
-        inputFocus: false
+        inputFocus: false,
+
+        // Nagging Mode
+        isNaggingMode: false,
+        naggingStyle: 'scatter', // 'scatter' | 'flow'
+        naggingWordInfo: null,
+        naggingItems: [],
+
+        // Detail Modal
+        showDetailModal: false
     },
 
     async onLoad() {
@@ -273,6 +289,12 @@ Page({
             }, 2000);
         }
 
+        // Word Detail Tooltip Logic (First Time Only)
+        const hasShownWordTooltip = wx.getStorageSync(TOOLTIP_STORAGE_KEY);
+        if (!hasShownWordTooltip) {
+            this.setData({ showWordTooltip: true });
+        }
+
         this.loadDailySentenceEntry();
 
         this.wordAudio = null;
@@ -282,13 +304,14 @@ Page({
         this._autoPronouncedWordId = null;
         this._audioUrlMemo = new Map();
         this._audioFileLRU = new Map();
-        this._audioFileLRUCapacity = 200;
+        this._audioFileLRUCapacity = 50;
         this._audioFileInFlight = new Map();
         this._preloadTask = null;
         this._preloadNextKey = null;
         this._hasPlayedAudioOnce = false;
         this._missingAudioPrompted = new Map();
         this._missingAudioToastAt = 0;
+        this._attemptedPreloadKeys = new Set();
 
         this.setData({
             statusBarHeight: windowInfo.statusBarHeight || 20,
@@ -341,6 +364,11 @@ Page({
                 if (source) wx.setStorageSync('kr_daily_sentence_entry_cache', { cachedAt: Date.now(), source });
             } catch (e) {}
         } catch (e) {}
+    },
+
+    dismissWordTooltip() {
+        this.setData({ showWordTooltip: false });
+        wx.setStorageSync(TOOLTIP_STORAGE_KEY, true);
     },
 
     openDailySentence() {
@@ -507,26 +535,65 @@ Page({
       });
     },
 
+    destroyAudioContexts() {
+        try {
+            if (this.wordAudio) {
+                this.wordAudio.destroy();
+                this.wordAudio = null;
+            }
+            if (this.cnAudio) {
+                this.cnAudio.destroy();
+                this.cnAudio = null;
+            }
+        } catch (e) {}
+    },
+
     onHide() {
+        this.stopNaggingLoop();
+        this.cancelCurrentAudioPlayback();
+        
+        // Clear pending auto-pronounce to prevent ghost audio on return
+        if (this._autoPronounceTimer) {
+            clearTimeout(this._autoPronounceTimer);
+            this._autoPronounceTimer = null;
+        }
+        
+        // Clear preload timer
+        if (this._preloadTimer) {
+             clearTimeout(this._preloadTimer);
+             this._preloadTimer = null;
+        }
+
+        // Destroy ALL audio contexts to prevent background resurrection
+        this.destroyAudioContexts();
+        if (this._sentenceAudioCtx) {
+            try { 
+                this._sentenceAudioCtx.stop();
+                this._sentenceAudioCtx.destroy(); 
+            } catch(e) {}
+            this._sentenceAudioCtx = null;
+        }
+
         if (this.videoAd && this._boundAdClose) {
             this.videoAd.offClose(this._boundAdClose);
         }
     },
 
     onUnload() {
+        this.stopNaggingLoop();
         this.persistCurrentProgress();
         this.cancelAudioPreload();
         this.clearAudioFileLRU();
         this.clearAllTimers();
+        if (this._attemptedPreloadKeys) this._attemptedPreloadKeys.clear();
         if (this.videoAd && this._boundAdClose) {
             this.videoAd.offClose(this._boundAdClose);
         }
-        try {
-            if (this.wordAudio) this.wordAudio.destroy();
-            if (this.cnAudio) this.cnAudio.destroy();
-        } catch (e) {}
-        this.wordAudio = null;
-        this.cnAudio = null;
+        this.destroyAudioContexts();
+        if (this._sentenceAudioCtx) {
+            try { this._sentenceAudioCtx.destroy(); } catch (e) {}
+            this._sentenceAudioCtx = null;
+        }
     },
 
     cancelAudioPreload() {
@@ -559,10 +626,12 @@ Page({
         const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
         if (!fs) return true;
         try {
-            if (typeof fs.accessSync === 'function') {
+            if (typeof fs.statSync === 'function') {
+                const stat = fs.statSync(path);
+                return stat.size > 0;
+            } else if (typeof fs.accessSync === 'function') {
                 fs.accessSync(path);
-            } else if (typeof fs.statSync === 'function') {
-                fs.statSync(path);
+                return true;
             }
             return true;
         } catch (e) {
@@ -574,7 +643,8 @@ Page({
         const key = cacheKey ? String(cacheKey) : '';
         if (!key || !this._audioFileLRU || !this._audioFileLRU.has) return '';
         const p = this._audioFileLRU.get(key);
-        if (!p || !this.hasLocalAudioFile(p)) {
+        // Trust LRU cache to avoid frequent IO checks which may fail and cause re-download
+        if (!p) {
             try { this._audioFileLRU.delete(key); } catch (e) {}
             return '';
         }
@@ -583,6 +653,21 @@ Page({
             this._audioFileLRU.set(key, p);
         } catch (e) {}
         return String(p);
+    },
+
+    removeAudioFromLRU(cacheKey) {
+        const key = cacheKey ? String(cacheKey) : '';
+        if (!key || !this._audioFileLRU || !this._audioFileLRU.has(key)) return;
+        const p = this._audioFileLRU.get(key);
+        this._audioFileLRU.delete(key);
+        
+        // Also try to delete file to clean up
+        if (p) {
+            const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
+            if (fs && fs.unlinkSync) {
+                try { fs.unlinkSync(p); } catch (e) {}
+            }
+        }
     },
 
     setAudioFileToLRU(cacheKey, tempPath) {
@@ -631,12 +716,43 @@ Page({
                             if (!ok) {
                                 return tryNext(idx + 1);
                             }
-                            const p = String(res.tempFilePath);
+                            
+                            let finalPath = String(res.tempFilePath);
+                            
+                            // Try to save to permanent storage to avoid OSS requests on replay
+                            try {
+                                const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
+                                if (fs && wx.env && wx.env.USER_DATA_PATH) {
+                                    const dir = `${wx.env.USER_DATA_PATH}/audio_cache`;
+                                    try { fs.accessSync(dir); } catch(e) { 
+                                        try { fs.mkdirSync(dir, {recursive: true}); } catch(e2) {} 
+                                    }
+                                    
+                                    // Sanitize key for filename
+                                    const safeName = String(key).replace(/[^\w\-\u4e00-\u9fa5\uac00-\ud7a3]/g, '_') + '.mp3';
+                                    const dest = `${dir}/${safeName}`;
+                                    
+                                    // Remove existing if any
+                                    try { fs.unlinkSync(dest); } catch(e) {}
+                                    
+                                    // saveFileSync moves/copies temp file to user path
+                                    fs.saveFileSync(finalPath, dest);
+                                    
+                                    this.setAudioFileToLRU(key, dest);
+                                } else {
+                                    // If no user path (should not happen), cache temp
+                                    this.setAudioFileToLRU(key, finalPath);
+                                }
+                            } catch (e) {
+                                console.error('Save audio cache failed', e);
+                                // Fallback: cache the temp file if saving failed
+                                this.setAudioFileToLRU(key, finalPath);
+                            }
+
                             if (this._audioUrlMemo && this._audioUrlMemo.set) {
                                 this._audioUrlMemo.set(key, url);
                             }
-                            this.setAudioFileToLRU(key, p);
-                            resolve(p);
+                            resolve(finalPath);
                         },
                         fail: () => tryNext(idx + 1)
                     });
@@ -705,6 +821,8 @@ Page({
     },
 
     onShow: async function() {
+        this.clearAllTimers();
+        this.cancelCurrentAudioPlayback();
         this.createVideoAd();
         if (this.videoAd) {
             if (!this._boundAdClose) {
@@ -730,6 +848,14 @@ Page({
 
         const nextKey = this.getWordsContentKey(finalSettings || mergedSettings);
         if (prevKey !== nextKey || !Array.isArray(this.data.words) || this.data.words.length === 0) {
+            this.stopNaggingLoop();
+            if (this._sentenceAudioCtx) {
+                try {
+                    this._sentenceAudioCtx.stop();
+                    this._sentenceAudioCtx.destroy();
+                } catch (e) {}
+                this._sentenceAudioCtx = null;
+            }
             this.loadWords(finalSettings || mergedSettings);
         }
         
@@ -862,6 +988,9 @@ Page({
     async loadWords(settingsOverride) {
         this.clearAllTimers();
         this.cancelAudioPreload();
+        this.cancelCurrentAudioPlayback();
+        this._autoPronouncedWordId = null;
+        if (this._attemptedPreloadKeys) this._attemptedPreloadKeys.clear();
         this.setData({ loading: true, prevWordInfo: null });
         const s = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
         const category = s.category || 'TOPIK Vocabulary';
@@ -1075,6 +1204,8 @@ Page({
         this._settingsTooltipTimer = null;
         if (this._preloadTimer) clearTimeout(this._preloadTimer);
         this._preloadTimer = null;
+        if (this._autoPronounceTimer) clearTimeout(this._autoPronounceTimer);
+        this._autoPronounceTimer = null;
     },
 
     startModeLogic() {
@@ -1173,6 +1304,16 @@ Page({
             } else {
                 if (this.quizTimer) clearInterval(this.quizTimer);
                 this.quizTimer = null;
+            }
+        }
+
+        if (key === 'naggingMode') {
+            if (next.naggingMode) {
+                this.setData({ isNaggingMode: true });
+                this.startNaggingLoop();
+            } else {
+                this.setData({ isNaggingMode: false });
+                this.stopNaggingLoop();
             }
         }
     },
@@ -1571,8 +1712,15 @@ Page({
     },
 
     ensureAudioContexts() {
-        if (!this.wordAudio) this.wordAudio = wx.createInnerAudioContext();
-        if (!this.cnAudio) this.cnAudio = wx.createInnerAudioContext();
+        if (!this.wordAudio) {
+            this.wordAudio = wx.createInnerAudioContext();
+            // Remove autoplay to avoid conflict with manual play() in playSrcOnce
+            this.wordAudio.autoplay = false;
+        }
+        if (!this.cnAudio) {
+            this.cnAudio = wx.createInnerAudioContext();
+            this.cnAudio.autoplay = false;
+        }
     },
 
     bumpAudioPlaySeq() {
@@ -1618,7 +1766,7 @@ Page({
         if (now - globalLast < 1200) return;
         this._missingAudioToastAt = now;
 
-        wx.showToast({ title: isChinese ? '释义音频缺失' : '韩语音频缺失', icon: 'none', duration: 1500 });
+        wx.showToast({ title: isChinese ? '释义音频加载失败，请手动点击' : '音频加载失败，请手动点击', icon: 'none', duration: 1500 });
     },
 
     getAudioFolder() {
@@ -1740,8 +1888,9 @@ Page({
                 try { nfc = base.normalize('NFC'); } catch (e) {}
             }
             const hangulNfd = toHangulNFD(base);
-            if (nfd) variants.push(nfd);
+            // Optimization: Prioritize Manual NFD (toHangulNFD) for Android compatibility
             if (hangulNfd) variants.push(hangulNfd);
+            if (nfd) variants.push(nfd);
             if (nfc) variants.push(nfc);
             variants.push(base);
         });
@@ -1810,6 +1959,11 @@ Page({
                 if (cacheKey && cacheUrl && this._audioUrlMemo && this._audioUrlMemo.set) {
                     this._audioUrlMemo.set(cacheKey, cacheUrl);
                 }
+                // Robustness: If not started yet, try playing again when ready
+                if (!started && !settled) {
+                    console.log('[PlaySrcOnce] onCanplay triggered, attempting play again');
+                    attemptPlay();
+                }
             };
 
             const onPlay = () => {
@@ -1820,7 +1974,8 @@ Page({
                 settle(true);
             });
 
-            audioCtx.onError(() => {
+            audioCtx.onError((res) => {
+                console.error('[PlaySrcOnce] Error:', src, res);
                 settle(false);
             });
 
@@ -1836,17 +1991,21 @@ Page({
             const attemptPlay = () => {
                 try {
                     audioCtx.play();
-                } catch (e) {}
+                } catch (e) {
+                    console.error('[PlaySrcOnce] Play exception:', e);
+                }
             };
             attemptPlay();
 
             retryTimer = setTimeout(() => {
                 if (settled || started) return;
+                console.warn('[PlaySrcOnce] Retry timeout:', src);
                 attemptPlay();
             }, 120);
 
             failTimer = setTimeout(() => {
                 if (settled || started) return;
+                console.error('[PlaySrcOnce] Overall timeout:', src);
                 settle(false);
             }, 3500);
         });
@@ -1857,16 +2016,22 @@ Page({
 
         const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
         if (memo) {
+            console.log('[PlayFallback] Trying memo:', memo);
             const ok = await this.playSrcOnce(audioCtx, memo, cacheKey, memo);
             if (ok) return true;
         }
 
         for (const url of urls) {
             if (!url) continue;
+            console.log('[PlayFallback] Trying url:', url);
             const ok = await this.playSrcOnce(audioCtx, url, cacheKey, url);
-            if (ok) return true;
+            if (ok) {
+                console.log('[PlayFallback] Success:', url);
+                return true;
+            }
         }
 
+        console.error('[PlayFallback] All failed:', urls);
         return false;
     },
 
@@ -1881,8 +2046,11 @@ Page({
         const PRELOAD_COUNT = 5;
         const currentIndex = Number(this.data.currentIndex || 0);
         const preloadMeaning = !!s.pronounceMeaning;
+        
+        // Optimization: limit loop if words count is small
+        const loopCount = Math.min(PRELOAD_COUNT, words.length - 1);
 
-        for (let i = 1; i <= PRELOAD_COUNT; i++) {
+        for (let i = 1; i <= loopCount; i++) {
             const nextIndex = normalizeIndex(currentIndex + i, words.length);
             const next = words[nextIndex];
             if (!next || !next.word) continue;
@@ -1898,12 +2066,20 @@ Page({
     },
 
     _preloadSingleAudio(word, isChinese) {
+        if (!word) return;
         const cacheKey = this.getAudioCacheKey(word, isChinese);
         // Check if already in LRU
         if (this.getAudioFileFromLRU(cacheKey)) return;
 
+        // Check if already attempted in this session (avoid redundant requests)
+        if (!this._attemptedPreloadKeys) this._attemptedPreloadKeys = new Set();
+        if (this._attemptedPreloadKeys.has(cacheKey)) return;
+
         // Check if already in flight
         if (this._audioFileInFlight && this._audioFileInFlight.has(cacheKey)) return;
+
+        // Mark as attempted
+        this._attemptedPreloadKeys.add(cacheKey);
 
         const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
         const candidates = memo ? [memo] : this.buildAudioUrls(word, isChinese);
@@ -1932,6 +2108,10 @@ Page({
         if (koLocal) {
             const ok = await this.playSrcOnce(this.wordAudio, koLocal);
             if (!ok) {
+                // If local play failed, only remove from cache if file is missing (avoid re-download if file exists but decode failed)
+                if (!this.hasLocalAudioFile(koLocal)) {
+                    this.removeAudioFromLRU(koCacheKey);
+                }
                 if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
                 koOk = await this.playWithFallback(this.wordAudio, koUrls, koCacheKey);
             } else {
@@ -1967,6 +2147,10 @@ Page({
             if (cnLocal) {
                 const ok = await this.playSrcOnce(this.cnAudio, cnLocal);
                 if (!ok) {
+                    // If local play failed, only remove from cache if file is missing
+                    if (!this.hasLocalAudioFile(cnLocal)) {
+                        this.removeAudioFromLRU(cnCacheKey);
+                    }
                     if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
                     cnOk = await this.playWithFallback(this.cnAudio, cnUrls, cnCacheKey);
                 } else {
@@ -2003,10 +2187,158 @@ Page({
         if (!current || !current.id) return;
         if (this._autoPronouncedWordId === current.id) return;
         this._autoPronouncedWordId = current.id;
-        setTimeout(() => {
+        
+        if (this._autoPronounceTimer) clearTimeout(this._autoPronounceTimer);
+        this._autoPronounceTimer = setTimeout(() => {
+            this._autoPronounceTimer = null;
             if (!this.data.currentWord || this.data.currentWord.id !== current.id) return;
             this.playWordAudio();
         }, 80);
+    },
+
+    showWordDetail() {
+        if (this.data.showWordTooltip) {
+             this.dismissWordTooltip();
+        }
+
+        const { currentWord } = this.data;
+        if (!currentWord) return;
+
+        this.setData({ showDetailModal: true });
+        
+        // Auto play when opened if enabled
+        if (this.data.settings && this.data.settings.autoPlaySentence) {
+            this.playSentenceAudio();
+        }
+    },
+
+    closeDetailModal() {
+        this.setData({ showDetailModal: false });
+        if (this._sentenceAudioCtx) {
+            try {
+                this._sentenceAudioCtx.stop();
+                this._sentenceAudioCtx.destroy();
+            } catch (e) {}
+            this._sentenceAudioCtx = null;
+        }
+    },
+    
+    playSentenceAudio() {
+        // Cleanup previous
+        if (this._sentenceAudioCtx) {
+            try {
+                this._sentenceAudioCtx.stop();
+                this._sentenceAudioCtx.destroy();
+            } catch (e) {}
+            this._sentenceAudioCtx = null;
+        }
+
+        const { currentWord } = this.data;
+        if (!currentWord || !currentWord.example_sentence) return;
+        
+        const sentence = currentWord.example_sentence;
+        console.log('[SentenceAudio] Original:', sentence);
+        // Replace spaces and punctuation with underscores to match OSS filename format
+        // Based on: https://enoss.aorenlan.fun/kr_yonsei_sentence_example/...
+        // "감기에 민간요법을 써 봤어요" -> "감기에_민간요법을_써_봤어요"
+        const filename = sentence.replace(/[\s\p{P}]+/gu, '_');
+        // Handle trailing underscore if any
+        const safeFilename = filename.replace(/_+$/, '').replace(/^_+/, '');
+        
+        console.log('[SentenceAudio] SafeFilename:', safeFilename);
+
+        const toHangulNFD = (s) => {
+            const str = String(s || '');
+            let out = '';
+            for (let i = 0; i < str.length; i++) {
+                const code = str.charCodeAt(i);
+                if (code >= 0xAC00 && code <= 0xD7A3) {
+                    const sIndex = code - 0xAC00;
+                    const lIndex = Math.floor(sIndex / 588);
+                    const vIndex = Math.floor((sIndex % 588) / 28);
+                    const tIndex = sIndex % 28;
+                    out += String.fromCharCode(0x1100 + lIndex);
+                    out += String.fromCharCode(0x1161 + vIndex);
+                    if (tIndex) out += String.fromCharCode(0x11A7 + tIndex);
+                } else {
+                    out += str[i];
+                }
+            }
+            return out;
+        };
+
+        // Generate candidates (NFD first as per macOS upload, then NFC as fallback)
+        // Optimization: Put Manual NFD (toHangulNFD) FIRST as it is the most reliable for OSS files on Android
+        const candidates = [];
+        try { candidates.push(toHangulNFD(safeFilename)); } catch (e) {}
+        try { candidates.push(safeFilename.normalize('NFD')); } catch (e) {}
+        try { candidates.push(safeFilename.normalize('NFC')); } catch (e) {}
+        candidates.push(safeFilename);
+        
+        const uniqueNames = Array.from(new Set(candidates));
+        // Use manual percent encoding for special characters to ensure compatibility
+        // Similar to how buildAudioUrls handles it
+        const percentEncodeUtf8 = (input) => {
+            const str = String(input || '');
+            let out = '';
+            for (let i = 0; i < str.length; i++) {
+                let codePoint = str.codePointAt(i);
+                if (codePoint == null) continue;
+                if (codePoint > 0xffff) i++;
+
+                const appendByte = (b) => {
+                    if (
+                        (b >= 0x41 && b <= 0x5a) ||
+                        (b >= 0x61 && b <= 0x7a) ||
+                        (b >= 0x30 && b <= 0x39) ||
+                        b === 0x2d ||
+                        b === 0x2e ||
+                        b === 0x5f ||
+                        b === 0x7e
+                    ) {
+                        out += String.fromCharCode(b);
+                    } else {
+                        out += `%${b.toString(16).toUpperCase().padStart(2, '0')}`;
+                    }
+                };
+
+                if (codePoint <= 0x7f) {
+                    appendByte(codePoint);
+                } else if (codePoint <= 0x7ff) {
+                    appendByte(0xc0 | (codePoint >> 6));
+                    appendByte(0x80 | (codePoint & 0x3f));
+                } else if (codePoint <= 0xffff) {
+                    appendByte(0xe0 | (codePoint >> 12));
+                    appendByte(0x80 | ((codePoint >> 6) & 0x3f));
+                    appendByte(0x80 | (codePoint & 0x3f));
+                } else {
+                    appendByte(0xf0 | (codePoint >> 18));
+                    appendByte(0x80 | ((codePoint >> 12) & 0x3f));
+                    appendByte(0x80 | ((codePoint >> 6) & 0x3f));
+                    appendByte(0x80 | (codePoint & 0x3f));
+                }
+            }
+            return out;
+        };
+
+        const urls = uniqueNames.map(name => 
+            `https://enoss.aorenlan.fun/kr_yonsei_sentence_example/${percentEncodeUtf8(name)}.mp3`
+        );
+        
+        console.log('[SentenceAudio] Candidates:', uniqueNames);
+        console.log('[SentenceAudio] URLs:', urls);
+
+        const ctx = wx.createInnerAudioContext();
+        ctx.autoplay = false;
+        this._sentenceAudioCtx = ctx;
+        
+        this.playWithFallback(ctx, urls, null).then((result) => {
+            console.log('[SentenceAudio] PlayWithFallback result:', result);
+            if (this._sentenceAudioCtx === ctx) {
+                try { ctx.destroy(); } catch (e) {}
+                this._sentenceAudioCtx = null;
+            }
+        });
     },
 
     toggleKeyboard() {
@@ -2107,5 +2439,119 @@ Page({
                 });
             });
     },
+
+    toggleFocusMode() {
+        // Toggle Nagging Mode (Focus Mode)
+        const isNagging = !this.data.isNaggingMode;
+        
+        // Update local state
+        this.setData({ isNaggingMode: isNagging });
+
+        if (isNagging) {
+             wx.hideKeyboard(); // Hide keyboard when entering Focus Mode
+             this.setData({ isKeyboardOpen: false }); // Ensure UI state reflects closed keyboard
+        }
+        
+        // Sync with settings if needed, or just keep it as a temporary state
+        // The user asked for "Nagging Mode" in settings and "Focus" button.
+        // Let's keep settings in sync so the switch reflects the state.
+        const newSettings = Object.assign({}, this.data.settings || {});
+        newSettings.naggingMode = isNagging;
+        this.setData({ settings: newSettings });
+        
+        if (isNagging) {
+            this.startNaggingLoop();
+        } else {
+            this.stopNaggingLoop();
+        }
+    },
+
+    toggleNaggingStyle() {
+        const next = this.data.naggingStyle === 'scatter' ? 'flow' : 'scatter';
+        this.setData({ naggingStyle: next });
+        
+        // Restart loop to apply new style (clear screen)
+        if (this.data.isNaggingMode) {
+            this.startNaggingLoop();
+        }
+    },
+
+    startNaggingLoop() {
+        this.stopNaggingLoop(); // Clear previous state
+        
+        const currentWord = this.data.currentWord;
+        if (!currentWord) return;
+
+        this.setData({ naggingItems: [] });
+        
+        // Start Loop
+        this._naggingLoopId = (this._naggingLoopId || 0) + 1;
+        this.naggingAudioLoop(this._naggingLoopId);
+    },
+
+    stopNaggingLoop() {
+        // Invalidate any running loop
+        this._naggingLoopId = (this._naggingLoopId || 0) + 1;
+        
+        if (this.naggingTimer) clearTimeout(this.naggingTimer);
+        this.naggingTimer = null;
+        this.setData({ naggingItems: [] });
+        this.cancelCurrentAudioPlayback();
+    },
+
+    async naggingAudioLoop(loopId) {
+        if (!this.data.isNaggingMode) return;
+        if (loopId !== this._naggingLoopId) return;
+        
+        // Add Visual Item (Read one, Appear one)
+        const added = this.addNaggingItem();
+        if (!added) return;
+
+        try {
+            await this.playWordAudio();
+        } catch (e) {
+            console.error('Nagging loop audio error', e);
+            // Safety delay on error
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        // Check if loop is still valid after await
+        if (loopId !== this._naggingLoopId) return;
+
+        if (this.data.isNaggingMode) {
+            // Yield to UI thread to prevent blocking (Allow taps/exits)
+            await new Promise(r => setTimeout(r, 50));
+            // Check again after yield
+            if (loopId !== this._naggingLoopId) return;
+            
+            this.naggingAudioLoop(loopId);
+        }
+    },
+
+    addNaggingItem() {
+        const items = this.data.naggingItems || [];
+        if (items.length >= 100) return false;
+
+        const currentWord = this.data.currentWord;
+        const style = this.data.naggingStyle;
+        
+        const newItem = {
+            id: Date.now() + Math.random(), // Unique ID
+            word: currentWord.word,
+        };
+
+        if (style === 'scatter') {
+            newItem.top = Math.floor(Math.random() * 90) + 5;
+            newItem.left = Math.floor(Math.random() * 90) + 5;
+            newItem.fontSize = Math.floor(Math.random() * 30) + 20;
+            newItem.rotate = Math.floor(Math.random() * 90) - 45;
+        }
+        
+        // Flow mode doesn't need extra props, CSS handles it
+        
+        items.push(newItem);
+        this.setData({ naggingItems: items });
+        return true;
+    }
 
 });

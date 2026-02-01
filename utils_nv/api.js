@@ -1,18 +1,57 @@
 
+const dataCache = new Map();
+
 const getData = async (key) => {
+    if (dataCache.has(key)) return dataCache.get(key);
     try {
+        let rawData = null;
         switch (key) {
-            case 'TOPIK Vocabulary': return await require.async('../subpackages/grammar/data/all_topik_vocabulary.js');
-            case 'Yonsei 1': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_1.js');
-            case 'Yonsei 2': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_2.js');
-            case 'Yonsei 3': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_3.js');
-            case 'Yonsei 4': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_4.js');
-            case 'Mistakes (错题本)': return [];
-            case 'Yonsei 5': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_5.js');
-            case 'Yonsei 6': return await require.async('../subpackages/grammar/data/yonsei_vocabulary_6.js');
+            case 'TOPIK Vocabulary': rawData = await require.async('../subpackages/grammar/data/all_topik_vocabulary.js'); break;
+            case 'Yonsei 1': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_1.js'); break;
+            case 'Yonsei 2': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_2.js'); break;
+            case 'Yonsei 3': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_3.js'); break;
+            case 'Yonsei 4': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_4.js'); break;
+            case 'Mistakes (错题本)': rawData = []; break;
+            case 'Yonsei 5': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_5.js'); break;
+            case 'Yonsei 6': rawData = await require.async('../subpackages/grammar/data/yonsei_vocabulary_6.js'); break;
             default: 
-                return [];
+                rawData = [];
         }
+
+        // Hydrate data if it's in compressed format { keys: [], values: [] }
+        let data = [];
+        if (Array.isArray(rawData)) {
+            data = rawData;
+        } else if (rawData && rawData.keys && rawData.values) {
+            const { keys, values } = rawData;
+            data = values.map(row => {
+                const obj = {};
+                keys.forEach((k, i) => {
+                    obj[k] = row[i];
+                });
+                return obj;
+            });
+        }
+
+        // Validate data category to prevent cache poisoning or mismatch
+        if (Array.isArray(data) && data.length > 0 && /^Yonsei\s+\d$/.test(key)) {
+            const firstItem = data[0];
+            if (firstItem && firstItem.category && firstItem.category !== key) {
+                console.warn(`[API] Data mismatch for key ${key}. Got data for ${firstItem.category}`);
+                // If mismatch, do not cache, and return empty or try to recover?
+                // For now, let's just log it. If it happens, we know the root cause.
+                // But to fix the user issue, we should probably NOT return this data if it's wrong.
+                if (firstItem.category.startsWith('Yonsei')) {
+                    // Critical mismatch between Yonsei versions
+                    return [];
+                }
+            }
+        }
+
+        if (Array.isArray(data)) {
+            dataCache.set(key, data);
+        }
+        return data || [];
     } catch (e) {
         console.error('Failed to load data for key:', key, e);
         return [];
@@ -177,8 +216,9 @@ export const getWords = async (category, limit = 50, offset = 0, filters) => {
         sourceCategory: item.category || '',
         lessonId: item.lesson_id || item.session || '',
         lessonName: item.lesson_name || item.original_lesson || '',
-        example: '', 
-        translation: '',
+        example_sentence: item.example_sentence || '', 
+        sentence_translation: item.sentence_translation || '',
+        sentence_grammar: item.sentence_grammar || '',
         phonetic: ''
     }));
 
@@ -220,4 +260,37 @@ export const batchGetWords = async (ids) => {
         })));
     }
     return results;
+};
+
+export const getGrammars = async (category, lessonId) => {
+    try {
+        const rawData = await require.async('../subpackages/grammar/data/yonsei_grammar.js');
+        if (!rawData) return [];
+        
+        let data = [];
+        if (Array.isArray(rawData)) {
+            data = rawData;
+        } else if (rawData && rawData.keys && rawData.values) {
+            const { keys, values } = rawData;
+            data = values.map(row => {
+                const obj = {};
+                keys.forEach((k, i) => {
+                    obj[k] = row[i];
+                });
+                return obj;
+            });
+        }
+        
+        let filtered = data;
+        if (category) {
+             filtered = filtered.filter(item => item.category === category);
+        }
+        if (lessonId) {
+             filtered = filtered.filter(item => String(item.lesson_id) === String(lessonId));
+        }
+        return filtered;
+    } catch (e) {
+        console.error('Failed to load grammar', e);
+        return [];
+    }
 };

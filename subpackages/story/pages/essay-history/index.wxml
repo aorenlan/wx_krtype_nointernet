@@ -1,0 +1,50 @@
+<custom-nav
+  title="我的短文"
+  theme="light"
+  showBack="{{true}}"
+></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="controls-row">
+    <view class="sort-bar">
+      <view class="sort-item {{sortMode === 'time' ? 'active' : ''}}" bindtap="setSort" data-mode="time">按时间</view>
+      <view class="sort-divider">|</view>
+      <view class="sort-item {{sortMode === 'course' ? 'active' : ''}}" bindtap="setSort" data-mode="course">按课程</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !works.length}}">
+    <text class="empty-title">暂无练习记录</text>
+    <text class="empty-sub">快去完成你的第一篇短文吧</text>
+  </view>
+
+  <scroll-view
+    wx:else
+    scroll-y
+    class="work-list"
+    style="height: calc(100vh - {{statusBarHeight + navBarHeight + 40}}px);"
+  >
+    <view class="list-padding">
+      <block wx:for="{{works}}" wx:key="_id">
+        <view class="work-card" bindtap="openDetail" data-id="{{item._id}}">
+          <view class="card-header">
+            <view class="header-left">
+              <view class="course-tag {{item.courseClass}}">{{item.courseLabel}}</view>
+              <text class="time-label">{{item.timeLabel}}</text>
+            </view>
+            <view class="score-badge {{item.scoreClass}}">{{item.result.score}}分</view>
+          </view>
+          
+          <view class="card-preview">
+            <text class="preview-text" user-select>{{item.content}}</text>
+          </view>
+          
+          <view class="card-footer">
+             <text class="keywords-count">使用了 {{item.prompts.words.length}} 个单词 · {{item.prompts.grammars.length}} 个语法</text>
+          </view>
+        </view>
+      </block>
+      <view style="height: 60rpx;"></view>
+    </view>
+  </scroll-view>
+</view>

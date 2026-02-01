@@ -1,0 +1,150 @@
+.page {
+  min-height: 100vh;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sort-bar {
+  display: flex;
+  align-items: center;
+}
+
+.sort-item {
+  font-size: 13px;
+  color: #94a3b8;
+  padding: 4px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.sort-item.active {
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.sort-divider {
+  color: #cbd5e1;
+  font-size: 11px;
+  margin: 0 4px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 100px;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.list-padding {
+  padding: 16px;
+}
+
+.work-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.course-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-right: 8px;
+}
+
+.course-tag.yonsei {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.course-tag.topik {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.course-tag.other {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.time-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.score-badge {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.score-badge.high {
+  color: #16a34a;
+}
+
+.score-badge.medium {
+  color: #d97706;
+}
+
+.score-badge.low {
+  color: #ef4444;
+}
+
+.card-preview {
+  margin-bottom: 12px;
+}
+
+.preview-text {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.card-footer {
+  border-top: 1px solid #f8fafc;
+  padding-top: 8px;
+}
+
+.keywords-count {
+  font-size: 11px;
+  color: #94a3b8;
+}

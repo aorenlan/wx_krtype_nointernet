@@ -21,18 +21,96 @@
   </view>
 
   <view class="controls-row">
-    <view class="tab-bar">
-      <view class="tab-item {{filterMode === 'current' ? 'active' : ''}}" bindtap="setFilter" data-mode="current">当前课程</view>
-      <view class="tab-item {{filterMode === 'all' ? 'active' : ''}}" bindtap="setFilter" data-mode="all">全部课程</view>
-    </view>
+    <scroll-view scroll-x class="tab-bar-scroll" show-scrollbar="{{false}}">
+        <view class="tab-bar">
+        <view class="tab-item {{filterMode === 'current' ? 'active' : ''}}" bindtap="setFilter" data-mode="current">当前课程</view>
+        <view class="tab-item {{filterMode === 'all' ? 'active' : ''}}" bindtap="setFilter" data-mode="all">全部课程</view>
+        <view class="tab-item {{filterMode === 'essay' ? 'active' : ''}}" bindtap="setFilter" data-mode="essay">短文练习</view>
+        </view>
+    </scroll-view>
     
-    <view class="sort-bar">
+    <view class="sort-bar" wx:if="{{filterMode !== 'essay'}}">
       <view class="sort-item {{sortMode === 'date' ? 'active' : ''}}" bindtap="setSort" data-mode="date">最新</view>
       <view class="sort-divider">|</view>
       <view class="sort-item {{sortMode === 'heat' ? 'active' : ''}}" bindtap="setSort" data-mode="heat">最热</view>
     </view>
+    <view class="history-btn-wrap" wx:if="{{filterMode === 'essay'}}" bindtap="openEssayHistory" hover-class="btn-hover">
+       <text class="history-btn-text">我的作品</text>
+    </view>
   </view>
 
+  <view class="essay-mode-container" wx:if="{{filterMode === 'essay'}}">
+      <scroll-view scroll-y class="essay-scroll" style="height: calc(100vh - {{statusBarHeight + navBarHeight + 120}}px); padding-bottom: calc(140px + env(safe-area-inset-bottom));">
+        <view class="essay-inner-padding">
+            <view class="essay-prompts-section">
+                <view class="section-header">
+                    <view class="section-title-group">
+                        <text class="section-title">随机单词 (5个)</text>
+                        <text class="section-subtitle">(点击可查看释义)</text>
+                    </view>
+                    <view class="refresh-btn" bindtap="refreshEssayPrompts">
+                        <text>换一换 ↻</text>
+                    </view>
+                </view>
+                <view class="tags-container">
+                    <view class="prompt-tag word-tag" wx:for="{{essayPrompts.words}}" wx:key="id" bindtap="showWordDetail" data-item="{{item}}">{{item.word}}</view>
+                </view>
+                
+                <view class="section-header" style="margin-top: 30rpx;">
+                    <text class="section-title">随机语法 (1-2个)</text>
+                </view>
+                <view class="tags-container">
+                    <view class="prompt-tag grammar-tag" wx:for="{{essayPrompts.grammars}}" wx:key="id" bindtap="showGrammarDetail" data-item="{{item}}">{{item.grammar}}</view>
+                </view>
+            </view>
+
+            <view class="essay-input-section">
+                <textarea 
+                    class="essay-textarea" 
+                    placeholder="请使用上面的单词和语法写一篇短文（最多300字） 点击上面单词和语法可查看释义..." 
+                    maxlength="300"
+                    value="{{essayContent}}"
+                    bindinput="onEssayInput"
+                ></textarea>
+                <view class="char-count">{{essayContent.length}}/300</view>
+            </view>
+
+            <view class="essay-result-section" wx:if="{{essayResult}}">
+                <view class="result-card">
+                    <view class="result-header">
+                        <text class="result-score-label">得分</text>
+                        <text class="result-score">{{essayResult.score}}</text>
+                    </view>
+                    <view class="result-content">
+                        <text class="result-label">老师点评:</text>
+                        <text class="result-text">{{essayResult.comment}}</text>
+                    </view>
+                    <view class="result-content" wx:if="{{essayResult.sentence_explanations.length}}">
+                        <text class="result-label">拆句讲解:</text>
+                        <view class="explain-item" wx:for="{{essayResult.sentence_explanations}}" wx:key="index">
+                            <rich-text class="explain-sentence" nodes="{{item.sentence}}"></rich-text>
+                            <rich-text class="explain-text" nodes="{{item.explanation}}"></rich-text>
+                        </view>
+                    </view>
+                    <view class="result-content" wx:if="{{essayResult.score < 80 && essayResult.rewrite}}">
+                        <text class="result-label">合格改写:</text>
+                        <text class="result-text">{{essayResult.rewrite}}</text>
+                    </view>
+                </view>
+            </view>
+            
+            <view style="height: 100rpx;"></view>
+        </view>
+      </scroll-view>
+
+      <view class="essay-footer-bar">
+          <button class="submit-btn {{isSubmitting ? 'submitting' : ''}}" bindtap="submitEssay" hover-class="btn-hover">
+              {{isSubmitting ? '智能批改中...' : '提交批改'}}
+          </button>
+      </view>
+  </view>
+
+  <block wx:else>
   <view class="search-bar" wx:if="{{filterMode === 'all'}}">
     <view class="search-wrap">
       <icon type="search" size="14" color="#94a3b8"></icon>
@@ -94,6 +172,8 @@
     <view style="height: 100px;"></view>
   </scroll-view>
 
+  </block>
+
   <view class="modal-mask" wx:if="{{showRulesModal}}" bindtap="hideRules">
     <view class="modal-content" catchtap="true">
       <view class="modal-header">
@@ -116,6 +196,52 @@
         <view class="rule-footer-tip">快来学习吧~</view>
       </scroll-view>
       <button class="modal-btn" bindtap="hideRules">我知道了</button>
+    </view>
+  </view>
+
+  <view class="modal-mask" wx:if="{{showDetailModal}}" bindtap="hideDetail">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header">
+        <text class="modal-title">详情</text>
+        <view class="close-btn" bindtap="hideDetail">×</view>
+      </view>
+      <scroll-view scroll-y class="modal-body">
+        <block wx:if="{{detailType === 'word'}}">
+           <view class="detail-section">
+             <view class="detail-label">单词</view>
+             <view class="detail-text" style="font-size: 18px; font-weight: bold;">{{detailData.word}}</view>
+             <view class="detail-label" style="margin-top: 10px;">释义</view>
+             <view class="detail-text">{{detailData.meaning}}</view>
+           </view>
+        </block>
+        <!-- Grammar Detail -->
+        <block wx:if="{{detailType === 'grammar'}}">
+             <view class="detail-section" wx:if="{{detailData.grammar_category || detailData.grammar_scope}}">
+                <view class="detail-tags">
+                  <text class="detail-tag" wx:if="{{detailData.grammar_category}}">{{detailData.grammar_category}}</text>
+                  <text class="detail-tag sub" wx:if="{{detailData.grammar_scope}}">{{detailData.grammar_scope}}</text>
+                </view>
+             </view>
+             
+             <view class="detail-section">
+               <view class="detail-label">含义</view>
+               <view class="detail-text">{{detailData.meaning || '暂无说明'}}</view>
+             </view>
+
+             <view class="detail-section" wx:if="{{detailData.usage_notes}}">
+               <view class="detail-label">用法</view>
+               <view class="detail-text">{{detailData.usage_notes}}</view>
+             </view>
+
+             <view class="detail-section" wx:if="{{detailData.examples && detailData.examples.length}}">
+               <view class="detail-label">例句</view>
+               <view class="example-item" wx:for="{{detailData.examples}}" wx:key="index" style="margin-bottom: 8px;">
+                 <view class="detail-text" style="font-weight: 500;">{{item.kr}}</view>
+                 <view class="detail-text" style="color: #64748b; font-size: 13px; margin-top: 2px;">{{item.cn}}</view>
+               </view>
+             </view>
+        </block>
+      </scroll-view>
     </view>
   </view>
 

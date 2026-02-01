@@ -24,14 +24,14 @@
          We'll assume some right padding to avoid overlap. -->
     <view class="nav-right">
        <view class="checkin-pill" catchtap="onCheckinTap" wx:if="{{showCheckin && checkinText}}">
-         <text>{{checkinText}}</text>
-       </view>
-       
-       <slot name="right-action"></slot>
+        <text class="checkin-text">{{checkinText}}</text>
+      </view>
+      
+      <slot name="right-action"></slot>
 
-       <view class="progress-pill" wx:if="{{progress}}">
-         <text>{{progress}}</text>
-       </view>
+      <view class="progress-pill" wx:if="{{progress}}">
+        <text class="progress-text">{{progress}}</text>
+      </view>
        
        <view class="settings-btn" catchtap="onSettingsTap" wx:if="{{showSettings}}">
       <view class="settings-icon"></view>

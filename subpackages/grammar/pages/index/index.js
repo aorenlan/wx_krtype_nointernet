@@ -1,4 +1,20 @@
-const grammarData = require('../../data/yonsei_grammar.js');
+const rawGrammarData = require('../../data/yonsei_grammar.js');
+
+let grammarData = [];
+if (Array.isArray(rawGrammarData)) {
+    grammarData = rawGrammarData;
+} else if (rawGrammarData && rawGrammarData.keys && rawGrammarData.values) {
+    const { keys, values } = rawGrammarData;
+    grammarData = values.map(row => {
+        const obj = {};
+        keys.forEach((k, i) => {
+            obj[k] = row[i];
+        });
+        return obj;
+    });
+} else {
+    grammarData = [];
+}
 
 const sortLessons = (a, b) => {
   const na = parseInt(a, 10);
@@ -220,9 +236,12 @@ Page({
 
   buildAudioUrl(text) {
       const baseUrl = 'https://enoss.aorenlan.fun/kr_yansei_grammar/audio/';
-      // Replace punctuation (including CJK) and spaces with underscore
+      // Replace punctuation (including English/CJK) and spaces with underscore
+      // Note: Do NOT use + quantifier. We want 1 char -> 1 underscore mapping.
+      // E.g. ", " (comma + space) should become "__" to match OSS file naming.
+      // English Punctuation: . , ? ! ~ : ; " '
       // CJK Punctuation: 。(3002) ，(FF0C) ？(FF1F) ！(FF01) …(2026) 、(3001) ：(FF1A) ；(FF1B)
-      let processed = text.replace(/[ \.,?!~:;"'’“”\u3002\uff0c\uff1f\uff01\u2026\u3001\uff1a\uff1b]+/g, '_');
+      let processed = text.replace(/[ \.,?!~:;"'’“”\u3002\uff0c\uff1f\uff01\u2026\u3001\uff1a\uff1b]/g, '_');
       // Encode
       const encoded = encodeURIComponent(processed);
       return `${baseUrl}${encoded}.mp3`;

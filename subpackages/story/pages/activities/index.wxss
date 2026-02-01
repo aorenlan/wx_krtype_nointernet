@@ -1,0 +1,86 @@
+page {
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.container {
+  padding: 20px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  display: block;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+  display: block;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.activity-card:active {
+  transform: scale(0.98);
+}
+
+.icon-box {
+  width: 56px;
+  height: 56px;
+  background: #eff6ff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon {
+  font-size: 28px;
+}
+
+.content {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+  display: block;
+}
+
+.arrow {
+  color: #cbd5e1;
+  font-size: 24px;
+  font-weight: 300;
+}
