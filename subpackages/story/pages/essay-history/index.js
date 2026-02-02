@@ -33,7 +33,27 @@ Page({
     this.setData({ loading: true });
     try {
         const db = wx.cloud.database();
+        
+        // 1. Get OpenID securely via cloud function
+        // This is necessary because client-side filtering by _openid might not work as expected
+        // if the database permissions are set to "Readable by all".
+        // We need the real openid to filter explicitly.
+        const { result } = await wx.cloud.callFunction({
+            name: 'quickstartFunctions',
+            data: { type: 'getOpenId' }
+        });
+        
+        if (!result || !result.openid) {
+            throw new Error('Failed to get user openid');
+        }
+        
+        const myOpenId = result.openid;
+        console.log('【Essay History】Got OpenID:', myOpenId);
+
         const res = await db.collection('essay_works')
+            .where({
+              _openid: myOpenId 
+            })
             .orderBy('createdAt', 'desc')
             .limit(50)
             .get();

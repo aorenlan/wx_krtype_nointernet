@@ -526,11 +526,29 @@
   color: #334155;
 }
 
+.input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.clear-input-btn {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 4px 0;
+}
+
+.clear-input-btn text {
+  margin-left: 4px;
+}
+
 .char-count {
   text-align: right;
   font-size: 12px;
   color: #cbd5e1;
-  margin-top: 8px;
 }
 
 .essay-footer-bar {
@@ -581,6 +599,16 @@
   border: 1px solid rgba(226, 232, 240, 0.5);
 }
 
+.result-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
 .result-header {
   display: flex;
   justify-content: space-between;
@@ -607,6 +635,21 @@
 
 .result-content {
   margin-bottom: 20px;
+}
+
+.result-retry {
+  margin-top: 10px;
+}
+
+.retry-btn {
+  width: 100%;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 0;
+  border: none;
 }
 
 .result-label {

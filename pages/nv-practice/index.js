@@ -293,6 +293,13 @@ Page({
         const hasShownWordTooltip = wx.getStorageSync(TOOLTIP_STORAGE_KEY);
         if (!hasShownWordTooltip) {
             this.setData({ showWordTooltip: true });
+            // Mark as shown immediately so it doesn't show again
+            wx.setStorageSync(TOOLTIP_STORAGE_KEY, true);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                this.setData({ showWordTooltip: false });
+            }, 5000);
         }
 
         this.loadDailySentenceEntry();
@@ -1714,7 +1721,6 @@ Page({
     ensureAudioContexts() {
         if (!this.wordAudio) {
             this.wordAudio = wx.createInnerAudioContext();
-            // Remove autoplay to avoid conflict with manual play() in playSrcOnce
             this.wordAudio.autoplay = false;
         }
         if (!this.cnAudio) {
@@ -1766,7 +1772,7 @@ Page({
         if (now - globalLast < 1200) return;
         this._missingAudioToastAt = now;
 
-        wx.showToast({ title: isChinese ? '释义音频加载失败，请手动点击' : '音频加载失败，请手动点击', icon: 'none', duration: 1500 });
+        wx.showToast({ title: '加载失败，请手动点击', icon: 'none', duration: 1500 });
     },
 
     getAudioFolder() {
@@ -1915,19 +1921,28 @@ Page({
     },
 
     playSrcOnce(audioCtx, src, cacheKey, cacheUrl) {
+        const playId = Math.random().toString(36).substring(7);
+        const logPrefix = `[PlaySrcOnce:${playId}]`;
+        console.log(logPrefix, 'Start request:', src);
+
         return new Promise((resolve) => {
-            if (!audioCtx || !src) return resolve(false);
+            if (!audioCtx || !src) {
+                console.warn(logPrefix, 'Invalid args');
+                return resolve(false);
+            }
 
             let settled = false;
             let started = false;
             let retryTimer = null;
             let failTimer = null;
+
             const cleanup = () => {
                 try { audioCtx.offEnded && audioCtx.offEnded(); } catch (e) {}
                 try { audioCtx.offError && audioCtx.offError(); } catch (e) {}
                 try { audioCtx.offCanplay && audioCtx.offCanplay(); } catch (e) {}
                 try { audioCtx.offStop && audioCtx.offStop(); } catch (e) {}
                 try { audioCtx.offPlay && audioCtx.offPlay(); } catch (e) {}
+                try { audioCtx.offWaiting && audioCtx.offWaiting(); } catch (e) {}
                 try { if (retryTimer) clearTimeout(retryTimer); } catch (e) {}
                 try { if (failTimer) clearTimeout(failTimer); } catch (e) {}
                 retryTimer = null;
@@ -1938,6 +1953,7 @@ Page({
                 if (settled) return;
                 settled = true;
                 cleanup();
+                console.log(logPrefix, 'Settled:', ok ? 'Success' : 'Failed');
                 try {
                     if (audioCtx.__nvPendingSettle === settle) {
                         audioCtx.__nvPendingSettle = null;
@@ -1946,68 +1962,94 @@ Page({
                 resolve(!!ok);
             };
 
+            // Stop previous if any
             try {
                 if (audioCtx.__nvPendingSettle) {
                     audioCtx.__nvPendingSettle(false);
                 }
             } catch (e) {}
             try { audioCtx.stop(); } catch (e) {}
-            cleanup();
+            
+            cleanup(); // Ensure clean slate
+            
             try { audioCtx.__nvPendingSettle = settle; } catch (e) {}
 
             const onCanplay = () => {
+                console.log(logPrefix, 'onCanplay');
                 if (cacheKey && cacheUrl && this._audioUrlMemo && this._audioUrlMemo.set) {
                     this._audioUrlMemo.set(cacheKey, cacheUrl);
                 }
-                // Robustness: If not started yet, try playing again when ready
+                // If not started yet, try playing again when ready
                 if (!started && !settled) {
-                    console.log('[PlaySrcOnce] onCanplay triggered, attempting play again');
+                    console.log(logPrefix, 'onCanplay -> attemptPlay');
                     attemptPlay();
                 }
             };
 
             const onPlay = () => {
+                console.log(logPrefix, 'onPlay (Started)');
                 started = true;
             };
 
+            const onWaiting = () => {
+                console.log(logPrefix, 'onWaiting');
+            };
+
             audioCtx.onEnded(() => {
+                console.log(logPrefix, 'onEnded');
                 settle(true);
             });
 
             audioCtx.onError((res) => {
-                console.error('[PlaySrcOnce] Error:', src, res);
+                console.error(logPrefix, 'onError:', res);
                 settle(false);
             });
 
-            if (audioCtx.onCanplay) {
-                audioCtx.onCanplay(onCanplay);
-            }
+            if (audioCtx.onCanplay) audioCtx.onCanplay(onCanplay);
+            if (audioCtx.onPlay) audioCtx.onPlay(onPlay);
+            if (audioCtx.onWaiting) audioCtx.onWaiting(onWaiting);
 
-            if (audioCtx.onPlay) {
-                audioCtx.onPlay(onPlay);
-            }
-
+            // Ensure autoplay is off to manually control playback
+            audioCtx.autoplay = false;
             audioCtx.src = src;
+            
             const attemptPlay = () => {
                 try {
+                    console.log(logPrefix, 'Calling audioCtx.play()');
                     audioCtx.play();
                 } catch (e) {
-                    console.error('[PlaySrcOnce] Play exception:', e);
+                    console.error(logPrefix, 'Play exception:', e);
                 }
             };
+            
+            // Manual play triggers loading
             attemptPlay();
+
+            // Timeout Logic
+            // If it's a local file, we expect it to be fast. If it stalls, it's likely corrupt or context issue.
+            // If it's network, it might take longer.
+            const isLocal = src.startsWith('http://usr/') || src.startsWith('wxfile://') || src.startsWith('/');
+            const retryDelay = isLocal ? 500 : 1500; // 500ms for local, 1.5s for network warning
 
             retryTimer = setTimeout(() => {
                 if (settled || started) return;
-                console.warn('[PlaySrcOnce] Retry timeout:', src);
-                attemptPlay();
-            }, 120);
+                console.warn(logPrefix, 'Retry timeout triggered. isLocal:', isLocal);
+                
+                if (isLocal) {
+                    // Fail fast for local files so we can fallback to network
+                    console.warn(logPrefix, 'Local file timeout -> Fail immediately to trigger fallback');
+                    settle(false);
+                } else {
+                    // For network, try one more time or just wait for overall timeout
+                    attemptPlay();
+                }
+            }, retryDelay);
 
             failTimer = setTimeout(() => {
                 if (settled || started) return;
-                console.error('[PlaySrcOnce] Overall timeout:', src);
+                console.error(logPrefix, 'Overall timeout:', src);
                 settle(false);
-            }, 3500);
+            }, 5000); // 5s overall safety
         });
     },
 
@@ -2182,7 +2224,7 @@ Page({
     tryAutoPronounce() {
         const s = this.data.settings || DEFAULT_SETTINGS;
         if (!s.autoPronounce) return;
-        if (!this._hasUserGesture) return;
+        // if (!this._hasUserGesture) return;
         const current = this.data.currentWord;
         if (!current || !current.id) return;
         if (this._autoPronouncedWordId === current.id) return;

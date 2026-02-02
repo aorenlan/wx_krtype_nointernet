@@ -72,12 +72,21 @@ Component({
       const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
       const menuButtonInfo = wx.getMenuButtonBoundingClientRect()
       const windowWidth = windowInfo.windowWidth || 375
+
+      // Detect iPad
+      const isIPad = (windowInfo.model || '').toLowerCase().includes('ipad')
+
       let capsuleLeft = null
       if (typeof menuButtonInfo.left === 'number') capsuleLeft = menuButtonInfo.left
       else if (typeof menuButtonInfo.right === 'number' && typeof menuButtonInfo.width === 'number') capsuleLeft = menuButtonInfo.right - menuButtonInfo.width
       if (typeof capsuleLeft !== 'number') capsuleLeft = windowWidth - 100
-      const rawPadding = Math.round(windowWidth - capsuleLeft + 12)
-      const capsulePaddingRight = Math.min(140, Math.max(72, rawPadding))
+      
+      // Adjust padding for iPad
+      const basePadding = isIPad ? 48 : 12
+      const maxPadding = isIPad ? 240 : 140
+
+      const rawPadding = Math.round(windowWidth - capsuleLeft + basePadding)
+      const capsulePaddingRight = Math.min(maxPadding, Math.max(72, rawPadding))
       
       const statusBarHeight = windowInfo.statusBarHeight || 20
       

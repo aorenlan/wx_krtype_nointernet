@@ -1462,7 +1462,7 @@
   color: #1e293b;
   font-weight: 700;
   white-space: nowrap;
-  animation: fadeInRotate 0.5s ease-out forwards;
+  animation: softAppear 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .nagging-style-switch {
@@ -1513,13 +1513,26 @@
   font-size: 20px;
   color: #1e293b;
   margin: 0 8px 12px 8px;
-  animation: fadeIn 0.3s ease-out;
+  animation: flowFadeIn 0.8s ease-out forwards;
   font-weight: 600;
 }
 
-@keyframes fadeInRotate {
-  from { opacity: 0; transform: scale(0.5) rotate(0deg); }
-  to { opacity: 0.4; transform: scale(1) rotate(var(--rotate, 0deg)); }
+@keyframes softAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px) rotate(var(--rotate, 0deg));
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1) translateY(0) rotate(var(--rotate, 0deg));
+    filter: blur(0);
+  }
+}
+
+@keyframes flowFadeIn {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .nagging-center {

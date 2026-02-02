@@ -40,7 +40,7 @@
   </view>
 
   <view class="essay-mode-container" wx:if="{{filterMode === 'essay'}}">
-      <scroll-view scroll-y class="essay-scroll" style="height: calc(100vh - {{statusBarHeight + navBarHeight + 120}}px); padding-bottom: calc(140px + env(safe-area-inset-bottom));">
+      <scroll-view scroll-y class="essay-scroll" scroll-into-view="{{scrollTarget}}" scroll-with-animation="{{true}}" style="height: calc(100vh - {{statusBarHeight + navBarHeight + 120}}px); padding-bottom: calc(140px + env(safe-area-inset-bottom));">
         <view class="essay-inner-padding">
             <view class="essay-prompts-section">
                 <view class="section-header">
@@ -72,29 +72,43 @@
                     value="{{essayContent}}"
                     bindinput="onEssayInput"
                 ></textarea>
-                <view class="char-count">{{essayContent.length}}/300</view>
+                <view class="input-footer">
+                    <view class="clear-input-btn" bindtap="clearEssay" wx:if="{{essayContent.length > 0}}">
+                        <icon type="clear" size="14" color="#cbd5e1"></icon>
+                        <text>清空</text>
+                    </view>
+                    <view class="char-count">{{essayContent.length}}/300</view>
+                </view>
             </view>
 
-            <view class="essay-result-section" wx:if="{{essayResult}}">
+            <view class="essay-result-section" id="essay-result-section" wx:if="{{essayResult || essayError}}">
                 <view class="result-card">
-                    <view class="result-header">
+                    <view class="result-error" wx:if="{{essayError}}">{{essayError.message}}</view>
+                    <view class="result-header" wx:if="{{essayResult}}">
                         <text class="result-score-label">得分</text>
                         <text class="result-score">{{essayResult.score}}</text>
                     </view>
-                    <view class="result-content">
+                    <view class="result-content" wx:if="{{essayResult && essayResult.comment}}">
                         <text class="result-label">老师点评:</text>
-                        <text class="result-text">{{essayResult.comment}}</text>
+                        <rich-text class="result-text" nodes="{{essayResult.commentHtml || essayResult.comment}}"></rich-text>
                     </view>
-                    <view class="result-content" wx:if="{{essayResult.sentence_explanations.length}}">
+                    <view class="result-content" wx:if="{{essayResult && essayResult.sentence_explanations.length}}">
                         <text class="result-label">拆句讲解:</text>
-                        <view class="explain-item" wx:for="{{essayResult.sentence_explanations}}" wx:key="index">
+                        <view class="explain-item" wx:for="{{essayResult.sentence_explanations}}" wx:key="index" id="explain-{{index}}">
                             <rich-text class="explain-sentence" nodes="{{item.sentence}}"></rich-text>
                             <rich-text class="explain-text" nodes="{{item.explanation}}"></rich-text>
                         </view>
                     </view>
-                    <view class="result-content" wx:if="{{essayResult.score < 80 && essayResult.rewrite}}">
+                    <view class="result-content" wx:if="{{essayResult && essayResult.score < 80 && essayResult.rewrite}}">
                         <text class="result-label">合格改写:</text>
                         <text class="result-text">{{essayResult.rewrite}}</text>
+                    </view>
+                    
+                    <!-- Anchor for auto-scrolling to bottom -->
+                    <view id="result-bottom-anchor" style="height: 1px;"></view>
+
+                    <view class="result-retry" wx:if="{{essayError && essayError.canRetry}}">
+                        <button class="retry-btn" bindtap="retryEssay">再次校验（免广告）</button>
                     </view>
                 </view>
             </view>
@@ -105,7 +119,7 @@
 
       <view class="essay-footer-bar">
           <button class="submit-btn {{isSubmitting ? 'submitting' : ''}}" bindtap="submitEssay" hover-class="btn-hover">
-              {{isSubmitting ? '智能批改中...' : '提交批改'}}
+              {{isSubmitting ? (submitStatus === 'thinking' ? '思考中...' : (submitStatus === 'generating' ? '生成中...' : '智能批改中...')) : '提交批改'}}
           </button>
       </view>
   </view>

@@ -9,7 +9,8 @@
     "pages/daily-sentence/index",
     "pages/daily-sentence-detail/index",
     "pages/daily-sentence-history/index",
-    "pages/nv-settings/index"
+    "pages/nv-settings/index",
+    "pages/time-learning/index"
   ],
   "preloadRule": {
     "pages/index/index": {

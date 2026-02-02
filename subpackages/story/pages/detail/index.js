@@ -122,7 +122,7 @@ Page({
     // Process segments for display
     const displaySegments = segments.map(seg => ({
       ...seg,
-      displayKorean: this.parseMarkdown(seg.korean),
+      displayKorean: (seg.displayKorean && seg.displayKorean.length > 0) ? seg.displayKorean : this.parseMarkdown(seg.korean),
       chinese: seg.chinese
     }));
 

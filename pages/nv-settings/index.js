@@ -561,6 +561,12 @@ Page({
     );
   },
 
+  navigateToTimeLearning() {
+    wx.navigateTo({
+      url: '/pages/time-learning/index'
+    });
+  },
+
   selectCategory: function (e) {
     const category = e.currentTarget.dataset.category;
     const nextCategory = String(category || '');

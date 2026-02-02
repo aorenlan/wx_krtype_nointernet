@@ -26,6 +26,161 @@ const isUnsafeContent = (text) => {
   return keywordPattern.test(raw);
 };
 
+const clampScore = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  const rounded = Math.round(num);
+  if (rounded < 0) return 0;
+  if (rounded > 100) return 100;
+  return rounded;
+};
+
+const unescapeJsonString = (value) => {
+  return String(value || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\');
+};
+
+const formatCommentToHtml = (comment) => {
+    if (!comment) return '';
+    let safeComment = String(comment)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    
+    // Convert **text** to <span style="font-weight: bold;">text</span>
+    let commentHtml = safeComment.replace(/\*\*(.*?)\*\*/g, '<span style="font-weight: bold;">$1</span>');
+    
+    // Convert newlines to <br>
+    commentHtml = commentHtml.replace(/\n/g, '<br>');
+    return commentHtml;
+};
+
+const extractPartialEssayResult = (text) => {
+  const raw = String(text || '');
+  const result = {
+      score: 0,
+      comment: '',
+      sentence_explanations: [],
+      rewrite: ''
+  };
+
+  // Extract Score
+  const scoreMatch = raw.match(/"score"\s*:\s*([0-9]{1,3})/) || raw.match(/score\s*[:：]\s*([0-9]{1,3})/i);
+  if (scoreMatch) result.score = clampScore(scoreMatch[1]) || 0;
+
+  // Extract Comment (Partial or Complete)
+  const commentStartRegex = /"comment"\s*:\s*"/;
+  const commentStart = raw.match(commentStartRegex) || raw.match(/"点评"\s*:\s*"/);
+  if (commentStart) {
+      const startIndex = commentStart.index + commentStart[0].length;
+      let content = raw.slice(startIndex);
+      
+      // Find closing quote that is NOT escaped
+      let endIndex = -1;
+      for (let i = 0; i < content.length; i++) {
+          if (content[i] === '"' && (i === 0 || content[i-1] !== '\\')) {
+              endIndex = i;
+              break;
+          }
+      }
+      
+      if (endIndex !== -1) {
+          content = content.slice(0, endIndex);
+      }
+      // If no closing quote, use all content (streaming)
+      
+      result.comment = unescapeJsonString(content);
+  }
+
+  // Extract Sentence Explanations (Partial or Complete)
+  // Regex body for a JSON string value
+  const strBody = '"((?:[^"\\\\]|\\\\.)*)"';
+  const pairRegex = new RegExp(`"sentence"\\s*:\\s*${strBody}\\s*,\\s*"explanation"\\s*:\\s*${strBody}`, 'g');
+  let pair;
+  // Use a fresh regex execution loop on the full text
+  while ((pair = pairRegex.exec(raw)) !== null) {
+    result.sentence_explanations.push({
+      sentence: unescapeJsonString(pair[1]),
+      explanation: unescapeJsonString(pair[2])
+    });
+  }
+
+  return result;
+};
+
+const extractEssayResultFromText = (text) => {
+  const raw = String(text || '');
+  const result = {};
+
+  const scoreMatch = raw.match(/"score"\s*:\s*([0-9]{1,3})/) || raw.match(/score\s*[:：]\s*([0-9]{1,3})/i) || raw.match(/"评分"\s*:\s*([0-9]{1,3})/);
+  if (scoreMatch) result.score = clampScore(scoreMatch[1]);
+
+  // Regex body for a JSON string value: matches "content" where content can contain escaped quotes
+  // Capture group 1 is the content.
+  const strBody = '"((?:[^"\\\\]|\\\\.)*)"';
+
+  const commentMatch = raw.match(new RegExp(`"comment"\\s*:\\s*${strBody}`)) || 
+                       raw.match(new RegExp(`"点评"\\s*:\\s*${strBody}`)) || 
+                       raw.match(new RegExp(`"feedback"\\s*:\\s*${strBody}`));
+  if (commentMatch) result.comment = unescapeJsonString(commentMatch[1]);
+
+  const rewriteMatch = raw.match(new RegExp(`"rewrite"\\s*:\\s*${strBody}`)) || 
+                       raw.match(new RegExp(`"改写"\\s*:\\s*${strBody}`)) || 
+                       raw.match(new RegExp(`"model_answer"\\s*:\\s*${strBody}`));
+  if (rewriteMatch) result.rewrite = unescapeJsonString(rewriteMatch[1]);
+
+  const sentences = [];
+  const pairRegex = new RegExp(`"sentence"\\s*:\\s*${strBody}\\s*,\\s*"explanation"\\s*:\\s*${strBody}`, 'g');
+  let pair;
+  while ((pair = pairRegex.exec(raw)) !== null) {
+    sentences.push({
+      sentence: unescapeJsonString(pair[1]),
+      explanation: unescapeJsonString(pair[2])
+    });
+  }
+  if (sentences.length) result.sentence_explanations = sentences;
+
+  return Object.keys(result).length ? result : null;
+};
+
+const normalizeEssayResult = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const score = clampScore(raw.score != null ? raw.score : raw.评分);
+  const comment = raw.comment != null ? raw.comment : (raw.review != null ? raw.review : (raw.feedback != null ? raw.feedback : (raw.点评 != null ? raw.点评 : '')));
+    const rewrite = raw.rewrite != null ? raw.rewrite : (raw.rewrite_text != null ? raw.rewrite_text : (raw.model_answer != null ? raw.model_answer : (raw.改写 != null ? raw.改写 : '')));
+    
+    // Clean rewrite field: remove HTML tags
+    const cleanRewrite = rewrite ? String(rewrite).replace(/<[^>]+>/g, '') : '';
+    
+    // Format comment: convert **text** to <b>text</b> for rich-text display
+    let commentHtml = '';
+    if (comment) {
+        commentHtml = formatCommentToHtml(comment);
+    }
+
+    const rawSentences = Array.isArray(raw.sentence_explanations)
+    ? raw.sentence_explanations
+    : (Array.isArray(raw.sentenceExplanations) ? raw.sentenceExplanations : (Array.isArray(raw.explanations) ? raw.explanations : (Array.isArray(raw.拆句讲解) ? raw.拆句讲解 : [])));
+  return {
+    score: score == null ? 0 : score,
+    comment: comment != null ? String(comment) : '',
+    commentHtml: commentHtml, // Add html formatted comment
+    sentence_explanations: (Array.isArray(rawSentences) ? rawSentences : [])
+      .filter(item => item)
+      .map(item => ({
+        sentence: item.sentence != null ? String(item.sentence) : (item.text != null ? String(item.text) : ''),
+        explanation: item.explanation != null ? String(item.explanation) : (item.analysis != null ? String(item.analysis) : '')
+      })),
+    rewrite: cleanRewrite
+  };
+};
+
 Page({
   data: {
     statusBarHeight: 20,
@@ -45,7 +200,10 @@ Page({
     essayPrompts: { words: [], grammars: [] },
     essayContent: '',
     essayResult: null,
+    essayError: null,
     isSubmitting: false,
+    submitStatus: 'idle', // 'idle' | 'thinking' | 'generating'
+    scrollTarget: '',
 
     // Detail Modal Data
     showDetailModal: false,
@@ -80,6 +238,12 @@ Page({
       console.error('rewarded video error', err);
     });
     this._rewardedAd.onClose((res) => {
+      // If ad was already marked completed (e.g. via timeout/skip), ignore this event
+      // to prevent a late "skip" action from blocking the result.
+      if (this._adCompleted) {
+          return;
+      }
+
       const finished = res && res.isEnded === false ? false : true;
       if (!finished) {
         this._adBlocked = true;
@@ -110,12 +274,45 @@ Page({
     });
   },
 
+  showRewardedAdWithTimeout(timeoutMs = 5000) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        console.warn('Ad show timeout, resolving false');
+        resolve(false);
+      }, timeoutMs);
+
+      this.showRewardedAd()
+        .then((ok) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(!!ok);
+        })
+        .catch(() => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(false);
+        });
+    });
+  },
+
   async showRewardedAd() {
+    // Re-initialize if missing (e.g. createRewardedVideoAd failed initially or instance lost)
+    if (!this._rewardedAd && wx.createRewardedVideoAd) {
+      this.initRewardedAd();
+    }
+    
     if (!this._rewardedAd) return false;
+    
     try {
       await this._rewardedAd.show();
       return true;
     } catch (e) {
+      console.warn('Ad show failed, retrying load...', e);
       try {
         await this._rewardedAd.load();
         await this._rewardedAd.show();
@@ -129,7 +326,12 @@ Page({
   },
 
   finishSubmitting() {
-    if (this.data.isSubmitting) this.setData({ isSubmitting: false });
+    if (this.data.isSubmitting) {
+        this.setData({ 
+            isSubmitting: false,
+            submitStatus: 'idle'
+        });
+    }
   },
 
   applyEssayResult(resultData, context) {
@@ -139,7 +341,9 @@ Page({
     }
     this._pendingEssayResult = null;
     this._pendingEssayContext = null;
-    this.setData({ essayResult: resultData });
+    const essayError = this._pendingEssayError || null;
+    this._pendingEssayError = null;
+    this.setData({ essayResult: resultData, essayError });
     wx.showToast({ title: '批改完成', icon: 'success' });
     wx.cloud.callFunction({
       name: 'checkEssay',
@@ -177,6 +381,12 @@ Page({
     }
     this._pendingEssayResult = resultData;
     this._pendingEssayContext = context;
+  },
+
+  retryEssay() {
+      if (this.data.isSubmitting) return;
+      this._skipAdOnce = true;
+      this.submitEssay();
   },
 
   onShow() {
@@ -222,10 +432,11 @@ Page({
 
     let shouldRefreshEssay = false;
     if (isCourseChanged) {
+        // If user is currently in essay mode, refresh the essay prompts immediately
         if (this.data.filterMode === 'essay') {
             shouldRefreshEssay = true;
         } else {
-            // Clear essay prompts so it refreshes when user switches to essay tab
+            // Otherwise, clear essay prompts so it refreshes when user switches to essay tab
             dataToSet.essayPrompts = { words: [], grammars: [] };
             dataToSet.essayResult = null;
             dataToSet.essayContent = '';
@@ -268,7 +479,8 @@ Page({
 
   async loadStories(force = false) {
     // Cache check for BOTH date and heat modes
-    const cacheKey = `story_cache_${this.data.sortMode}`;
+    // Use v3 to invalidate previous cache
+    const cacheKey = `story_cache_v3_${this.data.sortMode}`;
     if (!force) {
         const cache = wx.getStorageSync(cacheKey);
         const now = Date.now();
@@ -302,8 +514,15 @@ Page({
             }
         }
       });
+
+      console.log('【Client Log】storySync response:', res);
+      
       if (res && res.result && res.result.data) {
         let rawList = res.result.data;
+        console.log('【Client Log】Data length:', rawList.length);
+        if (rawList.length > 0) {
+            console.log('【Client Log】First item _openid:', rawList[0]._openid);
+        }
         
         // Filter logic:
         // 1. By default show ALL stories sorted by time (newest first).
@@ -370,7 +589,7 @@ Page({
         });
         
         // Cache for current sort mode
-        const cacheKey = `story_cache_${this.data.sortMode}`;
+        const cacheKey = `story_cache_v2_${this.data.sortMode}`;
         wx.setStorageSync(cacheKey, {
             data: messages,
             time: Date.now()
@@ -475,7 +694,10 @@ Page({
     
     this.setData({ filterMode: mode }, () => {
       if (mode === 'essay') {
-          if (!this.data.essayPrompts.words.length) {
+          // Refresh prompts if empty OR if settings changed (detected via empty check strategy above)
+          // But actually, we should check if current prompts match current settings?
+          // Simpler: if prompts are empty (cleared by onShow), refresh.
+          if (!this.data.essayPrompts || !this.data.essayPrompts.words || !this.data.essayPrompts.words.length) {
               this.refreshEssayPrompts();
           }
       } else {
@@ -485,13 +707,18 @@ Page({
   },
 
   async refreshEssayPrompts() {
+      // Use this.data.settings (which is updated in onShow) or fallback to storage
+      // Ensure we have the LATEST settings
       const settings = this.data.settings || wx.getStorageSync('settings') || {};
       const category = settings.category;
       
+      console.log('Refreshing Essay Prompts with settings:', settings);
+
       wx.showLoading({ title: '出题中...' });
       
       try {
           // Get Words
+          // Must pass explicit filters to getWords
           const wordRes = await getWords(category, 100, 0, {
               lessonId: settings.yonseiLessonId,
               topikLevel: settings.topikLevel,
@@ -520,6 +747,7 @@ Page({
                   grammars: selectedGrammars
               },
               essayResult: null,
+              essayError: null,
               essayContent: '' 
           });
       } catch (e) {
@@ -543,6 +771,22 @@ Page({
       }
       
       this.setData({ essayContent: value });
+  },
+
+  clearEssay() {
+      wx.showModal({
+          title: '确认清空',
+          content: '确定要清空当前内容和批改结果吗？',
+          success: (res) => {
+              if (res.confirm) {
+                  this.setData({
+                      essayContent: '',
+                      essayResult: null,
+                      essayError: null
+                  });
+              }
+          }
+      });
   },
 
   async submitEssay() {
@@ -579,19 +823,40 @@ Page({
       }
       
       const settings = this.data.settings || wx.getStorageSync('settings') || {};
-      const confirmed = await this.confirmAdGate();
-      if (!confirmed) return;
+      const skipAdOnce = this._skipAdOnce === true;
+      this._skipAdOnce = false;
 
-      this._adCompleted = false;
+      this._adCompleted = skipAdOnce;
       this._adBlocked = false;
       this._pendingEssayResult = null;
       this._pendingEssayContext = null;
+      this._pendingEssayError = null;
 
-      this.setData({ isSubmitting: true });
-      const adStarted = await this.showRewardedAd();
-      if (!adStarted) {
-          this.finishSubmitting();
-          return;
+      this.setData({ 
+          isSubmitting: true, 
+          submitStatus: 'thinking',
+          essayError: null,
+          scrollTarget: '' 
+      });
+
+      if (!skipAdOnce) {
+          const confirmed = await this.confirmAdGate();
+          if (!confirmed) {
+              this.finishSubmitting();
+              return;
+          }
+
+          const adStarted = await this.showRewardedAdWithTimeout(5000);
+          if (!adStarted) {
+              console.log('Ad failed to start or timed out, skipping ad check.');
+              this._adCompleted = true;
+              // Inform user that we are skipping the ad
+              wx.showToast({
+                  title: '广告加载超时，已自动跳过',
+                  icon: 'none',
+                  duration: 2000
+              });
+          }
       }
 
       try {
@@ -629,21 +894,24 @@ Page({
                 - **如果句子中有【敬语不统一】、【文体混用】、【错别字】或语法错误**，请在 sentence 字段中用 <span style="color: #ef4444;">错误部分</span> 标红显示错误，并在 explanation 中明确指出错误类型（如“敬语混用”、“拼写错误”）并给出正确写法。
                 - 注意：在 explanation 中，**不要**批评该句未包含指定的单词或语法（这是针对整篇文章的要求，而非单句）。
              6. 当分数 >= 80：rewrite 置为空字符串。重点在于指出文中的小错误（如有）。
-             7. 当分数 < 80：必须输出 rewrite，给出一篇符合要求的完整韩语短文。注意：改写时必须使用适合【${levelInfo}】水平的单词和语法，确保学生能够理解，避免使用过于高深的词汇。
+             7. 当分数 < 80：必须输出 rewrite，给出一篇符合要求的完整韩语短文。注意：改写时必须使用适合【${levelInfo}】水平的单词和语法，确保学生能够理解，避免使用过于高深的词汇。**rewrite 内容必须精简，篇幅应与原文相当（约100-150字），严禁长篇大论。**rewrite 内容必须是纯文本，严禁包含任何 HTML 标签（如 <span>, <p> 等）。
              8. 严禁输出 Markdown 代码块标记（如 \`\`\`json），请直接输出纯 JSON 字符串。
                 - 必须确保所有字符串（特别是 explanation 字段）中的换行符都已转义（使用 \\n）。
                 - 绝对禁止在 JSON 字符串值中直接使用未转义的换行符。
+                - 必须只输出 JSON 对象本身，禁止任何额外文字。
+                - 必须输出完整字段，缺失字段也要给空值：comment 为空字符串，sentence_explanations 为空数组，rewrite 为空字符串。
+                - 如果格式确实无法保证，请退化为最小 JSON：{"score": 数字, "comment":"", "sentence_explanations":[], "rewrite":""}
                 格式如下：
              {
                "score": 0-100之间的整数,
-               "comment": "详细的中文点评。请先肯定学生的优点，然后重点指出**敬语/文体/拼写**方面的问题（如有），最后给出改进建议。",
+               "comment": "详细的中文点评。请先肯定学生的优点，然后重点指出**敬语/文体/拼写**方面的问题（如有），最后给出改进建议。可以使用 **加粗** 来强调重点。",
                "sentence_explanations": [
                  {
                    "sentence": "原文中的一句韩语（如有错误请按要求标红）",
                    "explanation": "该句的中文讲解（务必指出敬语、文体、拼写等具体错误）"
                  }
                ],
-               "rewrite": "当分数<80时提供的合格韩语短文"
+               "rewrite": "当分数<80时提供的合格韩语短文（纯文本，无HTML标签，精简）"
              }
              如果文章完全无关、无法识别或字数过少，请给低分并说明原因。但务必注意：即使这种情况下，也必须生成一个 rewrite（合格改写/范文），展示如何使用要求的单词和语法写出正确的短文，供学生参考学习。绝不允许 rewrite 为空！`;
 
@@ -659,61 +927,154 @@ Page({
                 });
 
                 let aiText = '';
+                // Init shell for streaming
+                let currentResult = { score: 0, comment: '正在分析中...', commentHtml: '正在分析中...', sentence_explanations: [], rewrite: '' };
+                this.setData({ essayResult: currentResult });
+
+                let lastUpdateLen = 0;
+                let hasScrolled = false;
+                let isAnalysisToastShown = false;
+
                 for await (const str of res.textStream) {
                     aiText += str;
+                    // Update UI every ~10 chars or so to avoid too many setDatas, but for text stream 10 is fine
+                    if (aiText.length - lastUpdateLen > 5) {
+                        lastUpdateLen = aiText.length;
+                        
+                        // Update status to generating if not already
+                        if (this.data.submitStatus !== 'generating') {
+                             this.setData({ submitStatus: 'generating' });
+                        }
+
+                        // Scroll to result section once when content starts streaming
+                        if (!hasScrolled && aiText.length > 10) {
+                            hasScrolled = true;
+                            this.setData({ scrollTarget: 'essay-result-section' });
+                        }
+
+                        const partial = extractPartialEssayResult(aiText);
+                        
+                        // Update UI with partial result
+                        const updates = {};
+                        let hasChanges = false;
+                        
+                        if (partial.comment) {
+                            const formatted = formatCommentToHtml(partial.comment);
+                            if (formatted !== currentResult.commentHtml) {
+                                currentResult.comment = partial.comment;
+                                currentResult.commentHtml = formatted;
+                                updates['essayResult.comment'] = partial.comment;
+                                updates['essayResult.commentHtml'] = formatted;
+                                hasChanges = true;
+                            }
+                        }
+                        
+                        if (partial.score > 0 && partial.score !== currentResult.score) {
+                            currentResult.score = partial.score;
+                            updates['essayResult.score'] = partial.score;
+                            hasChanges = true;
+                        }
+
+                        if (partial.sentence_explanations.length > currentResult.sentence_explanations.length) {
+                             currentResult.sentence_explanations = partial.sentence_explanations;
+                             updates['essayResult.sentence_explanations'] = partial.sentence_explanations;
+                             hasChanges = true;
+                             
+                             // Show toast when analysis starts coming in (detected first sentence)
+                             if (!isAnalysisToastShown) {
+                                 isAnalysisToastShown = true;
+                                 wx.showToast({
+                                     title: '解析生成中...',
+                                     icon: 'none',
+                                     duration: 2000
+                                 });
+                             }
+                        }
+                        
+                        // Keep scrolling to bottom as content grows
+                        if (hasChanges) {
+                             // Use a toggle to ensure scroll-into-view triggers even if value is same string
+                             // But since we want to stick to bottom, we can just clear it and set it back? 
+                             // No, that's too much thrashing.
+                             // Better approach: calculate a large scrollTop.
+                             // But we don't have easy access to height in logic layer without query.
+                             // Let's try the toggle trick with two anchors at bottom?
+                             // Or just set it to 'result-bottom-anchor' every time. 
+                             // If it doesn't trigger, we might need to set it to '' then back to 'result-bottom-anchor' in next tick.
+                             // Let's try setting it directly first.
+                             
+                             // To make sure it triggers, we can use a sequence of updates.
+                             // But `setData` is async.
+                             
+                             // Let's just update scrollTarget to bottom anchor.
+                             // If the previous value was 'essay-result-section', it will scroll down.
+                             // If it was already 'result-bottom-anchor', it might not scroll again if the view grew.
+                             
+                             // Workaround: We really want "stick to bottom".
+                             // We can use a unique ID for each update? No, ID must exist in WXML.
+                             // We can use the last item's ID?
+                             // If sentence_explanations added a new item, scroll to that item!
+                             
+                             if (partial.sentence_explanations.length > 0) {
+                                 const lastIdx = partial.sentence_explanations.length - 1;
+                                 updates['scrollTarget'] = `explain-${lastIdx}`;
+                             } else {
+                                 updates['scrollTarget'] = 'result-bottom-anchor';
+                             }
+                             
+                             this.setData(updates);
+                        }
+                    }
                 }
                 console.log('Frontend AI Response:', aiText);
 
                 // Clean up markdown code blocks if any
                 aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
                 
-                let resultData = null;
+                let rawResult = null;
+                let hadParseError = false;
                 try {
-                    resultData = JSON.parse(aiText);
+                    rawResult = JSON.parse(aiText);
                 } catch (parseErr) {
-                    console.warn('First JSON parse failed, trying to repair:', parseErr);
-                    // Try to find JSON object in text
-                    let jsonMatch = aiText.match(/\{[\s\S]*\}/);
+                    hadParseError = true;
+                    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
-                        let jsonStr = jsonMatch[0];
-                        // Attempt to fix unescaped newlines in strings
-                        // This is a heuristic: replace newlines that are likely inside strings
-                        // A safer way for common LLM output is to assume newlines inside the structure are valid whitespace,
-                        // but newlines INSIDE quotes are invalid.
-                        // Since we can't easily distinguish, we'll try a common fix:
-                        // If the error is 'Unexpected token', it might be a newline.
-                        // Let's try replacing literal newlines with \n if the initial parse failed.
-                        // Note: This is risky if the JSON is pretty-printed (contains valid newlines).
-                        // However, most LLM JSON is compact or uses \n. 
-                        // If we see actual line breaks in the string, it's usually the error source.
-                        
+                        const jsonStr = jsonMatch[0];
                         try {
-                            resultData = JSON.parse(jsonStr);
+                            rawResult = JSON.parse(jsonStr);
                         } catch (e2) {
-                            // Smarter fix: Only escape control characters INSIDE strings
-                            // Use regex to find strings and replace \n within them to fix "Unexpected token" errors
                             try {
                                 const fixedStr = jsonStr.replace(/"(?:[^\\"]|\\.)*"/g, (match) => {
                                     return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
                                 });
-                                resultData = JSON.parse(fixedStr);
+                                rawResult = JSON.parse(fixedStr);
                             } catch (e3) {
-                                console.error('All JSON parse attempts failed', e3);
+                                rawResult = null;
                             }
                         }
                     }
                 }
 
-                if (resultData) {
-                    const normalizedResult = {
-                        ...resultData,
-                        score: Number(resultData.score) || 0,
-                        sentence_explanations: (Array.isArray(resultData.sentence_explanations) ? resultData.sentence_explanations : []).filter(item => item).map(item => ({
-                            sentence: item.sentence ? String(item.sentence) : '',
-                            explanation: item.explanation ? String(item.explanation) : ''
-                        })),
-                        rewrite: resultData.rewrite != null ? String(resultData.rewrite) : ''
-                    };
+                if (!rawResult) {
+                    const extracted = extractEssayResultFromText(aiText);
+                    if (extracted) {
+                        rawResult = extracted;
+                        hadParseError = true;
+                    } else if (aiText && aiText.trim().length > 0) {
+                        // If extraction fails but we have text, treat it as comment
+                        console.warn('Parsing failed completely, using raw text as comment');
+                        rawResult = {
+                            score: 0,
+                            comment: aiText,
+                            sentence_explanations: [],
+                            rewrite: ''
+                        };
+                        hadParseError = true;
+                    }
+                }
+
+                const normalizedResult = normalizeEssayResult(rawResult);
+                if (normalizedResult) {
                     const context = {
                         content,
                         prompts: this.data.essayPrompts,
@@ -722,8 +1083,24 @@ Page({
                         topikLevel: settings.topikLevel,
                         topikSession: settings.topikSession
                     };
+
+                    // Validation: Check for chaotic/empty format
+                    // Even if parsing succeeded, check for meaningful content
+                    const isMalformed = 
+                        !normalizedResult.comment || 
+                        normalizedResult.comment.length < 5 || 
+                        !normalizedResult.sentence_explanations || 
+                        normalizedResult.sentence_explanations.length === 0;
+
+                    if (hadParseError || isMalformed) {
+                        this._pendingEssayError = { message: '打分异常', canRetry: true };
+                        this._skipAdOnce = true;
+                        if (isMalformed) {
+                             console.warn('Essay result marked as malformed:', normalizedResult);
+                        }
+                    }
                     this.handleEssayResult(normalizedResult, context);
-                    return; 
+                    return;
                 }
              } catch (aiErr) {
                  console.error('Frontend AI failed, falling back to cloud function:', aiErr);
@@ -747,33 +1124,30 @@ Page({
 
           if (res.result && res.result.success) {
               const rawResult = res.result.data || {};
-              const normalizedResult = {
-                  ...rawResult,
-                  score: Number(rawResult.score) || 0,
-                  sentence_explanations: (Array.isArray(rawResult.sentence_explanations) ? rawResult.sentence_explanations : []).filter(item => item).map(item => ({
-                      sentence: item.sentence ? String(item.sentence) : '',
-                      explanation: item.explanation ? String(item.explanation) : ''
-                  })),
-                  rewrite: rawResult.rewrite ? String(rawResult.rewrite) : ''
-              };
-              const context = {
-                  content,
-                  prompts: this.data.essayPrompts,
-                  category: settings.category,
-                  lessonId: settings.yonseiLessonId,
-                  topikLevel: settings.topikLevel,
-                  topikSession: settings.topikSession
-              };
-              this.handleEssayResult(normalizedResult, context);
-          } else {
-              console.error('checkEssay failed result:', res.result);
-              throw new Error(res.result?.message || 'Check failed');
+              const normalizedResult = normalizeEssayResult(rawResult);
+              if (normalizedResult) {
+                  const context = {
+                      content,
+                      prompts: this.data.essayPrompts,
+                      category: settings.category,
+                      lessonId: settings.yonseiLessonId,
+                      topikLevel: settings.topikLevel,
+                      topikSession: settings.topikSession
+                  };
+                  this.handleEssayResult(normalizedResult, context);
+                  return;
+              }
           }
+          this._skipAdOnce = true;
+          this.setData({ essayResult: null, essayError: { message: '打分异常', canRetry: true } });
+          this.finishSubmitting();
       } catch (e) {
           if (!this._adBlocked) {
             console.error('checkEssay call failed:', e);
-            wx.showToast({ title: '批改失败: ' + (e.message || '未知错误'), icon: 'none', duration: 3000 });
+            wx.showToast({ title: '打分异常', icon: 'none', duration: 3000 });
           }
+          this._skipAdOnce = true;
+          this.setData({ essayResult: null, essayError: { message: '打分异常', canRetry: true } });
           this.finishSubmitting();
       }
   },
