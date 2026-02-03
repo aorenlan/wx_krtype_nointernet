@@ -10,7 +10,9 @@
     "pages/daily-sentence-detail/index",
     "pages/daily-sentence-history/index",
     "pages/nv-settings/index",
-    "pages/time-learning/index"
+    "pages/time-learning/index",
+    "pages/number-learning-2/index",
+    "pages/color-blocks/index"
   ],
   "preloadRule": {
     "pages/index/index": {
@@ -100,7 +102,7 @@
       },
       {
         "pagePath": "pages/hi-chat/index",
-        "text": "HI~",
+        "text": "趣味韩语",
         "iconPath": "assets/tabbar/re_talk.png",
         "selectedIconPath": "assets/tabbar/re_talk.png"
       },

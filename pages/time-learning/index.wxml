@@ -2,58 +2,111 @@
   <view class="back-btn" bindtap="goBack" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">
     <view class="back-arrow-icon"></view>
   </view>
-  <view class="nav-title" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">时间学习</view>
+  <view class="nav-title" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">数字学习</view>
 </view>
 
 <view class="container" style="padding-top: {{statusBarHeight + navBarHeight + 30}}px;">
-  <view class="clock-wrapper">
-    <view class="clock-face" bindtouchstart="onTouchStart" catchtouchmove="onTouchMove" bindtouchend="onTouchEnd">
-      <!-- Markers for minutes -->
-      <block wx:for="{{[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]}}" wx:key="*this">
-          <view class="marker {{index % 3 === 0 ? 'marker-main' : ''}}" style="transform: rotate({{item}}deg) translate(0, -280rpx);"></view>
-      </block>
-
-      <!-- Numbers 1-12 -->
-      <block wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this">
-        <view class="number" style="transform: rotate({{item * 30}}deg) translate(0, -230rpx) rotate(-{{item * 30}}deg);">
-          {{item}}
-        </view>
-      </block>
-
-      <!-- Hands -->
-      <!-- Hour Hand -->
-      <view class="hand hour-hand" style="transform: rotate({{hourAngle}}deg);"></view>
-      
-      <!-- Minute Hand -->
-      <view class="hand minute-hand" style="transform: rotate({{minuteAngle}}deg);"></view>
-      
-      <!-- Center Dot -->
-      <view class="center-dot"></view>
-      <view class="center-dot-inner"></view>
-    </view>
+  
+  <!-- Tab Bar -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">时间</view>
+    <view class="tab-item {{activeTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">日期</view>
   </view>
 
-  <view class="info-card">
-    <picker mode="time" value="{{digitalTime}}" bindchange="onTimePickerChange">
-      <view class="digital-time">{{digitalTime}}</view>
-    </picker>
-    
-    <view class="korean-time-container">
-        <view class="korean-time {{isKoreanVisible ? '' : 'hidden-blur'}}">
-            {{koreanTime}}
-        </view>
+  <!-- Tab 0: Clock -->
+  <block wx:if="{{activeTab === 0}}">
+    <view class="clock-wrapper">
+      <view class="clock-face" bindtouchstart="onTouchStart" catchtouchmove="onTouchMove" bindtouchend="onTouchEnd">
+        <!-- Markers for minutes -->
+        <block wx:for="{{[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]}}" wx:key="*this">
+            <view class="marker {{index % 3 === 0 ? 'marker-main' : ''}}" style="transform: rotate({{item}}deg) translate(0, -280rpx);"></view>
+        </block>
+
+        <!-- Numbers 1-12 -->
+        <block wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this">
+          <view class="number" style="transform: rotate({{item * 30}}deg) translate(0, -230rpx) rotate(-{{item * 30}}deg);">
+            {{item}}
+          </view>
+        </block>
+
+        <!-- Hands -->
+        <!-- Hour Hand -->
+        <view class="hand hour-hand" style="transform: rotate({{hourAngle}}deg);"></view>
+        
+        <!-- Minute Hand -->
+        <view class="hand minute-hand" style="transform: rotate({{minuteAngle}}deg);"></view>
+        
+        <!-- Center Dot -->
+        <view class="center-dot"></view>
+        <view class="center-dot-inner"></view>
+      </view>
     </view>
 
-    <view class="control-row">
-        <view class="btn-icon" bindtap="toggleKoreanVisibility">
-            {{isKoreanVisible ? '🙈 隐藏' : '👁️ 显示'}}
-        </view>
-        <view class="btn-icon" bindtap="setRandomTime">
-            🎲 随机
-        </view>
-        <view class="btn-icon" bindtap="playTTS">
-            🔊 朗读
-        </view>
+    <view class="info-card">
+      <picker mode="time" value="{{digitalTime}}" bindchange="onTimePickerChange">
+        <view class="digital-time">{{digitalTime}}</view>
+      </picker>
+      
+      <view class="korean-time-container">
+          <view class="korean-time {{isKoreanVisible ? '' : 'hidden-blur'}}">
+              {{koreanTime}}
+          </view>
+      </view>
+
+      <view class="control-row">
+          <view class="btn-icon" bindtap="toggleKoreanVisibility">
+              {{isKoreanVisible ? '🙈 隐藏' : '👁️ 显示'}}
+          </view>
+          <view class="btn-icon" bindtap="setRandomTime">
+              🎲 随机
+          </view>
+          <view class="btn-icon" bindtap="playTTS">
+              🔊 朗读
+          </view>
+      </view>
+      <view style="font-size: 24rpx; color: #94a3b8; text-align: center; margin-top: 20rpx;">使用朗读功能时 请自己注意音变！</view>
     </view>
-  </view>
+  </block>
+
+  <!-- Tab 1: Date Wheel -->
+  <block wx:if="{{activeTab === 1}}">
+    <view class="info-card">
+        <view class="date-picker-container">
+            <picker-view indicator-style="height: 50px;" style="width: 100%; height: 100%;" value="{{dateValue}}" bindchange="onDateChange">
+                <picker-view-column>
+                    <view wx:for="{{years}}" wx:key="*this" class="picker-view-column picker-item">{{item}}年</view>
+                </picker-view-column>
+                <picker-view-column>
+                    <view wx:for="{{months}}" wx:key="*this" class="picker-view-column picker-item">{{item}}月</view>
+                </picker-view-column>
+                <picker-view-column>
+                    <view wx:for="{{days}}" wx:key="*this" class="picker-view-column picker-item">{{item}}日</view>
+                </picker-view-column>
+            </picker-view>
+        </view>
+
+        <view class="korean-time-container">
+            <view class="korean-time {{isKoreanVisible ? '' : 'hidden-blur'}}">
+                {{koreanDate}}
+            </view>
+        </view>
+
+        <view class="control-row">
+            <view class="btn-icon" bindtap="toggleKoreanVisibility">
+                {{isKoreanVisible ? '🙈 隐藏' : '👁️ 显示'}}
+            </view>
+            <view class="btn-icon" bindtap="setRandomDate">
+                🎲 随机
+            </view>
+            <view class="btn-icon" bindtap="playTTS">
+                🔊 朗读
+            </view>
+        </view>
+        <view style="font-size: 24rpx; color: #94a3b8; text-align: center; margin-top: 20rpx;">使用朗读功能时 请自己注意音变！</view>
+    </view>
+  </block>
+
+  <!-- Tab 2: Calculator (REMOVED) -->
+
+
 </view>

@@ -12,22 +12,7 @@
   <block wx:if="{{view === 'categories'}}">
     <view class="page-title">词库设置</view>
 
-    <!-- Special Features -->
-    <view class="section-title" style="margin-top: 24px;">特色功能</view>
-    <view class="book-list">
-        <view class="card book-card" bindtap="navigateToTimeLearning">
-             <view class="book-content">
-                <view class="book-info">
-                    <text class="book-name">时间学习 (Time Learning)</text>
-                    <view class="book-desc-row">
-                       <text>🕒</text> 
-                       <text style="margin-left: 8px;">交互式时钟学习韩语时间表达</text>
-                    </view>
-                </view>
-                <view class="arrow-icon">›</view>
-            </view>
-        </view>
-    </view>
+
 
     <!-- 词库设置 -->
     <view class="section-title" style="margin-top: 32px;">词库设置</view>

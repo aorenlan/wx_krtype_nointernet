@@ -33,7 +33,7 @@ Component({
         pagePath: "/pages/hi-chat/index",
         iconPath: "/assets/tabbar/re_talk.png",
         selectedIconPath: "/assets/tabbar/re_talk.png",
-        text: "HI~"
+        text: "趣味韩语"
       },
       {
         pagePath: "",

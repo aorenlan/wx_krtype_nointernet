@@ -1,0 +1,95 @@
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px; height: {{navBarHeight}}px;">
+  <view class="back-btn" bindtap="goBack" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">
+    <view class="back-arrow-icon"></view>
+  </view>
+  <view class="nav-title" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">色块识别</view>
+</view>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight + 30}}px;">
+  <view class="tab-bar">
+    <view class="tab-item {{activeModule === 0 ? 'active' : ''}}" bindtap="switchModule" data-index="0">翻牌</view>
+    <view class="tab-item {{activeModule === 1 ? 'active' : ''}}" bindtap="switchModule" data-index="1">输入</view>
+    <view class="tab-item {{activeModule === 2 ? 'active' : ''}}" bindtap="switchModule" data-index="2">听音选色</view>
+  </view>
+
+  <block wx:if="{{activeModule === 0}}">
+    <view class="board">
+      <view class="size-toggle">
+        <view class="size-opt {{gridSize === 4 ? 'active' : ''}}" bindtap="switchGridSize" data-size="4">4x4</view>
+        <view class="size-opt {{gridSize === 9 ? 'active' : ''}}" bindtap="switchGridSize" data-size="9">9x9</view>
+      </view>
+
+      <view class="{{gridSize === 9 ? 'grid-9' : 'grid-4'}}">
+        <view wx:for="{{gridCells}}" wx:key="idx" class="cell" bindtap="onFlipCell" data-idx="{{index}}">
+          <view class="cell-inner" style="background: {{item.hex}};">
+          </view>
+        </view>
+      </view>
+
+      <view class="info-card" style="margin-top: 24rpx;">
+        <view class="korean-time-container">
+          <view class="korean-time">{{lastFlippedKo || '点击色块查看韩语'}}</view>
+        </view>
+        <view class="control-row">
+          <view class="btn-icon" bindtap="resetFlip">🔄 重置</view>
+          <view class="btn-icon" bindtap="shuffleFlip">🎲 换一组</view>
+          <view class="btn-icon" bindtap="toggleAudio">{{isAudioEnabled ? '🔊 开启' : '🔇 关闭'}}</view>
+          <view class="btn-icon" bindtap="toggleZh">{{isShowZh ? '👁️ 中文' : '🙈 隐藏'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Focused Overlay -->
+    <view class="focus-overlay {{focusedCell ? 'show' : ''}}" bindtap="closeFocus">
+      <view class="focus-card" catchtap="return">
+        <view class="focus-swatch" style="background: {{focusedCell.hex}}"></view>
+        <view class="focus-ko">{{focusedCell.ko}}</view>
+        <view class="focus-zh" wx:if="{{isShowZh}}" style="font-size: 40rpx; color: #64748b; margin-bottom: 20rpx; font-weight: 700;">{{focusedCell.zh}}</view>
+        <view class="focus-hint">点击任意处关闭</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{activeModule === 1}}">
+    <view class="info-card">
+      <view class="quiz-swatch" style="background: {{quizColor.hex}};"></view>
+      <view class="quiz-title">请输入该颜色韩文</view>
+
+      <input class="quiz-input" value="{{quizInput}}" bindinput="onQuizInput" placeholder="例如: 빨강 / 빨간색" />
+
+      <view class="control-row" style="margin-top: 18rpx;">
+        <view class="btn-icon" bindtap="checkQuiz">✅ 确认</view>
+        <view class="btn-icon" bindtap="nextQuiz">🎲 下一个</view>
+      </view>
+
+      <view class="quiz-feedback {{quizResult === 1 ? 'ok' : (quizResult === -1 ? 'bad' : '')}}">
+        {{quizFeedback}}
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{activeModule === 2}}">
+    <view class="info-card">
+      <view class="quiz-title">点击开始，听音后选择颜色</view>
+
+      <view class="control-row" style="margin-top: 10rpx;">
+        <view class="btn-icon" bindtap="startAudioRound">▶️ 开始</view>
+        <view class="btn-icon" bindtap="reshuffleAudioOptions">🎲 换一组</view>
+      </view>
+
+      <view class="audio-status">{{audioStatus}}</view>
+
+      <view class="grid-3" style="margin-top: 22rpx;">
+        <view wx:for="{{audioOptions}}" wx:key="id" class="opt" bindtap="selectAudioColor" data-id="{{item.id}}">
+          <view class="opt-swatch" style="background: {{item.hex}};"></view>
+          <view class="opt-text">{{item.zh}}</view>
+        </view>
+      </view>
+
+      <view class="quiz-feedback {{audioResult === 1 ? 'ok' : (audioResult === -1 ? 'bad' : '')}}">
+        {{audioFeedback}}
+      </view>
+      <view style="font-size: 24rpx; color: #94a3b8; text-align: center; margin-top: 20rpx;">使用朗读功能时 请自己注意音变！</view>
+    </view>
+  </block>
+</view>

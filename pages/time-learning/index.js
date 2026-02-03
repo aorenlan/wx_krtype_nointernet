@@ -5,6 +5,143 @@ const NATIVE_HOURS = [
 const SINO_TENS = ["", "십", "이십", "삼십", "사십", "오십"];
 const SINO_UNITS = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
 
+// Helper for Sino-Korean Numbers (Supports large numbers)
+function numberToSinoKorean(num) {
+  if (num === 0) return "영";
+  if (!isFinite(num) || isNaN(num)) return "오류";
+
+  const sign = num < 0 ? "마이너스 " : "";
+  const absNum = Math.abs(num);
+
+  const digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+  const smallUnits = ["", "십", "백", "천"];
+  const bigUnits = ["", "만", "억"];
+
+  const intNum = Math.floor(absNum);
+  if (intNum >= 1000000000000) return "범위 초과";
+
+  let s = String(intNum);
+  let result = [];
+
+  let chunkCount = Math.ceil(s.length / 4);
+  if (chunkCount > bigUnits.length) return "범위 초과";
+
+  for (let i = 0; i < chunkCount; i++) {
+    let start = s.length - (i + 1) * 4;
+    let end = s.length - i * 4;
+    if (start < 0) start = 0;
+    let chunk = s.substring(start, end);
+    let chunkNum = parseInt(chunk, 10);
+
+    if (chunkNum === 0) continue;
+
+    let chunkText = "";
+
+    for (let j = 0; j < chunk.length; j++) {
+      let d = parseInt(chunk[j], 10);
+      let power = chunk.length - 1 - j;
+
+      if (d !== 0) {
+        let digitStr = digits[d];
+        if (d === 1 && power > 0) digitStr = "";
+        chunkText += digitStr + smallUnits[power];
+      }
+    }
+
+    if (i === 1 && chunkNum === 1) {
+      chunkText = "";
+    }
+
+    if (chunkText !== "") {
+      result.unshift(chunkText + bigUnits[i]);
+    } else {
+      result.unshift(bigUnits[i]);
+    }
+  }
+
+  return sign + result.join(' ');
+}
+
+function numberToSinoAudioParts(num) {
+  if (num === 0) return ["영"];
+  if (!isFinite(num) || isNaN(num)) return [];
+
+  const parts = [];
+  if (num < 0) {
+      parts.push("마이너스");
+      num = Math.abs(num);
+  }
+
+  const digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+  const smallUnits = ["", "십", "백", "천"];
+  const bigUnits = ["", "만", "억", "조"];
+  const combinedTens = ["", "십", "이십", "삼십", "사십", "오십", "육십", "칠십", "팔십", "구십"];
+
+  const s = String(Math.floor(num));
+  const chunkCount = Math.ceil(s.length / 4);
+
+  for (let i = chunkCount - 1; i >= 0; i--) {
+      let start = s.length - (i + 1) * 4;
+      let end = s.length - i * 4;
+      if (start < 0) start = 0;
+      let chunk = s.substring(start, end);
+      let chunkNum = parseInt(chunk, 10);
+      
+      if (chunkNum === 0) continue;
+      
+      let chunkParts = [];
+      
+      for (let j = 0; j < chunk.length; j++) {
+          let d = parseInt(chunk[j], 10);
+          let power = chunk.length - 1 - j;
+          
+          if (d !== 0) {
+              if (power === 1) {
+                  // Use combined tens (e.g., "이십", "삼십")
+                  chunkParts.push(combinedTens[d]);
+              } else {
+                  if (d === 1 && power > 0) {
+                      // Skip '일' for 100, 1000 (10 is handled by combinedTens)
+                  } else {
+                      chunkParts.push(digits[d]);
+                  }
+                  
+                  if (power > 0) {
+                      chunkParts.push(smallUnits[power]);
+                  }
+              }
+          }
+      }
+      
+      parts.push(...chunkParts);
+      
+      if (i > 0) {
+          // Check if it's 10000 (man) -> we need to decide if we output "일만" or "만".
+          // Standard is "만".
+          // If the chunk was 1 (meaning 10000), parts so far for this chunk is empty (since we skipped '일' above? No.)
+          // Wait, if chunk is "1", d=1, power=0.
+          // In loop: d=1, power=0. digits[1]="일". chunkParts.push("일").
+          // So we have "일".
+          // Then we push "만". Result "일만".
+          // But Koreans usually say "만" for 10000 at start, but "일만" sometimes?
+          // numberToSinoKorean has logic: if (i === 1 && chunkNum === 1) chunkText = "";
+          // Let's replicate that.
+          
+          if (i === 1 && chunkNum === 1 && chunkParts.length === 1 && chunkParts[0] === "일") {
+               // Remove "일" to just have "만"
+               parts.pop();
+          }
+          parts.push(bigUnits[i]);
+      }
+  }
+  
+  return parts;
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
 function getSinoMinutes(minutes) {
   if (minutes === 0) return "";
   if (minutes === 30) return "반"; // "Half"
@@ -21,7 +158,10 @@ function getSinoMinutes(minutes) {
   return result;
 }
 
-const BASE_AUDIO_URL = 'https://enoss.aorenlan.fun/kr_time/';
+const BASE_AUDIO_URL = 'https://enoss.aorenlan.fun/kr_color_count/';
+const CLOCK_AUDIO_BASE_URL = 'https://enoss.aorenlan.fun/kr_time/minute/';
+const DATE_AUDIO_BASE_URL = 'https://enoss.aorenlan.fun/kr_time/calendar/';
+const UNIT_AUDIO_BASE_URL = 'https://enoss.aorenlan.fun/kr_time/unit/';
 
 // Helper: Manual NFD decomposition (more reliable on Android than String.prototype.normalize)
 function toHangulNFD(s) {
@@ -88,7 +228,7 @@ function percentEncodeUtf8(input) {
     return out;
 }
 
-function getAudioUrlCandidates(text) {
+function getAudioUrlCandidates(text, baseUrlOverride) {
   // Remove spaces
   let filename = text.replace(/\s+/g, '');
   
@@ -102,9 +242,12 @@ function getAudioUrlCandidates(text) {
   // 4. Raw filename
   candidates.push(filename);
 
+  // Use override if provided, otherwise default
+  let baseUrl = baseUrlOverride || BASE_AUDIO_URL;
+
   // Deduplicate and map to full URLs
   const uniqueNames = Array.from(new Set(candidates));
-  return uniqueNames.map(name => `${BASE_AUDIO_URL}${percentEncodeUtf8(name)}.mp3`);
+  return uniqueNames.map(name => `${baseUrl}${percentEncodeUtf8(name)}.mp3`);
 }
 
 function convertToKoreanTime(totalMinutes) {
@@ -143,20 +286,27 @@ function convertToKoreanTime(totalMinutes) {
   if (displayH === 0) displayH = 12;
   
   const hourPart = NATIVE_HOURS[displayH] + " 시";
-  audioParts.push(NATIVE_HOURS[displayH] + "시"); // "한시", "두시" etc.
+  // Use combined hour audio (e.g. "한시")
+  const hourAudio = NATIVE_HOURS[displayH] + "시";
   
   if (m === 0) {
     return { 
         text: `${prefix} ${hourPart}`,
-        audioParts: audioParts
+        audioParts: [prefix, hourAudio]
     };
   }
   
   const minPart = m === 30 ? "반" : getSinoMinutes(m) + " 분";
   if (m === 30) {
-      audioParts.push("반"); // Or "삼십분"? Assuming "반.mp3" exists or user wants "반"
+      // Use combined hour+half audio (e.g. "한시_반")
+      // User requested consistency: "세시_반.mp3"
+      audioParts.push(hourAudio + "_반"); 
   } else {
-      audioParts.push(getSinoMinutes(m) + "분"); // "일분", "이분" etc.
+      audioParts.push(hourAudio);
+      // Use combined minute audio (e.g. "이십삼분")
+      // User requested single file: "오십분.mp3"
+      const minNumStr = numberToSinoKorean(m).replace(/\s+/g, '');
+      audioParts.push(minNumStr + "분");
   }
 
   return { 
@@ -167,6 +317,9 @@ function convertToKoreanTime(totalMinutes) {
 
 Page({
   data: {
+    activeTab: 0, // 0: Clock, 1: Date, 2: Calculator
+
+    // Clock Data
     totalMinutes: 720, // 12:00 (Noon) - Range 0 to 1439
     hourAngle: 0,
     minuteAngle: 0,
@@ -183,10 +336,50 @@ Page({
     clockCenter: { x: 0, y: 0 },
     clockRadius: 0,
     isDragging: null, // 'minute' | 'hour'
-    lastAngle: 0
+    lastAngle: 0,
+
+    // Date Data
+    years: [],
+    months: [],
+    days: [],
+    dateValue: [0, 0, 0], // Index in picker
+    selectedYear: 2023,
+    selectedMonth: 1,
+    selectedDay: 1,
+    koreanDate: '',
+    
+    // Calculator Data
+    calcDisplay: '0',
+    calcResult: null,
+    calcOperator: null,
+    calcWaitingForSecondOperand: false,
+    koreanCalc: '',
+    
+    // Unit Data (Height, Weight, Temperature) - DEPRECATED
+    // unitOptions: [
+    //     { name: '温度', code: '도' },
+    //     { name: '体重', code: '킬로그램' },
+    //     { name: '身高', code: '센티미터' }
+    // ],
+    // currentUnitIndex: 0
   },
   
   onLoad() {
+    // Initialize Date Data
+    const years = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    for (let i = 1900; i <= 2100; i++) {
+        years.push(i);
+    }
+    const months = Array.from({length: 12}, (_, i) => i + 1);
+    
+    const yearIdx = years.indexOf(currentYear);
+    const monthIdx = now.getMonth();
+    const maxDays = getDaysInMonth(currentYear, monthIdx + 1);
+    const days = Array.from({length: maxDays}, (_, i) => i + 1);
+    const dayIdx = Math.min(now.getDate() - 1, maxDays - 1);
+
     // Ensure audio plays even in silent mode
     if (wx.setInnerAudioOption) {
         wx.setInnerAudioOption({
@@ -202,10 +395,19 @@ Page({
     const app = getApp();
     this.setData({
         statusBarHeight: app.globalData.statusBarHeight,
-        navBarHeight: app.globalData.navBarHeight
+        navBarHeight: app.globalData.navBarHeight,
+        years,
+        months,
+        days,
+        dateValue: [yearIdx, monthIdx, dayIdx],
+        selectedYear: currentYear,
+        selectedMonth: monthIdx + 1,
+        selectedDay: dayIdx + 1
     });
+
     // Start live clock on load
     this.startLiveClock();
+    this.updateDateKorean();
     
     // Preload audio for current time (Period + Hour)
     // Wait a bit for initial time set
@@ -220,6 +422,18 @@ Page({
         this._audioCtx.destroy();
     }
   },
+
+  switchTab(e) {
+      const idx = Number(e.currentTarget.dataset.index);
+      this.setData({ activeTab: idx });
+      if (idx === 0) {
+          this.startLiveClock();
+      } else {
+          this.stopLiveClock();
+      }
+  },
+
+  // --- Clock Methods ---
 
   startLiveClock() {
     this.setData({ isLiveClock: true });
@@ -397,9 +611,26 @@ Page({
   },
   
   playTTS() {
+    console.log('[playTTS] Triggered. ActiveTab:', this.data.activeTab);
     this.stopLiveClock(); // User interaction stops auto-update
     
-    if (!this.data.currentAudioParts || this.data.currentAudioParts.length === 0) {
+    // Determine parts based on active tab
+    let parts = [];
+    let baseUrl = BASE_AUDIO_URL;
+
+    if (this.data.activeTab === 0) {
+        parts = this.data.currentAudioParts;
+        baseUrl = CLOCK_AUDIO_BASE_URL;
+    } else if (this.data.activeTab === 1) {
+        parts = this.getDateAudioParts();
+        baseUrl = DATE_AUDIO_BASE_URL;
+    } 
+    // Tab 2 (Calculator/Unit) is removed
+
+
+    console.log('[playTTS] Parts:', parts, 'BaseURL:', baseUrl);
+
+    if (!parts || parts.length === 0) {
         return;
     }
     
@@ -412,7 +643,6 @@ Page({
         this._audioCtx.stop();
     }
     
-    const parts = this.data.currentAudioParts;
     let index = 0;
     
     const playNext = () => {
@@ -426,7 +656,7 @@ Page({
         }
         
         const text = parts[index];
-        this.playSinglePart(text).then(() => {
+        this.playSinglePart(text, baseUrl).then(() => {
             index++;
             playNext();
         }).catch((err) => {
@@ -440,12 +670,52 @@ Page({
     playNext();
   },
 
-  playSinglePart(text) {
-      const urls = getAudioUrlCandidates(text);
+  playSinglePart(text, baseUrl) {
+      console.log('[playSinglePart] Preparing to play:', text, 'BaseUrl:', baseUrl);
+      const urls = getAudioUrlCandidates(text, baseUrl);
+      console.log('[playSinglePart] Candidate URLs:', urls);
+      
       if (!this._audioCtx) {
           this._audioCtx = wx.createInnerAudioContext();
       }
       return this.playWithFallback(this._audioCtx, urls, text);
+  },
+
+  playWithFallback(audioCtx, urls, text) {
+    return new Promise((resolve, reject) => {
+        // Just try the first URL for now, or loop if we really want fallback
+        // Since we map all candidates to the same base URL pattern, they usually point to same file if naming is consistent.
+        // We can try sequential if needed.
+        
+        console.log('[playWithFallback] URLs to try:', urls.length);
+
+        let urlIndex = 0;
+        
+        const tryNext = () => {
+            if (urlIndex >= urls.length) {
+                // All failed
+                console.error('[playWithFallback] All URLs failed for:', text);
+                reject(new Error('All URLs failed'));
+                return;
+            }
+            
+            const url = urls[urlIndex];
+            console.log(`[playWithFallback] Attempting [${urlIndex + 1}/${urls.length}]:`, url);
+            
+            this.playSrcOnce(audioCtx, url, text + '_' + urlIndex, url).then((success) => {
+                if (success) {
+                    console.log('[playWithFallback] Success:', url);
+                    resolve();
+                } else {
+                    console.warn('[playWithFallback] Failed:', url);
+                    urlIndex++;
+                    tryNext();
+                }
+            });
+        };
+        
+        tryNext();
+    });
   },
 
   playSrcOnce(audioCtx, src, cacheKey, originalUrl) {
@@ -501,107 +771,276 @@ Page({
             settle(true);
         };
 
-        const onError = (err) => {
-            console.error(logPrefix, 'onError', err);
+        const onError = (res) => {
+            console.error(logPrefix, 'onError', res);
             settle(false);
         };
 
+        audioCtx.onCanplay(onCanplay);
+        audioCtx.onPlay(onPlay);
+        audioCtx.onWaiting(onWaiting);
         audioCtx.onEnded(onEnded);
         audioCtx.onError(onError);
-        if (audioCtx.onCanplay) audioCtx.onCanplay(onCanplay);
-        if (audioCtx.onPlay) audioCtx.onPlay(onPlay);
-        if (audioCtx.onWaiting) audioCtx.onWaiting(onWaiting);
 
-        // Ensure autoplay is off to manually control playback
-        audioCtx.autoplay = false;
         audioCtx.src = src;
+        audioCtx.play();
         
-        const attemptPlay = () => {
-            try {
-                console.log(logPrefix, 'Calling audioCtx.play()');
-                audioCtx.play();
-            } catch (e) {
-                console.error(logPrefix, 'Play exception:', e);
-            }
-        };
-        
-        // Manual play triggers loading
-        attemptPlay();
-
-        // Timeout Logic
-        // If it's a local file, we expect it to be fast. If it stalls, it's likely corrupt or context issue.
-        // If it's network, it might take longer.
-        const isLocal = src.startsWith('http://usr/') || src.startsWith('wxfile://') || src.startsWith('/');
-        const retryDelay = isLocal ? 500 : 1500; // 500ms for local, 1.5s for network warning
-
-        retryTimer = setTimeout(() => {
-            if (settled || started) return;
-            console.warn(logPrefix, 'Retry timeout triggered. isLocal:', isLocal);
-            
-            if (isLocal) {
-                // Fail fast for local files so we can fallback to network
-                console.warn(logPrefix, 'Local file timeout -> Fail immediately to trigger fallback');
-                settle(false);
-            } else {
-                // For network, try one more time or just wait for overall timeout
-                attemptPlay();
-            }
-        }, retryDelay);
-
+        // Timeout
         failTimer = setTimeout(() => {
-            if (settled || started) return;
-            console.error(logPrefix, 'Overall timeout:', src);
-            settle(false);
-        }, 5000); // 5s overall safety
+            if (!started) {
+                console.warn(logPrefix, 'Timeout waiting for start');
+                settle(false);
+            }
+        }, 3000); // 3s timeout to start
     });
   },
-
-  async playWithFallback(audioCtx, urls, cacheKey) {
-    if (!audioCtx || !urls || urls.length === 0) return Promise.reject('No URLs');
-
-    for (const url of urls) {
-        if (!url) continue;
-        console.log('[PlayFallback] Trying url:', url);
-        const ok = await this.playSrcOnce(audioCtx, url, cacheKey, url);
-        if (ok) {
-            console.log('[PlayFallback] Success:', url);
-            return Promise.resolve();
-        }
-    }
-
-    console.error('[PlayFallback] All failed:', urls);
-    return Promise.reject('All candidates failed');
+  
+  preloadCurrentPeriodAndHour() {
+      // Just a stub if needed
   },
 
-  preloadAudio(text) {
-      if (!text) return;
-      // Preload the primary candidate (Manual NFD)
-      const candidates = getAudioUrlCandidates(text);
-      if (!candidates || candidates.length === 0) return;
+  // --- Date Wheel Methods ---
+
+  onDateChange(e) {
+      const val = e.detail.value;
+      const year = this.data.years[val[0]];
+      const month = this.data.months[val[1]];
+
+      const maxDays = getDaysInMonth(year, month);
+      const days = Array.from({length: maxDays}, (_, i) => i + 1);
+      const dayIdx = Math.min(val[2], maxDays - 1);
+      const day = days[dayIdx];
+
+      this.setData({
+        days,
+        dateValue: [val[0], val[1], dayIdx],
+        selectedYear: year,
+        selectedMonth: month,
+        selectedDay: day
+      });
+      this.updateDateKorean();
+  },
+
+  updateDateKorean() {
+      const { selectedYear, selectedMonth, selectedDay } = this.data;
       
-      const url = candidates[0];
+      const yStr = numberToSinoKorean(selectedYear) + '년';
       
-      // Use wx.downloadFile to cache
-      wx.downloadFile({
-          url: url,
-          success: (res) => {
-              console.log(`Preloaded ${text}: ${res.tempFilePath}`);
-          },
-          fail: (err) => {
-              console.error(`Failed to preload ${text}`, err);
-          }
+      // Month exceptions
+      let mStr = numberToSinoKorean(selectedMonth);
+      if (selectedMonth === 6) mStr = '유';
+      if (selectedMonth === 10) mStr = '시';
+      mStr += '월';
+      
+      const dStr = numberToSinoKorean(selectedDay) + '일';
+      
+      this.setData({
+          koreanDate: `${yStr} ${mStr} ${dStr}`
       });
   },
-
-  preloadCurrentPeriodAndHour() {
-      // Preload current period and hour as requested by user
-      if (this.data.currentAudioParts && this.data.currentAudioParts.length >= 2) {
-          // Typically [Period, Hour, Minute]
-          this.preloadAudio(this.data.currentAudioParts[0]); // Period
-          this.preloadAudio(this.data.currentAudioParts[1]); // Hour
-      } else if (this.data.currentAudioParts && this.data.currentAudioParts.length === 1) {
-          // Exact time (Noon/Midnight)
-          this.preloadAudio(this.data.currentAudioParts[0]);
-      }
+  
+  getDateAudioParts() {
+      const { selectedYear, selectedMonth, selectedDay } = this.data;
+      const parts = [];
+      
+      // Year
+      // User request: Don't read one by one, use combined file (e.g., "이천이십삼년.mp3")
+      const yearStr = numberToSinoKorean(selectedYear).replace(/\s+/g, '') + '년';
+      parts.push(yearStr);
+      
+      // Month
+      // Special pronunciations: 6 -> 유월, 10 -> 시월
+      let monthNumStr = numberToSinoKorean(selectedMonth).replace(/\s+/g, '');
+      if (selectedMonth === 6) monthNumStr = '유';
+      if (selectedMonth === 10) monthNumStr = '시';
+      parts.push(monthNumStr + '월');
+      
+      // Day
+      const dayStr = numberToSinoKorean(selectedDay).replace(/\s+/g, '') + '일';
+      parts.push(dayStr);
+      
+      return parts;
   },
+
+  setRandomDate() {
+      const years = this.data.years;
+      const yearIdx = Math.floor(Math.random() * years.length);
+      const year = years[yearIdx];
+
+      const monthIdx = Math.floor(Math.random() * 12);
+      const month = this.data.months[monthIdx];
+
+      const maxDays = getDaysInMonth(year, month);
+      const days = Array.from({length: maxDays}, (_, i) => i + 1);
+      const dayIdx = Math.floor(Math.random() * maxDays);
+      const day = days[dayIdx];
+
+      this.setData({
+          days,
+          dateValue: [yearIdx, monthIdx, dayIdx],
+          selectedYear: year,
+          selectedMonth: month,
+          selectedDay: day
+      });
+      this.updateDateKorean();
+  },
+
+  // --- Calculator Methods ---
+
+  onCalcBtn(e) {
+      const val = e.currentTarget.dataset.val;
+      const { calcDisplay, calcWaitingForSecondOperand, calcResult, calcOperator } = this.data;
+
+      if (['+', '-', '*', '/'].includes(val)) {
+          this.setData({
+              calcOperator: val,
+              calcResult: parseFloat(calcDisplay),
+              calcWaitingForSecondOperand: true
+          });
+          return;
+      }
+
+      if (val === '=') {
+          if (calcOperator && !calcWaitingForSecondOperand) {
+              const second = parseFloat(calcDisplay);
+              let res = 0;
+              if (calcOperator === '+') res = calcResult + second;
+              else if (calcOperator === '-') res = calcResult - second;
+              else if (calcOperator === '*') res = calcResult * second;
+              else if (calcOperator === '/') res = calcResult / second;
+              
+              // Handle float precision simple fix
+              res = Math.round(res * 100000000) / 100000000;
+
+              this.setData({
+                  calcDisplay: String(res),
+                  calcResult: res,
+                  calcOperator: null,
+                  calcWaitingForSecondOperand: false
+              });
+              this.updateCalcKorean(res);
+          }
+          return;
+      }
+
+      if (val === 'C') {
+          this.setData({
+              calcDisplay: '0',
+              calcResult: null,
+              calcOperator: null,
+              calcWaitingForSecondOperand: false,
+              koreanCalc: ''
+          });
+          return;
+      }
+      
+      if (val === '.') {
+          let nextDisplay = calcDisplay;
+          if (calcWaitingForSecondOperand) {
+              nextDisplay = '0.';
+              this.setData({
+                  calcDisplay: nextDisplay,
+                  calcWaitingForSecondOperand: false
+              });
+          } else if (!calcDisplay.includes('.')) {
+              nextDisplay = calcDisplay + '.';
+              this.setData({ calcDisplay: nextDisplay });
+          }
+          this.updateCalcKorean(parseFloat(nextDisplay));
+          return;
+      }
+
+      // Numbers
+      let nextDisplay = calcDisplay;
+      if (calcWaitingForSecondOperand) {
+          nextDisplay = val;
+          this.setData({
+              calcDisplay: nextDisplay,
+              calcWaitingForSecondOperand: false
+          });
+      } else {
+          nextDisplay = calcDisplay === '0' ? val : calcDisplay + val;
+          this.setData({ calcDisplay: nextDisplay });
+      }
+
+      this.updateCalcKorean(parseFloat(nextDisplay));
+  },
+
+  setRandomCalc() {
+      const roll = Math.random();
+      let len = 1;
+      if (roll < 0.2) len = 1;
+      else if (roll < 0.4) len = 2;
+      else if (roll < 0.6) len = 3;
+      else if (roll < 0.8) len = 4;
+      else len = 5;
+
+      let min = 0;
+      let max = 9;
+      if (len > 1) {
+          min = Math.pow(10, len - 1);
+          max = Math.pow(10, len) - 1;
+      }
+      const num = Math.floor(min + Math.random() * (max - min + 1));
+      const display = String(num);
+      this.setData({
+          calcDisplay: display,
+          calcResult: null,
+          calcOperator: null,
+          calcWaitingForSecondOperand: false
+      });
+      this.updateCalcKorean(num);
+  },
+
+  toggleUnit() {
+      const { unitOptions, currentUnitIndex } = this.data;
+      const nextIndex = (currentUnitIndex + 1) % unitOptions.length;
+      this.setData({ currentUnitIndex: nextIndex });
+      
+      // Refresh display
+      const val = this.data.calcResult !== null ? this.data.calcResult : parseFloat(this.data.calcDisplay);
+      this.updateCalcKorean(val);
+  },
+
+  updateCalcKorean(num) {
+      if (isNaN(num) || !isFinite(num)) {
+          this.setData({ koreanCalc: '오류' });
+          return;
+      }
+      
+      const { unitOptions, currentUnitIndex } = this.data;
+      const unit = unitOptions[currentUnitIndex];
+      
+      // Use helper but handle negative manually for text consistency if needed
+      // numberToSinoKorean returns "마이너스 [num]"
+      let text = numberToSinoKorean(num);
+      
+      // Append unit
+      text += ' ' + unit.code;
+      
+      this.setData({ koreanCalc: text });
+  },
+
+  getCalcAudioParts() {
+      const val = this.data.calcResult !== null ? this.data.calcResult : parseFloat(this.data.calcDisplay);
+      if (isNaN(val) || !isFinite(val)) return [];
+      
+      const { unitOptions, currentUnitIndex } = this.data;
+      const unit = unitOptions[currentUnitIndex];
+      
+      const absVal = Math.abs(val);
+      const numStr = numberToSinoKorean(absVal).replace(/\s+/g, '');
+      
+      let filename = '';
+      
+      // Always use 마이너스 (Minus) for negative numbers as per user's file structure
+      if (val < 0) {
+           filename = `마이너스_${numStr}_${unit.code}`;
+      } else {
+           filename = `${numStr}_${unit.code}`;
+      }
+      
+      console.log('[getCalcAudioParts] Generated filename:', filename);
+      return [filename];
+  }
 });

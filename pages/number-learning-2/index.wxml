@@ -1,0 +1,72 @@
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px; height: {{navBarHeight}}px;">
+  <view class="back-btn" bindtap="goBack" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">
+    <view class="back-arrow-icon"></view>
+  </view>
+  <view class="nav-title" style="height: {{navBarHeight}}px; line-height: {{navBarHeight}}px;">数字学习二</view>
+</view>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight + 30}}px;">
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">身高</view>
+    <view class="tab-item {{activeTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">体重</view>
+    <view class="tab-item {{activeTab === 2 ? 'active' : ''}}" bindtap="switchTab" data-index="2">温度</view>
+  </view>
+
+  <block wx:if="{{activeTab === 0}}">
+    <view class="info-card">
+      <view class="big-value {{isSliding ? 'sliding' : ''}}">{{height}} cm</view>
+      <slider min="{{heightMin}}" max="{{heightMax}}" value="{{height}}" bindchanging="onHeightSliderChanging" bindchange="onHeightSliderChange" activeColor="#6366f1" backgroundColor="#e2e8f0" />
+      <view class="input-row">
+        <input class="num-input" type="number" value="{{height}}" bindinput="onHeightInput" />
+        <view class="range-hint">{{heightMin}}-{{heightMax}}</view>
+      </view>
+
+      <view class="btn-icon" bindtap="randomizeValue">🎲 随机生成</view>
+
+      <view class="korean-time-container" bindtap="playAudio">
+        <view class="korean-time">{{koreanHeight}}</view>
+        <view class="speaker-icon">🔊</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{activeTab === 1}}">
+    <view class="info-card">
+      <view class="big-value {{isSliding ? 'sliding' : ''}}">{{weight}} kg</view>
+      <slider min="{{weightMin}}" max="{{weightMax}}" value="{{weight}}" bindchanging="onWeightSliderChanging" bindchange="onWeightSliderChange" activeColor="#6366f1" backgroundColor="#e2e8f0" />
+      <view class="input-row">
+        <input class="num-input" type="number" value="{{weight}}" bindinput="onWeightInput" />
+        <view class="range-hint">{{weightMin}}-{{weightMax}}</view>
+      </view>
+
+      <view class="btn-icon" bindtap="randomizeValue">🎲 随机生成</view>
+
+      <view class="korean-time-container" bindtap="playAudio">
+        <view class="korean-time">{{koreanWeight}}</view>
+        <view class="speaker-icon">🔊</view>
+      </view>
+      <view style="font-size: 24rpx; color: #94a3b8; text-align: center; margin-top: 20rpx;">使用朗读功能时 请自己注意音变！</view>
+    </view>
+  </block>
+
+  <block wx:if="{{activeTab === 2}}">
+    <view class="info-card">
+      <view class="big-value {{isSliding ? 'sliding' : ''}}">{{tempSign < 0 ? '-' : ''}}{{tempAbs}} ℃</view>
+      <view class="temp-row">
+        <view class="sign-btn" bindtap="toggleTempSign">{{tempSign < 0 ? '-' : '+'}}</view>
+        <slider class="temp-slider" min="0" max="{{tempAbsMax}}" value="{{tempAbs}}" bindchanging="onTempAbsSliderChanging" bindchange="onTempAbsSliderChange" activeColor="#6366f1" backgroundColor="#e2e8f0" />
+      </view>
+      <view class="input-row">
+        <input class="num-input" type="number" value="{{tempAbs}}" bindinput="onTempAbsInput" />
+        <view class="range-hint">0-{{tempAbsMax}}</view>
+      </view>
+
+      <view class="btn-icon" bindtap="randomizeValue">🎲 随机生成</view>
+
+      <view class="korean-time-container" bindtap="playAudio">
+        <view class="korean-time">{{koreanTemp}}</view>
+        <view class="speaker-icon">🔊</view>
+      </view>
+    </view>
+  </block>
+</view>

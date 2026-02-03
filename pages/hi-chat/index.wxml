@@ -1,108 +1,52 @@
 <custom-nav
   id="customNav"
-  title="语法留言贴"
-  subtitle="{{nickname}}{{honorificType ? (' · ' + honorificType) : ''}}"
+  title="趣味韩语"
   theme="light"
   showBack="{{false}}"
-  showSettings="{{true}}"
-  showCheckin="{{true}}"
-  checkinText="记录"
-  showSettingsTooltip="{{showSettingsTooltip}}"
-  settingsTooltipText="可修改敬语/平语"
-  bind:checkin="openBook"
-  bind:settings="openSettings"
+  showSettings="{{false}}"
+  showCheckin="{{false}}"
 ></custom-nav>
 
 <view class="page {{dark ? 'dark' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
-  <view
-    class="page-top-tip"
-    wx:if="{{!unsupported && !banned}}"
-    style="top: {{statusBarHeight + navBarHeight}}px;"
-  >
-    <view class="page-top-tip-left" catchtap="showTipDetail">
-      <text class="page-top-tip-text">输入中文 · 点击卡片可查看详解</text>
-    </view>
-  </view>
-
-  
-  <view class="empty" wx:if="{{unsupported}}">
-    <text class="empty-title">当前版本不支持 HI~</text>
-    <text class="empty-sub">请升级微信后使用</text>
-  </view>
-
-  <view class="empty" wx:elif="{{banned}}">
-    <text class="empty-title">HI~已禁用</text>
-    <text class="empty-sub">多次发布不合规内容，暂不可使用</text>
-  </view>
-
-  <view class="empty" wx:elif="{{!messages.length && !sending}}">
-    <text class="empty-title">还没有留言</text>
-    <text class="empty-sub">发布中文，生成韩语语法笔记</text>
-  </view>
-
-  <scroll-view
-    wx:elif="{{messages.length || sending}}"
-    scroll-y
-    class="chat"
-    show-scrollbar="{{false}}"
-    scroll-into-view="{{scrollIntoView}}"
-    scroll-with-animation="{{true}}"
-    style="padding-top: 46px; height: calc(100vh - {{statusBarHeight + navBarHeight}}px - 62px - {{keyboardVisible ? 0 : 58}}px - {{keyboardOffset}}px - {{keyboardVisible ? 0 : safeAreaInsetBottom}}px);"
-  >
-    <block wx:for="{{messages}}" wx:key="mid">
-      <view id="{{item.mid}}" class="msg-container">
-        <view class="msg">
-          <view class="bubble-wrap">
-            <view class="msg-header">
-              <text class="name">{{item.nickname || (item.isSelf ? '我' : '匿名')}}</text>
-              <text class="time-text" wx:if="{{item.timeLabel}}">{{item.timeLabel}}</text>
-            </view>
-            <view class="bubble-container">
-               <view class="tip-bubble detail-tip" wx:if="{{showDetailTip && index === 0}}">
-                  <text>点击查看详解</text>
-                  <view class="tip-arrow-down"></view>
-               </view>
-               <view class="bubble" bindtap="openDetail" data-id="{{item.chatId}}">
-                 <text class="bubble-text">{{item.text}}</text>
-               </view>
-            </view>
+  <view class="module-list" style="padding: 20px;">
+    <!-- Time Learning Card -->
+    <view class="card book-card" bindtap="navigateToTimeLearning" style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+      <view class="book-content" style="display: flex; align-items: center; width: 100%;">
+        <view class="book-info" style="flex: 1;">
+          <text class="book-name" style="font-size: 16px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">数字学习</text>
+          <view class="book-desc-row" style="display: flex; align-items: center; color: #64748b; font-size: 13px;">
+            <text>🔢</text>
+            <text style="margin-left: 8px;">时间 日期 价格</text>
           </view>
         </view>
+        <view class="arrow-icon" style="color: #cbd5e1; font-size: 20px;">›</view>
       </view>
-    </block>
-    <view class="loading-inline" wx:if="{{sending}}">
-      <text class="loading-inline-text">生成中…</text>
     </view>
-    <view id="{{bottomId}}"></view>
-  </scroll-view>
 
-  <view class="composer" wx:if="{{!unsupported && !banned}}" style="{{keyboardVisible ? ('bottom: ' + safeAreaInsetBottom + 'px; transform: translateY(-' + keyboardOffset + 'px);') : ('bottom: calc(58px + ' + safeAreaInsetBottom + 'px);')}}">
-
-    <input
-      class="composer-input"
-      placeholder="发一条帖…"
-      value="{{inputText}}"
-      maxlength="80"
-      confirm-type="done"
-      adjust-position="false"
-      placeholder-style="color: rgba(100, 116, 139, 0.7);"
-      cursor-spacing="16"
-      bindinput="onInput"
-      bindconfirm="send"
-      bindfocus="onFocus"
-      bindblur="onBlur"
-      bindkeyboardheightchange="onKeyboardHeightChange"
-    />
-    <view class="composer-send {{(canSend && !sending) ? '' : 'disabled'}}" bindtap="send">
-      <text>{{sending ? '生成中' : '发布'}}</text>
-    </view>
-    <view class="composer-sync" catchtap="manualRefresh">
-    <view class="tip-bubble sync-tip" wx:if="{{showRefreshBubble && refreshText === '刷新'}}">
-        <text>拉取最新</text>
-        <view class="tip-arrow"></view>
+    <view class="card book-card" bindtap="navigateToNumberLearning2" style="margin-top: 14px; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+      <view class="book-content" style="display: flex; align-items: center; width: 100%;">
+        <view class="book-info" style="flex: 1;">
+          <text class="book-name" style="font-size: 16px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">数字学习二</text>
+          <view class="book-desc-row" style="display: flex; align-items: center; color: #64748b; font-size: 13px;">
+            <text>📏</text>
+            <text style="margin-left: 8px;">身高 体重 温度</text>
+          </view>
+        </view>
+        <view class="arrow-icon" style="color: #cbd5e1; font-size: 20px;">›</view>
       </view>
-      <text class="{{refreshText !== '刷新' ? 'countdown-text' : ''}}">{{refreshText}}</text>
+    </view>
+
+    <view class="card book-card" bindtap="navigateToColorBlocks" style="margin-top: 14px; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+      <view class="book-content" style="display: flex; align-items: center; width: 100%;">
+        <view class="book-info" style="flex: 1;">
+          <text class="book-name" style="font-size: 16px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">色块识别</text>
+          <view class="book-desc-row" style="display: flex; align-items: center; color: #64748b; font-size: 13px;">
+            <text>🎨</text>
+            <text style="margin-left: 8px;">翻牌 输入 听音选色</text>
+          </view>
+        </view>
+        <view class="arrow-icon" style="color: #cbd5e1; font-size: 20px;">›</view>
+      </view>
     </view>
   </view>
-
 </view>
