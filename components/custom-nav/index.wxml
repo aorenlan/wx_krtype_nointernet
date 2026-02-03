@@ -1,4 +1,4 @@
-<view class="custom-nav {{theme}} {{(showCheckin && checkinText && progress) ? 'compact' : ''}}" style="height: {{statusBarHeight + navBarHeight}}px;">
+<view class="custom-nav {{theme}} {{isIPad ? 'ipad-layout' : ''}} {{(showCheckin && checkinText && progress) ? 'compact' : ''}}" style="height: {{statusBarHeight + navBarHeight}}px;">
   <view class="nav-content" style="top: {{menuButtonTop}}px; height: {{menuButtonHeight}}px; right: {{capsulePaddingRight}}px;">
     <view class="nav-back" catchtap="onHomeTap" wx:if="{{showHome}}">
       <image src="/assets/icons/home.svg" class="home-icon" />

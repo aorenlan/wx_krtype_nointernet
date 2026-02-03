@@ -74,7 +74,7 @@ Component({
       const windowWidth = windowInfo.windowWidth || 375
 
       // Detect iPad
-      const isIPad = (windowInfo.model || '').toLowerCase().includes('ipad')
+      const isIPad = (windowInfo.model || '').toLowerCase().includes('ipad') || (windowWidth >= 600)
 
       let capsuleLeft = null
       if (typeof menuButtonInfo.left === 'number') capsuleLeft = menuButtonInfo.left
@@ -95,7 +95,8 @@ Component({
         navBarHeight: (menuButtonInfo.top - statusBarHeight) * 2 + menuButtonInfo.height,
         menuButtonHeight: menuButtonInfo.height,
         menuButtonTop: menuButtonInfo.top,
-        capsulePaddingRight
+        capsulePaddingRight,
+        isIPad
       })
     }
   },

@@ -1,6 +1,6 @@
 <custom-nav subtitle="{{displayCategory}}" progress="{{words.length > 0 ? (currentIndex + 1) + ' / ' + words.length : ''}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
-<view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;" bindtap="focusHiddenInput">
+<view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}} {{isIPad ? 'ipad-mode' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;" bindtap="focusHiddenInput">
   <input class="hidden-input" value="{{hiddenInputValue}}" focus="{{inputFocus}}" bindinput="onHiddenInput" bindblur="onHiddenInputBlur" maxlength="-1" />
 
   <!-- 每日一句入口 -->

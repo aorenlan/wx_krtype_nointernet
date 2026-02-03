@@ -267,3 +267,18 @@
   background-color: #1e293b;
   transform: rotate(45deg);
 }
+
+/* iPad Centered Layout */
+.custom-nav.ipad-layout .nav-content {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 500px; /* Constrain width to bring elements to center */
+  padding-right: 0;
+  box-sizing: border-box;
+}
+
+.custom-nav.ipad-layout .nav-right {
+  margin-right: 0; /* Ensure no extra margin pushes it out */
+}

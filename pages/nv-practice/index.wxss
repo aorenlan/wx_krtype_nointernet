@@ -1606,3 +1606,54 @@
 .dark-mode .tooltip-arrow {
     border-top-color: #f1f5f9;
 }
+
+/* iPad Keyboard Adjustment: Centered and not stretched */
+.container.ipad-mode .keyboard-wrapper {
+  /* Use scaling to maintain aspect ratio (keys won't be too tall) */
+  width: 100% !important;
+  max-width: none !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform-origin: bottom center !important;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+}
+
+.container.ipad-mode .keyboard-wrapper.closed {
+  transform: translateY(120%) scale(0.65) !important;
+}
+
+.container.ipad-mode .keyboard-wrapper.open {
+  transform: translateY(0) scale(0.65) !important;
+}
+
+/* iPad Adjustments */
+.container.ipad-mode .card-stack {
+  margin-top: -60px;
+}
+
+.container.ipad-mode.keyboard-open .card-stack {
+  /* Increased scale from 0.92 to 1.05 as requested */
+  transform: translateY(-220px) scale(1.05);
+}
+
+/* iPad Keyboard Header Adjustments */
+/* Since the wrapper is scaled down (0.65), we need to enlarge the header elements 
+   so they look proportional and accessible. */
+.container.ipad-mode .keyboard-header-row {
+  height: 60px; /* Enlarge header height */
+  padding-bottom: 10px;
+}
+
+.container.ipad-mode .keyboard-icon-btn,
+.container.ipad-mode .keyboard-mistake-pill {
+  transform: scale(1.4); /* Enlarge buttons */
+  margin: 0 10px; /* Add some spacing */
+}
+
+.container.ipad-mode .keyboard-handle-bar {
+  transform: scale(1.5);
+}
+
+.container.ipad-mode .keyboard-close-btn {
+  transform: scale(1.4);
+}

@@ -237,6 +237,10 @@ Page({
         // Add 'devtools' for simulator testing
         const isPC = platform === 'mac' || platform === 'windows' || platform === 'devtools';
         
+        // iPad/Large Screen detection
+        // Check model OR screen width (iPad usually > 700px width, landscape even more)
+        const isIPad = (windowInfo.model || '').toLowerCase().includes('ipad') || (windowInfo.windowWidth >= 600);
+        
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
 
@@ -323,6 +327,7 @@ Page({
         this.setData({
             statusBarHeight: windowInfo.statusBarHeight || 20,
             navBarHeight: 44, 
+            isIPad,
             settings: mergedSettings,
             isKeyboardOpen: false,
             timeLeft: mergedSettings.timerDuration || DEFAULT_SETTINGS.timerDuration,
