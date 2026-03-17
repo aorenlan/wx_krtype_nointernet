@@ -811,6 +811,11 @@
   background: transparent;
 }
 
+.icon-btn.shuffle-active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
 .share-btn-reset {
   margin: 0;
   padding: 0;

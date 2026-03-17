@@ -1,4 +1,89 @@
 
+/* Shuffle Button on Card */
+.shuffle-action-icon {
+  position: relative;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.shuffle-action-icon image {
+  width: 17px !important;
+  height: 17px !important;
+  opacity: 0.3;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.shuffle-action-icon.shuffle-on {
+  border-color: #3b82f6 !important;
+  background-color: transparent !important;
+}
+
+.shuffle-action-icon.shuffle-on image {
+  opacity: 1;
+  filter: brightness(0) saturate(100%) invert(45%) sepia(80%) saturate(600%) hue-rotate(200deg) brightness(100%) contrast(95%);
+}
+
+/* Shuffle Guide Tooltip */
+.shuffle-guide {
+  position: absolute;
+  bottom: -38px;
+  right: 0;
+  background: #1e293b;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.shuffle-guide.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.shuffle-guide::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 18px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #1e293b;
+}
+
+/* Shuffle Toast */
+.shuffle-toast {
+  position: absolute;
+  top: 52px;
+  right: 12px;
+  background: rgba(30, 41, 59, 0.88);
+  color: #fff;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.shuffle-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Hidden Input for PC */
 .hidden-input {
   position: absolute;

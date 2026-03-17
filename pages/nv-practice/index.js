@@ -140,8 +140,13 @@ const sanitizeSettings = (raw) => {
 Page({
     data: {
         words: [],
+        originalWords: [],
+        isShuffled: false,
+        showShuffleToast: false,
+        shuffleToastText: '',
+        showShuffleGuide: false,
         currentIndex: 0,
-        currentWord: null, 
+        currentWord: null,
         repeatCorrectCount: 0,
         categories: [],
         yonseiLessons: [],
@@ -244,66 +249,60 @@ Page({
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
 
-        // Check Update Popup
+        // Check Update Popup (runs independently, not part of guide queue)
         const updateKey = 'hasShownUpdatePopup_v2_new';
-        const hasShown = wx.getStorageSync(updateKey);
-        if (!hasShown) {
+        if (!wx.getStorageSync(updateKey)) {
             this.setData({ showUpdatePopup: true });
             wx.setStorageSync(updateKey, true);
-        } else {
-            const guideKey = 'kr_practice_guide_bubble_shown_v1';
-            const guideShown = !!wx.getStorageSync(guideKey);
-            if (!guideShown && !this.data.isKeyboardOpen) {
-                this.showGuideBubbleWithTimeout();
-            }
         }
 
-        // Settings Tooltip Logic (Daily Rotating)
-        const now = new Date();
-        const today = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-        const lastShownDate = wx.getStorageSync('settings_tooltip_shown_date');
+        // --- Onboarding Guide Queue ---
+        // To add a new guide in the future, append an entry to GUIDE_QUEUE.
+        // Each entry needs a unique `key` (stored in wx.storage to track if shown),
+        // a `show` function (called to display it), and a `hide` function.
+        // The queue runs in order; only unseen guides are shown, one at a time.
+        const GUIDE_QUEUE = [
+            {
+                key: 'kr_practice_guide_bubble_shown_v1',   // 1. 点击唤起键盘
+                duration: 2500,
+                show: () => this.setData({ showGuideBubble: true }),
+                hide: () => this.setData({ showGuideBubble: false }),
+            },
+            {
+                key: 'has_seen_shuffle_guide_v1',            // 2. 打乱单词
+                duration: 2500,
+                show: () => this.setData({ showShuffleGuide: true }),
+                hide: () => this.setData({ showShuffleGuide: false }),
+            },
+            {
+                key: 'has_shown_word_detail_tooltip',        // 3. 点击单词可查看例句 (same key as TOOLTIP_STORAGE_KEY)
+                duration: 2500,
+                show: () => this.setData({ showWordTooltip: true }),
+                hide: () => this.setData({ showWordTooltip: false }),
+            },
+            {
+                key: 'has_seen_settings_guide_v1',           // 4. 可选择词库
+                duration: 2500,
+                show: () => this.setData({ showSettingsTooltip: true, settingsTooltipText: '可选择词库' }),
+                hide: () => this.setData({ showSettingsTooltip: false }),
+            },
+        ];
 
-        if (lastShownDate !== today) {
-            const TIPS = ['设置', '可选择词库', '可修改键盘', '朗读设置', '显示设置'];
-            const lastIndex = wx.getStorageSync('settings_tooltip_index');
-            // If lastIndex is null/undefined (first run), we want to start at 0.
-            // But we increment BEFORE showing? Or increment AFTER showing?
-            // "Rotate these every day" -> Day 1: Tip 0, Day 2: Tip 1...
-            // So if no index exists, use -1 so next is 0.
-            
-            let currentIndex = Number(lastIndex);
-            if (!Number.isFinite(currentIndex)) {
-                currentIndex = -1;
-            }
-            
-            const nextIndex = (currentIndex + 1) % TIPS.length;
-            const nextTip = TIPS[nextIndex];
+        // Filter to only unseen guides, mark them all as seen upfront
+        const pending = GUIDE_QUEUE.filter(g => !wx.getStorageSync(g.key));
+        pending.forEach(g => wx.setStorageSync(g.key, true));
 
-            this.setData({ 
-                showSettingsTooltip: true,
-                settingsTooltipText: nextTip
-            });
-            
-            wx.setStorageSync('settings_tooltip_shown_date', today);
-            wx.setStorageSync('settings_tooltip_index', nextIndex);
-            
-            if (this._settingsTooltipTimer) clearTimeout(this._settingsTooltipTimer);
-            this._settingsTooltipTimer = setTimeout(() => {
-                this.setData({ showSettingsTooltip: false });
-            }, 2000);
-        }
-
-        // Word Detail Tooltip Logic (First Time Only)
-        const hasShownWordTooltip = wx.getStorageSync(TOOLTIP_STORAGE_KEY);
-        if (!hasShownWordTooltip) {
-            this.setData({ showWordTooltip: true });
-            // Mark as shown immediately so it doesn't show again
-            wx.setStorageSync(TOOLTIP_STORAGE_KEY, true);
-            
-            // Auto dismiss after 5 seconds
-            setTimeout(() => {
-                this.setData({ showWordTooltip: false });
-            }, 5000);
+        if (pending.length > 0) {
+            const runNext = (index) => {
+                if (index >= pending.length) return;
+                const guide = pending[index];
+                guide.show();
+                setTimeout(() => {
+                    guide.hide();
+                    setTimeout(() => runNext(index + 1), 400);
+                }, guide.duration);
+            };
+            setTimeout(() => runNext(0), 1000);
         }
 
         this.loadDailySentenceEntry();
@@ -1016,6 +1015,8 @@ Page({
             return this.setData(
                 {
                     words: mistakes,
+                    originalWords: [...mistakes],
+                    isShuffled: false,
                     loading: false,
                     currentIndex: startIndex,
                     currentWord: null
@@ -1046,6 +1047,8 @@ Page({
             this.setData(
                 {
                     words: res.words,
+                    originalWords: [...res.words],
+                    isShuffled: false,
                     loading: false,
                     currentIndex: startIndex,
                     currentWord: null
@@ -1057,8 +1060,38 @@ Page({
                 }
             );
         } else {
-            this.setData({ words: [], loading: false, currentWord: null, prevWordInfo: null });
+            this.setData({ words: [], originalWords: [], isShuffled: false, loading: false, currentWord: null, prevWordInfo: null });
         }
+    },
+
+    toggleShuffle() {
+        const { isShuffled, originalWords, words } = this.data;
+        let newWords;
+        let toastText;
+        if (isShuffled) {
+            newWords = [...originalWords];
+            toastText = '已恢复原顺序';
+        } else {
+            newWords = [...words];
+            for (let i = newWords.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newWords[i], newWords[j]] = [newWords[j], newWords[i]];
+            }
+            toastText = `已随机打乱 ${newWords.length} 个单词`;
+        }
+        if (this._shuffleToastTimer) clearTimeout(this._shuffleToastTimer);
+        this.setData({
+            isShuffled: !isShuffled,
+            words: newWords,
+            currentIndex: 0,
+            showShuffleToast: true,
+            shuffleToastText: toastText
+        }, () => {
+            this.startWord(0);
+        });
+        this._shuffleToastTimer = setTimeout(() => {
+            this.setData({ showShuffleToast: false });
+        }, 2000);
     },
 
     openSettings() {

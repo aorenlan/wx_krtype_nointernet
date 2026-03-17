@@ -78,7 +78,11 @@ Page({
     // PC Support
     isPC: false,
     inputFocus: false,
-    hiddenInputValue: ''
+    hiddenInputValue: '',
+
+    // Shuffle Logic
+    isShuffled: false,
+    originalItems: []
   },
 
   onLoad() {
@@ -624,6 +628,34 @@ Page({
     this.setData({ mode: 'menu', inputFocus: false });
   },
 
+  toggleShuffle() {
+    const { isShuffled, originalItems, items } = this.data;
+    let newItems;
+    if (isShuffled) {
+      // 恢复原始顺序
+      newItems = [...originalItems];
+    } else {
+      // 打乱当前课程顺序
+      newItems = [...items];
+      for (let i = newItems.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newItems[i], newItems[j]] = [newItems[j], newItems[i]];
+      }
+    }
+    this.setData({
+      isShuffled: !isShuffled,
+      items: newItems,
+      currentItemIndex: 0
+    }, () => {
+      this.loadItem(newItems[0]);
+    });
+    wx.showToast({
+      title: isShuffled ? '已恢复原顺序' : '已随机打乱',
+      icon: 'none',
+      duration: 1200
+    });
+  },
+
   // --- Custom Input ---
 
   handleCustomInput(e) {
@@ -803,6 +835,8 @@ Page({
 
     this.setData({
       items: itemsToUse,
+      originalItems: [...practiceItems],
+      isShuffled: false,
       currentItemIndex: 0,
       mode: 'typing',
       isTopAdVisible: false, // Reset ad state

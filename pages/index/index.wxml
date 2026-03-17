@@ -214,6 +214,10 @@ module.exports = {
         <view class="icon-btn" bindtap="goBack" hover-class="icon-hover">
           <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNSAxOCA5IDEyIDE1IDYiPjwvcG9seWxpbmU+PC9zdmc+"></image>
         </view>
+        <!-- Shuffle Button -->
+        <view class="icon-btn {{isShuffled ? 'shuffle-active' : ''}}" bindtap="toggleShuffle" hover-class="icon-hover">
+          <image class="icon-img small" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIxNiAzIDIxIDMgMjEgOCI+PC9wb2x5bGluZT48bGluZSB4MT0iNCIgeTE9IjIwIiB4Mj0iMjEiIHkyPSIzIj48L2xpbmU+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTYgMjEgMjEgMTYgMjEiPjwvcG9seWxpbmU+PGxpbmUgeDE9IjQiIHkxPSI0IiB4Mj0iOSIgeTI9IjkiPjwvbGluZT48L3N2Zz4=" style="{{isShuffled ? 'filter: brightness(0) saturate(100%) invert(58%) sepia(97%) saturate(420%) hue-rotate(200deg) brightness(101%) contrast(96%)' : ''}}"></image>
+        </view>
         <!-- Settings Button -->
         <view class="settings-wrapper">
         <view class="icon-btn" bindtap="showSettings" hover-class="icon-hover">
