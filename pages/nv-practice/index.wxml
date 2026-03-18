@@ -15,6 +15,7 @@
     </view>
   </view>
 
+
   <view class="loading-container" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
@@ -372,25 +373,21 @@
 
   <canvas type="2d" id="shareCanvas" style="position: absolute; left: -9999px; top: 0; width: 375px; height: 300px;"></canvas>
 
-  <!-- Update Popup -->
-  <view class="modal-overlay center {{showUpdatePopup ? 'show' : ''}}" catchtouchmove="preventScroll">
-    <view class="modal-content {{settings.darkMode ? 'dark' : ''}}">
-      <view class="modal-header">
-        <text class="modal-title">更新说明</text>
-        <view class="modal-close" bindtap="closeUpdatePopup">✕</view>
-      </view>
-      <view class="modal-body" style="padding: 20px;">
-        <view style="margin-bottom: 15px; font-weight: bold; font-size: 16px;">v4.3 全新上线！</view>
-        <view style="line-height: 1.8; color: #64748b; font-size: 14px;">
-          <view>1. 卡片左上角F模式</view>
-          <view>2. 点击单词 新增例句</view>
-          <view>3. 新增写作矫正模式</view>
-          <view>待更新：拍照识别</view>
-        </view>
-        <button bindtap="closeUpdatePopup" style="margin-top: 25px; width: 100%; background: #6366f1; color: white; border-radius: 12px; font-weight: 500;">开始体验</button>
-      </view>
+  <!-- 左下角：今日待复习胶囊 + 隐藏开发者触发区 -->
+  <view class="bottom-left-corner">
+    <!-- 模拟次日按钮（开发者专用，默认隐藏） -->
+    <view wx:if="{{showDevBtn}}" class="debug-srs-fab" bindtap="debugSimulateNextDay">
+      <text>🧪</text>
+    </view>
+    <!-- 今日待复习胶囊 -->
+    <view wx:if="{{srsCount > 0}}" class="srs-capsule" bindtap="openSrsReview">
+      <view class="srs-capsule-glow"></view>
+      <text class="srs-capsule-icon">🔥</text>
+      <text class="srs-capsule-text">待复习·{{srsCount}}</text>
+      <text class="srs-capsule-arrow">›</text>
     </view>
   </view>
+
 
   <!-- Nagging Mode Overlay -->
   <view class="nagging-overlay" wx:if="{{isNaggingMode}}" catchtouchmove="preventScroll" bindtap="toggleSetting" data-key="naggingMode">

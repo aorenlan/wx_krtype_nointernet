@@ -1,0 +1,309 @@
+<custom-nav title="韩语 News" theme="light" showSettings="{{false}}"></custom-nav>
+
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;">
+
+  <!-- ========== LIST VIEW ========== -->
+  <view wx:if="{{view === 'list'}}" class="list-view">
+
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <view class="kr-hello">
+        <text class="kr-char kr-c1">안</text>
+        <text class="kr-char kr-c2">녕</text>
+        <text class="kr-char kr-c3">하</text>
+        <text class="kr-char kr-c4">세</text>
+        <text class="kr-char kr-c5">요</text>
+      </view>
+      <view class="kr-hello-sub">加载韩语news中...</view>
+    </view>
+
+    <view wx:else class="article-list">
+      <view
+        wx:for="{{articles}}"
+        wx:key="_id"
+        class="article-card"
+        bindtap="onArticleTap"
+        data-id="{{item._id}}"
+      >
+        <view class="card-date">{{item.date}}</view>
+        <view class="card-title">{{item.content.news_title}}</view>
+        <view wx:if="{{item.content.chinese_title}}" class="card-chinese-title">{{item.content.chinese_title}}</view>
+        <view class="card-arrow">›</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== DETAIL VIEW ========== -->
+  <view wx:if="{{view === 'detail'}}" class="detail-view">
+
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <view class="spinner"></view>
+    </view>
+
+    <block wx:elif="{{currentArticle}}">
+      <!-- Back + Title -->
+      <view class="detail-header">
+        <view class="back-btn" bindtap="goBack">
+          <text class="back-icon">‹</text>
+          <text class="back-text">返回</text>
+        </view>
+        <view class="header-right-btns">
+          <view class="expert-wrap">
+            <view wx:if="{{showExpertTip}}" class="expert-tip-inline" bindtap="toggleExpertMode">
+              <text class="expert-tip-text">切换后点单词</text>
+              <text class="expert-tip-arrow-right">▶</text>
+            </view>
+            <view class="expert-toggle {{expertMode ? 'on' : 'off'}}" bindtap="toggleExpertMode">
+              <view class="expert-dot"></view>
+              <text class="expert-label">{{expertMode ? '精讲' : '速读'}}</text>
+            </view>
+          </view>
+          <view class="translate-toggle {{showChinese ? 'active' : ''}}" bindtap="toggleLanguage">
+            <text>{{showChinese ? '韩文' : '翻译'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <scroll-view scroll-y class="article-scroll {{showBottomPanel ? 'with-panel' : ''}}">
+        <view class="newspaper-wrap">
+          <view class="article-title">{{currentArticle.content.news_title}}</view>
+          <view wx:if="{{currentArticle.content.chinese_title}}" class="article-chinese-title">{{currentArticle.content.chinese_title}}</view>
+          <view class="article-date">{{currentArticle.date}}</view>
+
+          <!-- 中文翻译模式 -->
+          <view wx:if="{{showChinese}}" class="chinese-content">
+            <text class="chinese-text">{{currentArticle.content.original_content}}</text>
+          </view>
+
+          <!-- 韩文段落模式 -->
+          <block wx:else>
+            <view
+              wx:for="{{currentArticle.paragraphs}}"
+              wx:key="pIdx"
+              class="paragraph-wrap"
+            >
+              <view class="paragraph-text">
+                <block wx:if="{{item.sentences.length > 0}}">
+                  <block wx:for="{{item.sentences}}" wx:key="sentence_id" wx:for-item="sent">
+                    <view
+                      class="sentence-wrap {{selectedSentence.sentence_id === sent.sentence_id ? 'sentence-selected' : ''}}"
+                      catchtap="onSentenceTap"
+                      data-sentence-id="{{sent.sentence_id}}"
+                      data-p-idx="{{item.pIdx}}"
+                    >
+                      <block wx:for="{{sent.word_segments}}" wx:key="word_id" wx:for-item="ws">
+                        <text
+                          class="word-span {{selectedWord.word_id === ws.word_id ? 'word-selected' : ''}}"
+                          catchtap="onWordTap"
+                          data-word-id="{{ws.word_id}}"
+                          data-sentence-id="{{sent.sentence_id}}"
+                          data-p-idx="{{item.pIdx}}"
+                        >{{ws.text}} </text>
+                      </block>
+                    </view>
+                  </block>
+                </block>
+                <block wx:else>
+                  <text class="plain-text">{{item.paraText}}</text>
+                </block>
+                <view class="para-audio-btn-inline" catchtap="onParaAudioTap" data-para-index="{{item.pIdx}}">
+                  <view wx:if="{{loadingParaIndex === item.pIdx}}" class="audio-loading-dot"></view>
+                  <view wx:elif="{{playingParaIndex === item.pIdx}}" class="audio-playing-icon">
+                    <view class="bar b1"></view><view class="bar b2"></view><view class="bar b3"></view>
+                  </view>
+                  <image wx:else src="/assets/icons/volume.svg" class="audio-vol-icon" mode="aspectFit"></image>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
+      </scroll-view>
+
+      <!-- 首次进入引导弹窗 -->
+      <view wx:if="{{showGuideModal}}" class="guide-mask" catchtap="closeGuideModal">
+        <view class="guide-modal" catchtap="">
+          <view class="guide-title">使用提示</view>
+          <view class="guide-item">
+            <text class="guide-icon">👆</text>
+            <text class="guide-text">点击韩文单词，可查看精讲解析</text>
+          </view>
+          <view class="guide-item">
+            <text class="guide-icon">⚡</text>
+            <text class="guide-text">点击「精讲」可切换速读模式，单词释义悬浮显示</text>
+          </view>
+          <view class="guide-close" bindtap="closeGuideModal">知道了</view>
+        </view>
+      </view>
+
+      <!-- Word Meaning Toast (速读模式) -->
+      <view
+        class="word-meaning-toast {{showWordMeaningToast ? 'show' : ''}}"
+        style="left:{{wordToastX}}px;top:{{wordToastY}}px;"
+      >
+        <text>{{wordToast}}</text>
+      </view>
+
+      <!-- Mask -->
+      <view wx:if="{{showBottomPanel}}" class="panel-mask" catchtap="closeBottomPanel"></view>
+
+      <!-- Bottom Panel -->
+      <view class="bottom-panel {{showBottomPanel ? 'show' : ''}}">
+        <!-- Tab Bar -->
+        <view class="panel-tabs">
+          <view class="panel-tab {{bottomTab === 'word' ? 'active' : ''}}" bindtap="switchBottomTab" data-tab="word">单词</view>
+          <view class="panel-tab {{bottomTab === 'sentence' ? 'active' : ''}}" bindtap="switchBottomTab" data-tab="sentence">句子</view>
+          <view class="panel-tab {{bottomTab === 'translation' ? 'active' : ''}}" bindtap="switchBottomTab" data-tab="translation">翻译</view>
+          <view class="panel-close" bindtap="closeBottomPanel">×</view>
+        </view>
+
+        <!-- Word Tab -->
+        <scroll-view scroll-y class="panel-body" wx:if="{{bottomTab === 'word'}}">
+          <view class="panel-body-inner">
+            <view wx:if="{{selectedWord}}" class="word-panel">
+              <!-- 韩文 + 发音 + 汉字 -->
+              <view class="word-top-row">
+                <text class="word-main">{{selectedWord.text}}</text>
+                <view class="word-badges">
+                  <text wx:if="{{selectedWord.analysis && selectedWord.analysis.word_class}}" class="badge-pos">{{selectedWord.analysis.word_class}}</text>
+                  <text wx:if="{{selectedWord.analysis && selectedWord.analysis.level}}" class="badge-level">{{selectedWord.analysis.level}}</text>
+                </view>
+              </view>
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.pronunciation}}" class="word-pronunciation">{{selectedWord.analysis.pronunciation}}</view>
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.hanja}}" class="word-hanja">{{selectedWord.analysis.hanja}}</view>
+
+              <!-- 中文释义 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.meaning}}" class="word-meaning">{{selectedWord.analysis.meaning}}</view>
+
+              <view wx:if="{{selectedWord.analysis}}" class="word-divider"></view>
+
+              <!-- 原形 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.base_form && selectedWord.analysis.base_form !== selectedWord.text}}" class="word-meta-row">
+                <text class="meta-label">原形</text>
+                <text class="meta-value">{{selectedWord.analysis.base_form}}</text>
+              </view>
+              <!-- 助词用法 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.detailed && selectedWord.analysis.detailed.particle_usage}}" class="word-meta-row">
+                <text class="meta-label">助词</text>
+                <text class="meta-value">{{selectedWord.analysis.detailed.particle_usage}}</text>
+              </view>
+              <!-- 语法 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.detailed && selectedWord.analysis.detailed.grammar_point}}" class="word-meta-row">
+                <text class="meta-label">语法</text>
+                <text class="meta-value">{{selectedWord.analysis.detailed.grammar_point}}</text>
+              </view>
+
+              <!-- 例句 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.usage_example}}" class="word-example">
+                <text class="example-kr">{{selectedWord.analysis.usage_example}}</text>
+              </view>
+
+              <!-- 近义词 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.synonyms && selectedWord.analysis.synonyms.length > 0}}" class="word-tags-row">
+                <text class="meta-label">近义</text>
+                <view class="tags-wrap">
+                  <text wx:for="{{selectedWord.analysis.synonyms}}" wx:key="*this" class="tag-chip tag-syn">{{item}}</text>
+                </view>
+              </view>
+              <!-- 反义词 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.antonyms && selectedWord.analysis.antonyms.length > 0}}" class="word-tags-row">
+                <text class="meta-label">反义</text>
+                <view class="tags-wrap">
+                  <text wx:for="{{selectedWord.analysis.antonyms}}" wx:key="*this" class="tag-chip tag-ant">{{item}}</text>
+                </view>
+              </view>
+              <!-- 相关词 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.detailed && selectedWord.analysis.detailed.related_words && selectedWord.analysis.detailed.related_words.length > 0}}" class="word-tags-row">
+                <text class="meta-label">相关</text>
+                <view class="tags-wrap">
+                  <text wx:for="{{selectedWord.analysis.detailed.related_words}}" wx:key="*this" class="tag-chip tag-rel">{{item}}</text>
+                </view>
+              </view>
+              <!-- 复合词 -->
+              <view wx:if="{{selectedWord.analysis && selectedWord.analysis.detailed && selectedWord.analysis.detailed.compounds && selectedWord.analysis.detailed.compounds.length > 0}}" class="word-tags-row">
+                <text class="meta-label">复合</text>
+                <view class="tags-wrap">
+                  <text wx:for="{{selectedWord.analysis.detailed.compounds}}" wx:key="*this" class="tag-chip tag-rel">{{item}}</text>
+                </view>
+              </view>
+            </view>
+            <view wx:else class="empty-hint">点击文章中的单词查看分析</view>
+          </view>
+        </scroll-view>
+
+        <!-- Sentence Tab -->
+        <scroll-view scroll-y class="panel-body" wx:if="{{bottomTab === 'sentence'}}">
+          <view class="panel-body-inner">
+            <view wx:if="{{selectedSentence}}" class="sentence-panel">
+              <!-- 句子原文 -->
+              <view class="sent-text">{{selectedSentence.text}}</view>
+              <!-- 句子翻译（优先 detailed_analysis.translation，其次 hover_explanation）-->
+              <view wx:if="{{selectedSentence.detailed_analysis && selectedSentence.detailed_analysis.translation}}" class="sent-translation">{{selectedSentence.detailed_analysis.translation}}</view>
+              <view wx:elif="{{selectedSentence.hover_explanation}}" class="sent-translation">{{selectedSentence.hover_explanation}}</view>
+
+              <view wx:if="{{selectedSentence.detailed_analysis}}">
+                <!-- 难度 -->
+                <view wx:if="{{selectedSentence.detailed_analysis.difficulty_score}}" class="sent-difficulty">
+                  <text class="meta-label">难度</text>
+                  <view class="difficulty-dots">
+                    <view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="dot {{selectedSentence.detailed_analysis.difficulty_score >= item ? 'dot-on' : ''}}"></view>
+                  </view>
+                </view>
+
+                <!-- 句子解析 -->
+                <view wx:if="{{selectedSentence.detailed_analysis.full_explanation}}" class="sent-section">
+                  <view class="sent-label">句子解析</view>
+                  <view class="sent-body">{{selectedSentence.detailed_analysis.full_explanation}}</view>
+                </view>
+
+                <!-- 句型 -->
+                <view wx:if="{{selectedSentence.detailed_analysis.sentence_pattern}}" class="sent-section">
+                  <view class="sent-label">句型结构</view>
+                  <view class="sent-body pattern">{{selectedSentence.detailed_analysis.sentence_pattern}}</view>
+                </view>
+
+                <!-- 语法点 -->
+                <view wx:if="{{selectedSentence.detailed_analysis.grammar_analysis && selectedSentence.detailed_analysis.grammar_analysis.length > 0}}" class="sent-section">
+                  <view class="sent-label">语法点</view>
+                  <view wx:for="{{selectedSentence.detailed_analysis.grammar_analysis}}" wx:key="point" class="grammar-item">
+                    <view class="grammar-point-row">
+                      <text class="grammar-point">{{item.point}}</text>
+                      <text class="grammar-level">{{item.level}}</text>
+                    </view>
+                    <view class="grammar-explain">{{item.explanation}}</view>
+                    <!-- 构成方式 -->
+                    <view wx:if="{{item.formation && item.formation.length > 0}}" class="grammar-sub">
+                      <text class="grammar-sub-label">构成：</text>
+                      <text class="grammar-sub-val">{{item.formation[0]}}</text>
+                    </view>
+                    <!-- 例句 -->
+                    <view wx:if="{{item.examples && item.examples.length > 0}}" class="grammar-examples">
+                      <text wx:for="{{item.examples}}" wx:key="*this" wx:for-item="eg" class="grammar-eg">• {{eg}}</text>
+                    </view>
+                    <!-- 常见错误 -->
+                    <view wx:if="{{item.common_errors}}" class="grammar-sub grammar-error">
+                      <text class="grammar-sub-label">注意：</text>
+                      <text class="grammar-sub-val">{{item.common_errors}}</text>
+                    </view>
+                    <!-- 对比 -->
+                    <view wx:if="{{item.comparison}}" class="grammar-sub">
+                      <text class="grammar-sub-label">对比：</text>
+                      <text class="grammar-sub-val">{{item.comparison}}</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+            <view wx:else class="empty-hint">点击文章中的句子查看分析</view>
+          </view>
+        </scroll-view>
+
+        <!-- Translation Tab -->
+        <scroll-view scroll-y class="panel-body" wx:if="{{bottomTab === 'translation'}}">
+          <view class="panel-body-inner">
+            <view class="translation-text">{{currentArticle.content.original_content}}</view>
+          </view>
+        </scroll-view>
+      </view>
+    </block>
+  </view>
+
+</view>

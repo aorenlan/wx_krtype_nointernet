@@ -450,7 +450,7 @@ Page({
     });
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1, hidden: false });
+      this.getTabBar().setData({ selected: 2, hidden: false });
     }
     
     // Check if we need to force refresh (e.g. after new story)

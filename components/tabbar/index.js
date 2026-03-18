@@ -24,19 +24,19 @@ Component({
         text: "练习"
       },
       {
-        pagePath: "/pages/story-workshop/index",
+        pagePath: "/pages/news/index",
         iconPath: "/assets/tabbar/re_story.png",
         selectedIconPath: "/assets/tabbar/re_story.png",
+        text: "News"
+      },
+      {
+        pagePath: "/pages/story-workshop/index",
+        iconPath: "/assets/tabbar/re_talk.png",
+        selectedIconPath: "/assets/tabbar/re_talk.png",
         text: "故事坊"
       },
       {
-        pagePath: "/pages/hi-chat/index",
-        iconPath: "/assets/tabbar/re_talk.png",
-        selectedIconPath: "/assets/tabbar/re_talk.png",
-        text: "趣味韩语"
-      },
-      {
-        pagePath: "",
+        pagePath: "/pages/grammar-entry/index",
         iconPath: "/assets/tabbar/re_语法.png",
         selectedIconPath: "/assets/tabbar/re_语法.png",
         text: "语法"
@@ -50,55 +50,9 @@ Component({
     ]
   },
   methods: {
-    async switchTab(e) {
+    switchTab(e) {
       const data = e.currentTarget.dataset
       const url = data.path
-      const index = data.index
-      
-      if (index === 3) { // 语法 Tab
-        const settings = wx.getStorageSync('settings') || {};
-        const category = String(settings.category || '');
-        
-        if (category === 'TOPIK Vocabulary') {
-             wx.showToast({ title: '语法功能正在开发', icon: 'none' });
-             return;
-        }
-
-        const m = category.match(/^Yonsei\s*(\d)$/i);
-        if (!m) {
-             wx.showToast({ title: '语法功能正在开发', icon: 'none' });
-             return;
-        }
-        
-        const bookNum = m[1];
-        const book = `Yonsei ${bookNum}`;
-        let lessonId = String(settings.yonseiLessonId || '').trim();
-        
-        // 尝试自动获取第一课
-        if (!lessonId) {
-             try {
-                // 动态引入 api 避免循环依赖或路径问题，尝试简单的 require
-                // 注意：小程序 require 相对路径需要准确
-                const { getYonseiLessons } = require('../../utils_nv/api.js');
-                const lessons = await getYonseiLessons(category);
-                if (lessons && lessons.length > 0) {
-                    lessonId = String(lessons[0].id);
-                }
-             } catch (err) {
-                 console.error('Auto fetch lesson failed', err);
-             }
-        }
-
-        if (!lessonId) {
-            wx.showToast({ title: '请先在练习页选择课次', icon: 'none' });
-            return;
-        }
-        
-        const targetUrl = `/subpackages/grammar/pages/index/index?book=${encodeURIComponent(book)}&lessonId=${encodeURIComponent(lessonId)}`;
-        wx.navigateTo({ url: targetUrl });
-        return
-      }
-
       wx.switchTab({
         url,
         fail: () => {

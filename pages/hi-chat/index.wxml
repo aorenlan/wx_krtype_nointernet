@@ -2,7 +2,7 @@
   id="customNav"
   title="趣味韩语"
   theme="light"
-  showBack="{{false}}"
+  showBack="{{true}}"
   showSettings="{{false}}"
   showCheckin="{{false}}"
 ></custom-nav>

@@ -2,6 +2,7 @@ import { getWords, getCategories, getYonseiLessons, getTopikLevels, getTopikSess
 import { decomposeKoreanStructure } from '../../utils/hangul';
 import { saveMistake, removeMistake, getMistakes, getProgress, saveProgressV2 } from '../../utils_nv/storage';
 import { KEYBOARD_LAYOUT } from '../../constants/index';
+const srs = require('../../utils/srs');
 
 const AUDIO_ORIGIN = 'https://enoss.aorenlan.fun';
 const AUDIO_BASE_PATH = '/kr_word';
@@ -195,8 +196,9 @@ Page({
         
         statusBarHeight: 20,
         navBarHeight: 44,
-        showUpdatePopup: false,
         dailySentenceEntrySource: '',
+        srsCount: 0,
+        showDevBtn: false,
         showGuideBubble: false,
         showSettingsTooltip: false,
         settingsTooltipText: '可调整显示模式',
@@ -249,12 +251,6 @@ Page({
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
 
-        // Check Update Popup (runs independently, not part of guide queue)
-        const updateKey = 'hasShownUpdatePopup_v2_new';
-        if (!wx.getStorageSync(updateKey)) {
-            this.setData({ showUpdatePopup: true });
-            wx.setStorageSync(updateKey, true);
-        }
 
         // --- Onboarding Guide Queue ---
         // To add a new guide in the future, append an entry to GUIDE_QUEUE.
@@ -382,6 +378,26 @@ Page({
         wx.setStorageSync(TOOLTIP_STORAGE_KEY, true);
     },
 
+    openSrsReview() {
+        wx.navigateTo({ url: '/pages/srs-review/index' });
+    },
+
+    debugSimulateNextDay() {
+        const all = wx.getStorageSync('flashflow_srs') || {};
+        const keys = Object.keys(all);
+        if (keys.length === 0) {
+            wx.showToast({ title: '还没有学习记录，先练几个单词', icon: 'none' });
+            return;
+        }
+        const ONE_DAY = 86400000;
+        keys.forEach(k => { all[k].nextReview = all[k].nextReview - ONE_DAY; });
+        wx.setStorageSync('flashflow_srs', all);
+        wx.removeStorageSync('flashflow_srs_daily');
+        const count = srs.getTodayCount();
+        this.setData({ srsCount: count });
+        wx.showToast({ title: count > 0 ? `今日待复习 ${count}个` : '今天没有到期单词', icon: 'none' });
+    },
+
     openDailySentence() {
         try { this.cancelCurrentAudioPlayback(); } catch (e) {}
         try { this.cancelAudioPreload(); } catch (e) {}
@@ -400,15 +416,6 @@ Page({
         });
     },
 
-    closeUpdatePopup() {
-        this.setData({ showUpdatePopup: false });
-        // Check Guide Bubble again after popup closed
-        const guideKey = 'kr_practice_guide_bubble_shown_v1';
-        const guideShown = !!wx.getStorageSync(guideKey);
-        if (!guideShown && !this.data.isKeyboardOpen) {
-            this.showGuideBubbleWithTimeout();
-        }
-    },
 
     showGuideBubbleWithTimeout() {
         const guideKey = 'kr_practice_guide_bubble_shown_v1';
@@ -846,6 +853,9 @@ Page({
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
             this.getTabBar().setData({ selected: 0 });
         }
+        // 更新今日待复习数量 & 开发者模式
+        const devEnabled = wx.getStorageSync('dev_mode_enabled') || false;
+        this.setData({ srsCount: srs.getTodayCount(), showDevBtn: devEnabled });
         const newSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(newSettings);
         const prevSettings = sanitizeSettings(this.data.settings || {});
@@ -1656,6 +1666,18 @@ Page({
         this.completeTimer = setTimeout(() => {
             this.clearAllTimers();
             if (nextRepeat >= repeatCount) {
+                // 记录 SRS 学习数据
+                const w = this.data.currentWord;
+                if (w && w.id) {
+                    const wordKey = `${w.sourceCategory || ''}_${w.lessonId || ''}_${w.id}`;
+                    srs.recordLearned(wordKey, {
+                        word: w.word,
+                        meaning: w.meaning,
+                        phonetic: w.phonetic || '',
+                        category: w.sourceCategory || '',
+                        lessonId: w.lessonId || '',
+                    });
+                }
                 this.nextWord();
                 return;
             }

@@ -1,0 +1,87 @@
+<view class="page">
+
+  <!-- 顶部导航 -->
+  <view class="nav">
+    <view class="nav-back" bindtap="onBack">
+      <text class="nav-back-icon">‹</text>
+      <text class="nav-back-text">返回</text>
+    </view>
+    <text class="nav-title" wx:if="{{!finished}}">{{done}} / {{total}}</text>
+    <!-- 测试用，上线前删除 -->
+    <view class="debug-btn" bindtap="debugSimulateNextDay">模拟次日</view>
+  </view>
+
+  <!-- 进度条 -->
+  <view class="progress-bar" wx:if="{{!finished}}">
+    <view class="progress-fill" style="width: {{total > 0 ? (done / total) * 100 : 0}}%"></view>
+  </view>
+
+  <!-- 完成页 -->
+  <view wx:if="{{finished}}" class="finish-wrap">
+    <text class="finish-emoji">🎉</text>
+    <text class="finish-title">今日复习完成！</text>
+    <text class="finish-sub">明天根据记忆曲线继续复习</text>
+    <view class="finish-btn" bindtap="onBack">返回</view>
+  </view>
+
+  <!-- 卡片区 -->
+  <block wx:elif="{{cards.length > 0}}">
+    <view
+      class="card-wrap"
+      bindtap="onCardTap"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove"
+      bindtouchend="onTouchEnd"
+      style="transform: translateX({{offsetX}}px) rotate({{offsetX * 0.03}}deg);"
+    >
+      <!-- 滑动方向提示 -->
+      <view class="swipe-hint-left {{revealed && swipeDir === 'left' ? 'show' : ''}}">
+        <text class="hint-text">再来一次</text>
+      </view>
+      <view class="swipe-hint-right {{revealed && swipeDir === 'right' ? 'show' : ''}}">
+        <text class="hint-text">✓ 已掌握</text>
+      </view>
+
+      <!-- 未翻转直接滑动时的顶部绿色气泡 -->
+      <view class="mastered-bubble {{!revealed && swipeDir ? 'show' : ''}}">
+        <text>✓ 已掌握，下次见</text>
+      </view>
+
+      <view class="card">
+        <!-- 卡片正面内容（始终显示） -->
+        <view class="card-front">
+          <text class="card-word">{{cards[current].word}}</text>
+        </view>
+
+        <!-- 翻转后的内容 -->
+        <block wx:if="{{revealed}}">
+          <view class="card-divider"></view>
+          <text class="card-phonetic" wx:if="{{cards[current].phonetic}}">{{cards[current].phonetic}}</text>
+          <text class="card-meaning">{{cards[current].meaning}}</text>
+          <text class="card-category">{{cards[current].category}} · {{cards[current].lessonId}}</text>
+        </block>
+
+        <!-- 未翻转提示 -->
+        <text wx:else class="card-tap-hint">TAP TO REVEAL</text>
+      </view>
+    </view>
+
+    <!-- 底部操作区（翻转后显示） -->
+    <view class="bottom-actions {{revealed ? 'show' : ''}}">
+      <view class="action-btns">
+        <view class="btn-forgot" bindtap="onForgot">
+          <text class="btn-emoji">😅</text>
+          <text class="btn-label">没记住</text>
+          <text class="btn-sub">稍后再练</text>
+        </view>
+        <view class="btn-divider"></view>
+        <view class="btn-remembered" bindtap="onRemembered">
+          <text class="btn-emoji">✅</text>
+          <text class="btn-label">掌握了</text>
+          <text class="btn-sub">下次见</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+</view>

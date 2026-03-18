@@ -2,6 +2,9 @@
   "pages": [
     "pages/index/index",
     "pages/nv-practice/index",
+    "pages/news/index",
+    "pages/srs-review/index",
+    "pages/grammar-entry/index",
     "pages/story-workshop/index",
     "pages/hi-chat/index",
     "pages/hi-chat-detail/index",
@@ -95,16 +98,22 @@
         "selectedIconPath": "assets/tabbar/re_练习.png"
       },
       {
-        "pagePath": "pages/story-workshop/index",
-        "text": "故事坊",
+        "pagePath": "pages/news/index",
+        "text": "News",
         "iconPath": "assets/tabbar/re_story.png",
         "selectedIconPath": "assets/tabbar/re_story.png"
       },
       {
-        "pagePath": "pages/hi-chat/index",
-        "text": "趣味韩语",
+        "pagePath": "pages/story-workshop/index",
+        "text": "故事坊",
         "iconPath": "assets/tabbar/re_talk.png",
         "selectedIconPath": "assets/tabbar/re_talk.png"
+      },
+      {
+        "pagePath": "pages/grammar-entry/index",
+        "text": "语法",
+        "iconPath": "assets/tabbar/re_语法.png",
+        "selectedIconPath": "assets/tabbar/re_语法.png"
       },
       {
         "pagePath": "pages/nv-settings/index",

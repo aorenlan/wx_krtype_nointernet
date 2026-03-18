@@ -567,6 +567,10 @@ Page({
     });
   },
 
+  goToHiChat() {
+    wx.navigateTo({ url: '/pages/hi-chat/index' });
+  },
+
   selectCategory: function (e) {
     const category = e.currentTarget.dataset.category;
     const nextCategory = String(category || '');
@@ -719,9 +723,11 @@ Page({
        const currentUnlock = wx.getStorageSync('story_create_unlock_counter') || 0;
        if (currentUnlock >= 10) {
            wx.setStorageSync('story_create_unlock_counter', 0);
+           wx.setStorageSync('dev_mode_enabled', false);
            wx.showToast({ title: '已关闭免广告模式', icon: 'none' });
        } else {
            wx.setStorageSync('story_create_unlock_counter', 100);
+           wx.setStorageSync('dev_mode_enabled', true);
            wx.showToast({ title: '已开启免广告模式', icon: 'success' });
        }
        this.clickCount = 0;

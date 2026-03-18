@@ -162,6 +162,11 @@ page {
   color: #3b82f6;
 }
 
+.icon-circle.purple {
+  background: #f3f0ff;
+  color: #7c3aed;
+}
+
 .icon-circle.gray {
   background: #f1f5f9;
   color: #64748b;
