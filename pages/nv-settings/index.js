@@ -99,6 +99,51 @@ const parseImportedWords = (content) => {
   return words;
 };
 
+const EXTEND_LINK = 'https://chat.eng100.cn/';
+const EXTEND_USER_ID_STORAGE_KEY = 'extend_user_id';
+const EXTEND_ONE_DAY_AD_UNIT_ID = 'adunit-a8c0edf5a1947c4a';
+const REMOTE_BASE_CONFIG_URL = 'https://enoss.aorenlan.fun/kr_dailysentence/base.json';
+const REMOTE_BASE_CONFIG_CACHE_KEY = 'kr_remote_base_config_v1';
+const REMOTE_BASE_CONFIG_TTL_MS = 10 * 60 * 1000;
+
+const DEFAULT_REMOTE_BASE_CONFIG = {
+  extendModal: {
+    notice: ''
+  }
+};
+
+const normalizeRemoteBaseConfig = (raw) => {
+  const safe = raw && typeof raw === 'object' ? raw : {};
+  const extendModal = safe.extendModal && typeof safe.extendModal === 'object' ? safe.extendModal : {};
+  return {
+    extendModal: {
+      notice: extendModal.notice != null ? String(extendModal.notice) : ''
+    }
+  };
+};
+
+const readRemoteBaseConfigCache = () => {
+  try {
+    const raw = wx.getStorageSync(REMOTE_BASE_CONFIG_CACHE_KEY);
+    if (!raw || typeof raw !== 'object') return null;
+    const cachedAt = raw.cachedAt != null ? Number(raw.cachedAt) : NaN;
+    if (!Number.isFinite(cachedAt)) return null;
+    if (Date.now() - cachedAt > REMOTE_BASE_CONFIG_TTL_MS) return null;
+    return normalizeRemoteBaseConfig(raw.value);
+  } catch (e) {
+    return null;
+  }
+};
+
+const writeRemoteBaseConfigCache = (value) => {
+  try {
+    wx.setStorageSync(REMOTE_BASE_CONFIG_CACHE_KEY, {
+      cachedAt: Date.now(),
+      value
+    });
+  } catch (e) {}
+};
+
 Page({
   data: {
     statusBarHeight: 20,
@@ -128,12 +173,19 @@ Page({
     content: '',
     contentCursor: -1,
     contentFocus: false,
+    showExtendModal: false,
+    extendLink: EXTEND_LINK,
+    extendUserId: '',
+    extendSubmitting: false,
+    extendNotice: '',
     importPlaceholderLines: ['apple 苹果', 'banana 香蕉', 'computer 电脑'],
     importPlaceholder: 'apple 苹果\nbanana 香蕉\ncomputer 电脑',
     suggestion: null
   },
 
   videoAd: null, // 激励视频广告实例
+  extendVideoAd: null,
+  extendAdResolver: null,
 
   switchVersion: function() {
     wx.showModal({
@@ -179,6 +231,9 @@ Page({
     this.loadCategories();
     this.loadMistakesCount();
     this.loadLists();
+    this.loadExtendUserId();
+    this.createExtendVideoAd();
+    this.loadRemoteBaseConfig();
   },
 
   createVideoAd: function() {
@@ -196,8 +251,40 @@ Page({
     }
   },
 
+  createExtendVideoAd: function() {
+    if (this.extendVideoAd || !wx.createRewardedVideoAd) return;
+    this.extendVideoAd = wx.createRewardedVideoAd({
+      adUnitId: EXTEND_ONE_DAY_AD_UNIT_ID
+    });
+    this.extendVideoAd.onError((err) => {
+      console.error('加一天激励视频广告加载失败', err);
+      if (this.extendAdResolver) {
+        const resolve = this.extendAdResolver;
+        this.extendAdResolver = null;
+        resolve(false);
+      }
+    });
+    this.extendVideoAd.onClose((res) => {
+      const resolve = this.extendAdResolver;
+      this.extendAdResolver = null;
+      if (!resolve) return;
+      const finished = !(res && res.isEnded === false);
+      resolve(finished);
+    });
+  },
+
+  loadExtendUserId: function () {
+    try {
+      const extendUserId = wx.getStorageSync(EXTEND_USER_ID_STORAGE_KEY) || '';
+      this.setData({ extendUserId: String(extendUserId || '') });
+    } catch (e) {
+      this.setData({ extendUserId: '' });
+    }
+  },
+
   onShow: function () {
     this.createVideoAd();
+    this.createExtendVideoAd();
     if (this.videoAd) {
       if (!this.onAdClose) {
          this.onAdClose = (res) => {
@@ -268,6 +355,169 @@ Page({
     // 不要销毁广告
     if (this.videoAd && this.onAdClose) {
        this.videoAd.offClose(this.onAdClose);
+    }
+  },
+
+  openExtendModal: function () {
+    this.loadExtendUserId();
+    this.loadRemoteBaseConfig();
+    this.setData({
+      showExtendModal: true
+    });
+  },
+
+  closeExtendModal: function () {
+    if (this.data.extendSubmitting) return;
+    this.setData({
+      showExtendModal: false
+    });
+  },
+
+  copyExtendLink: function () {
+    wx.setClipboardData({
+      data: EXTEND_LINK,
+      success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
+    });
+  },
+
+  onExtendUserIdInput: function (e) {
+    const extendUserId = e && e.detail && e.detail.value != null ? String(e.detail.value) : '';
+    this.setData({ extendUserId });
+    try {
+      wx.setStorageSync(EXTEND_USER_ID_STORAGE_KEY, extendUserId);
+    } catch (err) {
+      console.error('保存加一天ID失败', err);
+    }
+  },
+
+  adLoad: function () {
+    console.log('原生模板广告加载成功');
+  },
+
+  adError: function (err) {
+    console.error('原生模板广告加载失败', err);
+  },
+
+  adClose: function () {
+    console.log('原生模板广告关闭');
+  },
+
+  loadRemoteBaseConfig: function () {
+    const cached = readRemoteBaseConfigCache();
+    if (cached) {
+      this.setData({
+        extendNotice: cached.extendModal.notice || ''
+      });
+    }
+
+    wx.request({
+      url: REMOTE_BASE_CONFIG_URL,
+      method: 'GET',
+      timeout: 5000,
+      success: (res) => {
+        if (!res || !res.data || res.statusCode < 200 || res.statusCode >= 300) return;
+        const nextConfig = normalizeRemoteBaseConfig(res.data);
+        writeRemoteBaseConfigCache(nextConfig);
+        this.setData({
+          extendNotice: nextConfig.extendModal.notice || ''
+        });
+      },
+      fail: (err) => {
+        console.warn('加载远程 base.json 失败', err);
+      }
+    });
+  },
+
+  showExtendRewardedAd: async function () {
+    this.createExtendVideoAd();
+    if (!this.extendVideoAd) {
+      wx.showToast({ title: '当前环境不支持广告', icon: 'none' });
+      return false;
+    }
+
+    if (this.extendAdResolver) {
+      wx.showToast({ title: '广告正在打开', icon: 'none' });
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      this.extendAdResolver = resolve;
+      this.extendVideoAd.show().catch(() => {
+        this.extendVideoAd.load()
+          .then(() => this.extendVideoAd.show())
+          .catch((err) => {
+            console.error('加一天激励视频广告显示失败', err);
+            if (this.extendAdResolver) {
+              const fallbackResolve = this.extendAdResolver;
+              this.extendAdResolver = null;
+              fallbackResolve(false);
+            }
+          });
+      });
+    });
+  },
+
+  submitExtendDay: async function () {
+    const userid = String(this.data.extendUserId || '').trim();
+    let loadingShown = false;
+    if (!userid) {
+      wx.showToast({ title: '请输入id', icon: 'none' });
+      return;
+    }
+    if (!wx.cloud || !wx.cloud.callFunction) {
+      wx.showToast({ title: '云能力不可用', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.setStorageSync(EXTEND_USER_ID_STORAGE_KEY, userid);
+    } catch (err) {
+      console.error('保存加一天ID失败', err);
+    }
+
+    this.setData({ extendSubmitting: true });
+
+    try {
+      const watched = await this.showExtendRewardedAd();
+      if (!watched) {
+        wx.showToast({ title: '看完广告才能加一天', icon: 'none' });
+        return;
+      }
+
+      wx.showLoading({
+        title: '处理中',
+        mask: true
+      });
+      loadingShown = true;
+
+      const res = await wx.cloud.callFunction({
+        name: 'extendUserOneDay',
+        data: { userid }
+      });
+
+      const result = res && res.result ? res.result : {};
+      if (result.success === false) {
+        throw new Error(result.error || '加一天失败');
+      }
+
+      wx.showToast({
+        title: result.message || '已加一天',
+        icon: 'success'
+      });
+      this.setData({
+        showExtendModal: false
+      });
+    } catch (err) {
+      console.error('加一天失败', err);
+      wx.showToast({
+        title: (err && err.message) || '加一天失败',
+        icon: 'none'
+      });
+    } finally {
+      if (loadingShown) {
+        wx.hideLoading();
+      }
+      this.setData({ extendSubmitting: false });
     }
   },
 
@@ -728,9 +978,10 @@ Page({
        } else {
            wx.setStorageSync('story_create_unlock_counter', 100);
            wx.setStorageSync('dev_mode_enabled', true);
-           wx.showToast({ title: '已开启免广告模式', icon: 'success' });
+           wx.showToast({ title: '🧪 开发者模式已开启', icon: 'none' });
        }
        this.clickCount = 0;
+       return; // 不触发复制，避免 toast 被覆盖
     }
 
     wx.setClipboardData({

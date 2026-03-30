@@ -25,6 +25,7 @@ Page({
     showBottomPanel: false,
     showChinese: false,
     expertMode: true,   // 精讲模式：点单词弹半屏；关闭后点单词只显示中文 toast
+    ttsToggle: true,    // 速读模式下喇叭开关
     wordToast: '',
     showWordMeaningToast: false,
     wordToastX: 0,
@@ -176,6 +177,10 @@ Page({
     if (!ws) return;
 
     if (!this.data.expertMode) {
+      // 速读模式：喇叭开关开着且 wordtts=true → 播放单词音频
+      if (this.data.ttsToggle && this.data.currentArticle && this.data.currentArticle.wordtts) {
+        this._playWordTtsByText(ws.text);
+      }
       // 非精讲模式：在单词上方显示中文释义 2s
       const analysis = ws.analysis || null;
       const meaning = analysis ? analysis.meaning : '';
@@ -247,7 +252,13 @@ Page({
   },
 
   toggleExpertMode() {
-    this.setData({ expertMode: !this.data.expertMode, showBottomPanel: false, showExpertTip: false });
+    this.setData({ expertMode: !this.data.expertMode, showBottomPanel: false, showExpertTip: false, selectedWord: null, selectedSentence: null });
+  },
+
+  toggleTtsMode() {
+    const next = !this.data.ttsToggle;
+    this.setData({ ttsToggle: next });
+    wx.showToast({ title: next ? '朗读已开启' : '朗读已关闭', icon: 'none', duration: 1200 });
   },
 
   // ---- Audio ----
@@ -297,5 +308,62 @@ Page({
     ctx.onEnded(() => {
       this.setData({ playingParaIndex: -1 });
     });
+  },
+
+  playWordTts() {
+    const word = this.data.selectedWord;
+    if (!word || !word.text) return;
+    this._playWordTtsByText(word.text);
+  },
+
+  _playWordTtsByText(text) {
+    const url = buildParaAudioUrl(text);
+
+    if (this._wordAudioCtx) {
+      try { this._wordAudioCtx.stop(); this._wordAudioCtx.destroy(); } catch (e) {}
+      this._wordAudioCtx = null;
+    }
+
+    const fs = wx.getFileSystemManager();
+    const safeName = String(text).replace(/[^\w\-\u4e00-\u9fa5\uac00-\ud7a3]/g, '_') + '.mp3';
+    const cacheDir = `${wx.env.USER_DATA_PATH}/audio_cache`;
+    const cachePath = `${cacheDir}/${safeName}`;
+
+    const playSrc = (src) => {
+      const ctx = wx.createInnerAudioContext();
+      this._wordAudioCtx = ctx;
+      ctx.onError(() => wx.showToast({ title: '暂无音频', icon: 'none', duration: 1500 }));
+      ctx.autoplay = false;
+      ctx.src = src;
+      ctx.play();
+    };
+
+    let hasCached = false;
+    try { fs.accessSync(cachePath); hasCached = true; } catch (e) {}
+
+    if (hasCached) {
+      playSrc(cachePath);
+    } else {
+      wx.downloadFile({
+        url,
+        success(res) {
+          if (res.statusCode === 200 && res.tempFilePath) {
+            try { fs.accessSync(cacheDir); } catch (e) {
+              try { fs.mkdirSync(cacheDir, { recursive: true }); } catch (e2) {}
+            }
+            try { fs.unlinkSync(cachePath); } catch (e) {}
+            try {
+              fs.saveFileSync(res.tempFilePath, cachePath);
+              playSrc(cachePath);
+            } catch (e) {
+              playSrc(res.tempFilePath);
+            }
+          } else {
+            wx.showToast({ title: '暂无音频', icon: 'none', duration: 1500 });
+          }
+        },
+        fail: () => wx.showToast({ title: '暂无音频', icon: 'none', duration: 1500 })
+      });
+    }
   },
 });

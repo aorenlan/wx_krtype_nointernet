@@ -52,6 +52,11 @@
                 <view class="action-icon" bindtap="removeCurrentFromMistakes" wx:if="{{settings.category === 'Mistakes (错题本)'}}">
                     <text style="font-size: 12px; color: #ef4444;">移出</text>
                 </view>
+                <!-- 待复习胶囊：紧贴card-actions右侧 -->
+                <view wx:if="{{srsCount > 0 && !isKeyboardOpen && settings.srsEnabled}}" class="srs-capsule-inline" bindtap="openSrsReview">
+                    <text class="srs-capsule-icon">🔥</text>
+                    <text class="srs-capsule-text">待复习·{{srsCount}}</text>
+                </view>
             </view>
 
             <!-- Shuffle Toast -->
@@ -109,6 +114,11 @@
 
             <view class="nav-arrow right" bindtap="nextWord">
                 <text>›</text>
+            </view>
+
+            <!-- 喇叭开关：仅 flash 模式 + wordtts=true 时显示 -->
+            <view wx:if="{{settings.practiceMode === 'flash' && currentWord.wordtts}}" class="tts-toggle-btn {{ttsEnabled ? 'tts-on' : 'tts-off'}}" catchtap="toggleTts">
+                <image src="/assets/icons/volume.svg" style="width:18px;height:18px;" mode="aspectFit" />
             </view>
         </view>
       </view>
@@ -176,6 +186,10 @@
     <view class="detail-card" catchtap="playSentenceAudio">
       <view class="detail-header">
         <text class="detail-title">例句学习</text>
+        <view wx:if="{{currentWord.wordtts}}" class="detail-play-btn" catchtap="playWordAudio">
+          <image src="/assets/icons/volume.svg" style="width:20px;height:20px;" mode="aspectFit" />
+          <text class="detail-play-text">朗读单词</text>
+        </view>
         <view class="detail-close" catchtap="closeDetailModal">×</view>
       </view>
       <scroll-view scroll-y class="detail-body">
@@ -202,7 +216,7 @@
   <view class="modal-overlay {{showSettingsModal ? 'show' : ''}}" bindtap="closeSettings">
     <view class="modal-content" catchtap="preventBubble">
       <view class="modal-header">
-        <text class="modal-title">设置</text>
+        <text class="modal-title" bindtap="onDevTriggerTap">设置</text>
       </view>
       
       <scroll-view scroll-y class="modal-body">
@@ -366,6 +380,11 @@
             <switch checked="{{settings.autoPlaySentence}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPlaySentence"/>
           </view>
 
+          <view class="setting-item" bindtap="toggleSetting" data-key="srsEnabled">
+            <text>待复习功能</text>
+            <switch checked="{{settings.srsEnabled}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="srsEnabled"/>
+          </view>
+
         </view>
       </scroll-view>
     </view>
@@ -373,20 +392,6 @@
 
   <canvas type="2d" id="shareCanvas" style="position: absolute; left: -9999px; top: 0; width: 375px; height: 300px;"></canvas>
 
-  <!-- 左下角：今日待复习胶囊 + 隐藏开发者触发区 -->
-  <view class="bottom-left-corner">
-    <!-- 模拟次日按钮（开发者专用，默认隐藏） -->
-    <view wx:if="{{showDevBtn}}" class="debug-srs-fab" bindtap="debugSimulateNextDay">
-      <text>🧪</text>
-    </view>
-    <!-- 今日待复习胶囊 -->
-    <view wx:if="{{srsCount > 0}}" class="srs-capsule" bindtap="openSrsReview">
-      <view class="srs-capsule-glow"></view>
-      <text class="srs-capsule-icon">🔥</text>
-      <text class="srs-capsule-text">待复习·{{srsCount}}</text>
-      <text class="srs-capsule-arrow">›</text>
-    </view>
-  </view>
 
 
   <!-- Nagging Mode Overlay -->
@@ -428,4 +433,9 @@
 
     <view class="nagging-tip">点击任意处退出唠叨模式</view>
   </view>
+</view>
+
+<!-- 开发者模拟按钮（fixed，必须在容器外） -->
+<view wx:if="{{showDevBtn}}" class="debug-srs-fab" bindtap="debugSimulateNextDay">
+  <text>🧪</text>
 </view>

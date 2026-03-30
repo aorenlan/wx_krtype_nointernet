@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
     autoPronounce: false,
     pronounceMeaning: false,
     autoPlaySentence: false,
+    srsEnabled: true,
     category: 'Yonsei 1',
     keyboardVisualMode: 'korean',
     yonseiLessonId: '',
@@ -129,6 +130,7 @@ const sanitizeSettings = (raw) => {
     if (merged.topikSession != null) merged.topikSession = String(merged.topikSession);
     merged.naggingMode = !!merged.naggingMode;
     merged.autoPlaySentence = !!merged.autoPlaySentence;
+    merged.srsEnabled = merged.srsEnabled !== false; // 默认 true
     if (merged.yonseiLessonId != null) merged.yonseiLessonId = String(merged.yonseiLessonId);
     if (merged.yonseiLessonName != null) merged.yonseiLessonName = String(merged.yonseiLessonName);
     let repeatCount = Number(merged.repeatCount);
@@ -199,6 +201,7 @@ Page({
         dailySentenceEntrySource: '',
         srsCount: 0,
         showDevBtn: false,
+        ttsEnabled: true,
         showGuideBubble: false,
         showSettingsTooltip: false,
         settingsTooltipText: '可调整显示模式',
@@ -380,6 +383,26 @@ Page({
 
     openSrsReview() {
         wx.navigateTo({ url: '/pages/srs-review/index' });
+    },
+
+    // 设置弹窗标题连点10次开启/关闭开发者模式
+    onDevTriggerTap() {
+        const now = Date.now();
+        const last = this._devLastTap || 0;
+        this._devLastTap = now;
+        if (now - last > 2000) {
+            this._devTapCount = 1;
+            this._devFirstTap = now;
+        } else {
+            this._devTapCount = (this._devTapCount || 0) + 1;
+        }
+        if (this._devTapCount >= 10 && (now - (this._devFirstTap || now) <= 5000)) {
+            const next = !this.data.showDevBtn;
+            wx.setStorageSync('dev_mode_enabled', next);
+            this.setData({ showDevBtn: next });
+            wx.showToast({ title: next ? '🧪 开发者模式已开启' : '开发者模式已关闭', icon: 'none' });
+            this._devTapCount = 0;
+        }
     },
 
     debugSimulateNextDay() {
@@ -855,6 +878,7 @@ Page({
         }
         // 更新今日待复习数量 & 开发者模式
         const devEnabled = wx.getStorageSync('dev_mode_enabled') || false;
+        console.log('[SRS] dev_mode_enabled:', devEnabled, 'srsCount:', srs.getTodayCount());
         this.setData({ srsCount: srs.getTodayCount(), showDevBtn: devEnabled });
         const newSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(newSettings);
@@ -2281,6 +2305,12 @@ Page({
         this.preloadNextWordAudio();
     },
 
+    toggleTts() {
+        const next = !this.data.ttsEnabled;
+        this.setData({ ttsEnabled: next });
+        wx.showToast({ title: next ? '朗读已开启' : '朗读已关闭', icon: 'none', duration: 1200 });
+    },
+
     tryAutoPronounce() {
         const s = this.data.settings || DEFAULT_SETTINGS;
         if (!s.autoPronounce) return;
@@ -2303,8 +2333,14 @@ Page({
              this.dismissWordTooltip();
         }
 
-        const { currentWord } = this.data;
+        const { currentWord, settings, ttsEnabled } = this.data;
         if (!currentWord) return;
+
+        // flash 模式下：若 wordtts=true 且用户开了朗读开关，点击单词只朗读不开弹窗
+        if (settings && settings.practiceMode === 'flash' && ttsEnabled && currentWord.wordtts) {
+            this.playWordAudio();
+            return;
+        }
 
         this.setData({ showDetailModal: true });
         

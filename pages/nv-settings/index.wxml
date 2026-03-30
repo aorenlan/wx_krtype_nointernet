@@ -12,7 +12,18 @@
   <block wx:if="{{view === 'categories'}}">
     <view class="page-title">词库设置</view>
 
-
+    <view class="card action-card extend-entry-card" bindtap="openExtendModal">
+      <view class="card-left">
+        <view class="icon-circle orange">
+          <text class="action-icon">＋</text>
+        </view>
+        <view class="extend-entry-texts">
+          <text class="card-text">加一天</text>
+          <text class="extend-entry-desc">输入 id，复制链接，看广告后领取</text>
+        </view>
+      </view>
+      <view class="arrow-icon">›</view>
+    </view>
 
     <!-- 趣味韩语入口 -->
     <view class="card action-card" bindtap="goToHiChat" style="margin-top: 20px;">
@@ -88,7 +99,6 @@
     </view>
 
   </block>
-
   <!-- VIEW 2: SETTINGS -->
   <block wx:if="{{view === 'filters'}}">
     <view class="header-bar">
@@ -314,4 +324,51 @@
   </block>
 
   </scroll-view>
+
+  <view class="extend-modal-mask" wx:if="{{showExtendModal}}" bindtap="closeExtendModal">
+    <view class="extend-modal" catchtap="preventBubble">
+      <view class="extend-modal-handle"></view>
+      <scroll-view scroll-y class="extend-modal-body" show-scrollbar="{{false}}">
+        <view class="extend-modal-header">
+          <text class="extend-modal-title">加一天时长</text>
+          <text class="extend-modal-close" bindtap="closeExtendModal">×</text>
+        </view>
+
+        <view class="extend-link-row">
+          <view class="extend-link-copy" bindtap="copyExtendLink">复制链接</view>
+          <text class="extend-link-text">{{extendLink}}</text>
+        </view>
+
+        <view class="extend-notice" wx:if="{{extendNotice}}">
+          <text class="extend-notice-label">公告</text>
+          <text class="extend-notice-text">{{extendNotice}}</text>
+        </view>
+
+        <input
+          class="extend-input"
+          placeholder="请输入 id"
+          value="{{extendUserId}}"
+          bindinput="onExtendUserIdInput"
+        />
+
+        <button
+          class="extend-submit-btn"
+          bindtap="submitExtendDay"
+          loading="{{extendSubmitting}}"
+          disabled="{{extendSubmitting}}"
+        >
+          加一天
+        </button>
+
+        <view class="extend-ad-wrap">
+          <ad-custom
+            unit-id="adunit-f4c44c67aaa282e0"
+            bindload="adLoad"
+            binderror="adError"
+            bindclose="adClose"
+          ></ad-custom>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
 </view>

@@ -52,6 +52,10 @@
               <text class="expert-tip-text">切换后点单词</text>
               <text class="expert-tip-arrow-right">▶</text>
             </view>
+            <!-- 速读模式 + wordtts 才显示喇叭开关 -->
+            <view wx:if="{{!expertMode && currentArticle && currentArticle.wordtts}}" class="tts-mode-btn {{ttsToggle ? 'tts-on' : 'tts-off'}}" catchtap="toggleTtsMode">
+              <image src="/assets/icons/volume.svg" style="width:16px;height:16px;" mode="aspectFit" />
+            </view>
             <view class="expert-toggle {{expertMode ? 'on' : 'off'}}" bindtap="toggleExpertMode">
               <view class="expert-dot"></view>
               <text class="expert-label">{{expertMode ? '精讲' : '速读'}}</text>
@@ -165,6 +169,9 @@
                 <view class="word-badges">
                   <text wx:if="{{selectedWord.analysis && selectedWord.analysis.word_class}}" class="badge-pos">{{selectedWord.analysis.word_class}}</text>
                   <text wx:if="{{selectedWord.analysis && selectedWord.analysis.level}}" class="badge-level">{{selectedWord.analysis.level}}</text>
+                </view>
+                <view wx:if="{{currentArticle && currentArticle.wordtts}}" class="word-tts-btn" catchtap="playWordTts">
+                  <image src="/assets/icons/volume.svg" style="width:18px;height:18px;" mode="aspectFit" />
                 </view>
               </view>
               <view wx:if="{{selectedWord.analysis && selectedWord.analysis.pronunciation}}" class="word-pronunciation">{{selectedWord.analysis.pronunciation}}</view>

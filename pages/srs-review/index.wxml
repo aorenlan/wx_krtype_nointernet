@@ -7,8 +7,7 @@
       <text class="nav-back-text">返回</text>
     </view>
     <text class="nav-title" wx:if="{{!finished}}">{{done}} / {{total}}</text>
-    <!-- 测试用，上线前删除 -->
-    <view class="debug-btn" bindtap="debugSimulateNextDay">模拟次日</view>
+    <view class="debug-btn" wx:if="{{showDebugBtn}}" bindtap="debugSimulateNextDay">模拟次日</view>
   </view>
 
   <!-- 进度条 -->
@@ -48,6 +47,11 @@
       </view>
 
       <view class="card">
+        <!-- 右上角喇叭开关 -->
+        <view class="card-tts-btn {{autoPlay ? 'tts-on' : 'tts-off'}}" catchtap="toggleAutoPlay">
+          <image src="/assets/icons/volume.svg" style="width:16px;height:16px;" mode="aspectFit" />
+        </view>
+
         <!-- 卡片正面内容（始终显示） -->
         <view class="card-front">
           <text class="card-word">{{cards[current].word}}</text>
