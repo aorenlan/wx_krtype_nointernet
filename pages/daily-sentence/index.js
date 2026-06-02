@@ -315,7 +315,15 @@ const writeInterstitialStore = (store) => {
   } catch (e) {}
 };
 
+const AD_FREE_EXPIRE_KEY = 'kr_ad_free_expire';
+
 const maybeShowInterstitial = ({ dayKey, contentKey }) => {
+  // 检查免广告码是否有效
+  try {
+    const adFreeExpire = wx.getStorageSync(AD_FREE_EXPIRE_KEY);
+    if (adFreeExpire && Date.now() < Number(adFreeExpire)) return;
+  } catch (e) {}
+
   const d = String(dayKey || '');
   if (!d) return;
   const c = String(contentKey || '');

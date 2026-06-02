@@ -129,10 +129,12 @@ Page({
       ctx.onPlay(() => { console.log('[SRS audio] onPlay fired'); });
       ctx.onError((err) => {
         console.error('[SRS audio] playError:', JSON.stringify(err));
-        // 播放失败时如果还有 fallback URL，继续尝试
+        // 播放失败时如果还有 fallback URL，继续尝试；否则走 edgeTts 兜底
         if (fallbackUrls && fallbackUrls.length > 0) {
           console.log('[SRS audio] trying next url');
           doDownload(fallbackUrls);
+        } else {
+          fallbackToEdgeTts();
         }
       });
       ctx.autoplay = false;
@@ -140,9 +142,56 @@ Page({
       ctx.play();
     };
 
+    const ensureCacheDir = () => {
+      try { fs.accessSync(cacheDir); } catch (e) {
+        try { fs.mkdirSync(cacheDir, { recursive: true }); } catch (e2) {}
+      }
+    };
+
+    const fallbackToEdgeTts = () => {
+      if (!wx.cloud || !wx.cloud.callFunction) {
+        console.warn('[SRS audio] edgeTts unavailable: wx.cloud not initialized');
+        return;
+      }
+      console.log('[SRS audio] all urls failed, calling edgeTts for:', card.word);
+      wx.cloud.callFunction({
+        name: 'edgeTts',
+        timeout: 15000,
+        data: { text: card.word, lang: 'ko-KR' },
+        success: (res) => {
+          const result = (res && res.result) || {};
+          if (!result.ok || !result.audioBase64) {
+            console.warn('[SRS audio] edgeTts failed:', result.error || 'no audio');
+            wx.showToast({ title: '朗读失败', icon: 'none', duration: 1500 });
+            return;
+          }
+          ensureCacheDir();
+          try { fs.unlinkSync(cachePath); } catch (e) {}
+          fs.writeFile({
+            filePath: cachePath,
+            data: result.audioBase64,
+            encoding: 'base64',
+            success: () => {
+              console.log('[SRS audio] edgeTts saved to:', cachePath);
+              playSrc(cachePath, []);
+            },
+            fail: (e) => {
+              console.warn('[SRS audio] edgeTts writeFile failed:', JSON.stringify(e));
+              wx.showToast({ title: '朗读失败', icon: 'none', duration: 1500 });
+            }
+          });
+        },
+        fail: (e) => {
+          console.warn('[SRS audio] edgeTts callFunction fail:', JSON.stringify(e));
+          wx.showToast({ title: '朗读失败', icon: 'none', duration: 1500 });
+        }
+      });
+    };
+
     const doDownload = (remainingUrls) => {
       if (!remainingUrls || remainingUrls.length === 0) {
-        console.warn('[SRS audio] all urls exhausted, no audio for:', card.word);
+        console.warn('[SRS audio] all urls exhausted, falling back to edgeTts for:', card.word);
+        fallbackToEdgeTts();
         return;
       }
       const url = remainingUrls[0];
@@ -153,10 +202,7 @@ Page({
         success(res) {
           console.log('[SRS audio] download statusCode:', res.statusCode);
           if (res.statusCode === 200 && res.tempFilePath) {
-            // 存到永久目录
-            try { fs.accessSync(cacheDir); } catch (e) {
-              try { fs.mkdirSync(cacheDir, { recursive: true }); } catch (e2) {}
-            }
+            ensureCacheDir();
             try { fs.unlinkSync(cachePath); } catch (e) {}
             try {
               fs.saveFileSync(res.tempFilePath, cachePath);
@@ -179,7 +225,8 @@ Page({
 
     if (hasCached) {
       console.log('[SRS audio] cache hit:', cachePath);
-      playSrc(cachePath, urls);
+      // 缓存损坏时直接清除并走 edgeTts 重生成，不再重试 OSS
+      playSrc(cachePath, []);
     } else {
       doDownload(urls);
     }

@@ -1,5 +1,5 @@
 import { getCategories, getCategoryCounts, getYonseiLessons, getTopikLevels, getTopikSessions, getWords } from '../../utils_nv/api';
-import { getImportedLists, saveImportedList, updateImportedList, deleteImportedList, getMistakes, removeMistake } from '../../utils_nv/storage';
+import { getImportedLists, saveImportedList, updateImportedList, deleteImportedList, getMistakes, removeMistake, FAVORITES_LIST_NAME } from '../../utils_nv/storage';
 
 const DEFAULT_SETTINGS = {
   practiceMode: 'study',
@@ -99,11 +99,13 @@ const parseImportedWords = (content) => {
   return words;
 };
 
+const AD_FREE_EXPIRE_KEY = 'kr_ad_free_expire';
+
 const EXTEND_LINK = 'https://chat.eng100.cn/';
 const EXTEND_USER_ID_STORAGE_KEY = 'extend_user_id';
 const EXTEND_ONE_DAY_AD_UNIT_ID = 'adunit-a8c0edf5a1947c4a';
 const REMOTE_BASE_CONFIG_URL = 'https://enoss.aorenlan.fun/kr_dailysentence/base.json';
-const REMOTE_BASE_CONFIG_CACHE_KEY = 'kr_remote_base_config_v1';
+const REMOTE_BASE_CONFIG_CACHE_KEY = 'kr_remote_base_config_v2';
 const REMOTE_BASE_CONFIG_TTL_MS = 10 * 60 * 1000;
 
 const DEFAULT_REMOTE_BASE_CONFIG = {
@@ -115,9 +117,13 @@ const DEFAULT_REMOTE_BASE_CONFIG = {
 const normalizeRemoteBaseConfig = (raw) => {
   const safe = raw && typeof raw === 'object' ? raw : {};
   const extendModal = safe.extendModal && typeof safe.extendModal === 'object' ? safe.extendModal : {};
+  const redeemModal = safe.redeemModal && typeof safe.redeemModal === 'object' ? safe.redeemModal : {};
   return {
     extendModal: {
       notice: extendModal.notice != null ? String(extendModal.notice) : ''
+    },
+    redeemModal: {
+      notice: redeemModal.notice != null ? String(redeemModal.notice) : ''
     }
   };
 };
@@ -178,6 +184,10 @@ Page({
     extendUserId: '',
     extendSubmitting: false,
     extendNotice: '',
+    showRedeemModal: false,
+    redeemCode: '',
+    redeemSubmitting: false,
+    redeemNotice: '',
     importPlaceholderLines: ['apple 苹果', 'banana 香蕉', 'computer 电脑'],
     importPlaceholder: 'apple 苹果\nbanana 香蕉\ncomputer 电脑',
     suggestion: null
@@ -373,6 +383,61 @@ Page({
     });
   },
 
+  openRedeemModal: function () {
+    this.loadRemoteBaseConfig();
+    this.setData({ showRedeemModal: true, redeemCode: '' });
+  },
+
+  closeRedeemModal: function () {
+    if (this.data.redeemSubmitting) return;
+    this.setData({ showRedeemModal: false, redeemCode: '' });
+  },
+
+  onRedeemCodeInput: function (e) {
+    const redeemCode = e && e.detail && e.detail.value != null ? String(e.detail.value) : '';
+    this.setData({ redeemCode });
+  },
+
+  submitRedeemCode: async function () {
+    const code = String(this.data.redeemCode || '').trim();
+    if (!code) {
+      wx.showToast({ title: '请输入兑换码', icon: 'none' });
+      return;
+    }
+    if (!wx.cloud || !wx.cloud.callFunction) {
+      wx.showToast({ title: '云能力不可用', icon: 'none' });
+      return;
+    }
+
+    this.setData({ redeemSubmitting: true });
+    wx.showLoading({ title: '验证中', mask: true });
+
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'redeemCode',
+        data: { code }
+      });
+      const result = res && res.result ? res.result : {};
+      if (!result.success) {
+        throw new Error(result.error || '兑换失败');
+      }
+
+      const days = Number(result.days) || 0;
+      const expire = Date.now() + days * 24 * 60 * 60 * 1000;
+      try {
+        wx.setStorageSync(AD_FREE_EXPIRE_KEY, expire);
+      } catch (e) {}
+
+      wx.showToast({ title: result.message || `免广告 ${days} 天`, icon: 'success' });
+      this.setData({ showRedeemModal: false, redeemCode: '' });
+    } catch (err) {
+      wx.showToast({ title: (err && err.message) || '兑换失败', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+      this.setData({ redeemSubmitting: false });
+    }
+  },
+
   copyExtendLink: function () {
     wx.setClipboardData({
       data: EXTEND_LINK,
@@ -406,7 +471,8 @@ Page({
     const cached = readRemoteBaseConfigCache();
     if (cached) {
       this.setData({
-        extendNotice: cached.extendModal.notice || ''
+        extendNotice: cached.extendModal.notice || '',
+        redeemNotice: cached.redeemModal ? (cached.redeemModal.notice || '') : ''
       });
     }
 
@@ -419,7 +485,8 @@ Page({
         const nextConfig = normalizeRemoteBaseConfig(res.data);
         writeRemoteBaseConfigCache(nextConfig);
         this.setData({
-          extendNotice: nextConfig.extendModal.notice || ''
+          extendNotice: nextConfig.extendModal.notice || '',
+          redeemNotice: nextConfig.redeemModal ? (nextConfig.redeemModal.notice || '') : ''
         });
       },
       fail: (err) => {
@@ -707,6 +774,15 @@ Page({
       contentId = null;
     }
 
+    // 检查免广告码是否有效
+    try {
+      const adFreeExpire = wx.getStorageSync(AD_FREE_EXPIRE_KEY);
+      if (adFreeExpire && Date.now() < Number(adFreeExpire)) {
+        callback && callback();
+        return;
+      }
+    } catch (e) {}
+
     // 检查是否开启了免广告模式
     const unlockCount = wx.getStorageSync('story_create_unlock_counter') || 0;
     if (unlockCount >= 10) {
@@ -722,7 +798,7 @@ Page({
         if (lastUnlock) {
           const now = Date.now();
           const diff = now - Number(lastUnlock);
-          const sevenDays = 7 * 24 * 60 * 60 * 1000;
+          const sevenDays = 60 * 60 * 1000;
           if (diff < sevenDays) {
             // 有效期内，直接通过
             callback && callback();
@@ -743,7 +819,7 @@ Page({
     // 显示确认弹窗
     wx.showModal({
       title: '解锁章节',
-      content: '解锁该章节需要观看一次广告，解锁后7天内可自由切换。',
+      content: '解锁该章节需要观看一次广告，解锁后1小时内可自由切换。',
       confirmText: '观看广告',
       cancelText: '取消',
       success: (res) => {
@@ -992,10 +1068,16 @@ Page({
 
   loadLists: function () {
     const lists = getImportedLists();
-    const next = (Array.isArray(lists) ? lists : []).map(l => ({
-      ...l,
-      formattedDate: formatDate(l.updatedAt || l.createdAt)
-    }));
+    const next = (Array.isArray(lists) ? lists : [])
+      .map(l => ({
+        ...l,
+        isFavorites: l && l.name === FAVORITES_LIST_NAME,
+        formattedDate: formatDate(l.updatedAt || l.createdAt)
+      }))
+      // 收藏词单没数据不显示
+      .filter(l => !(l.isFavorites && (!Array.isArray(l.words) || l.words.length === 0)));
+    // 「单词收藏」置顶
+    next.sort((a, b) => (b.isFavorites ? 1 : 0) - (a.isFavorites ? 1 : 0));
     this.setData({ lists: next });
   },
 

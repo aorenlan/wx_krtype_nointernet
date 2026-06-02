@@ -1,6 +1,6 @@
 import { getWords, getCategories, getYonseiLessons, getTopikLevels, getTopikSessions } from '../../utils_nv/api';
 import { decomposeKoreanStructure } from '../../utils/hangul';
-import { saveMistake, removeMistake, getMistakes, getProgress, saveProgressV2 } from '../../utils_nv/storage';
+import { saveMistake, removeMistake, getMistakes, getProgress, saveProgressV2, getFavorites, addFavorites, FAVORITES_LIST_NAME } from '../../utils_nv/storage';
 import { KEYBOARD_LAYOUT } from '../../constants/index';
 const srs = require('../../utils/srs');
 
@@ -222,7 +222,18 @@ Page({
         showDetailModal: false
     },
 
-    async onLoad() {
+    async onLoad(options) {
+        // 直接带参打开（非 tabBar 中转）时也记录待处理收藏，统一在 onShow 处理。
+        // 不覆盖 app.js 经 extraData 写入的更可靠数据（words 为数组）。
+        if (options && (options.words || options.word)) {
+            try {
+                const existing = wx.getStorageSync('pending_fav_import');
+                const hasExtraData = existing && existing.query && Array.isArray(existing.query.words);
+                if (!hasExtraData) {
+                    wx.setStorageSync('pending_fav_import', { query: options, ts: Date.now() });
+                }
+            } catch (e) {}
+        }
         const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
         
         let platform = '';
@@ -512,6 +523,15 @@ Page({
         contentId = null;
       }
 
+      // 检查免广告码是否有效
+      try {
+        const adFreeExpire = wx.getStorageSync('kr_ad_free_expire');
+        if (adFreeExpire && Date.now() < Number(adFreeExpire)) {
+          callback && callback();
+          return;
+        }
+      } catch (e) {}
+
       // 检查是否在有效期内（7天）
       if (contentId) {
         try {
@@ -520,7 +540,7 @@ Page({
           if (lastUnlock) {
             const now = Date.now();
             const diff = now - Number(lastUnlock);
-            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            const sevenDays = 60 * 60 * 1000;
             if (diff < sevenDays) {
               // 有效期内，直接通过
               callback && callback();
@@ -541,7 +561,7 @@ Page({
       // 显示确认弹窗
       wx.showModal({
         title: '解锁章节',
-        content: '解锁该章节需要观看一次广告，解锁后7天内可自由切换。',
+        content: '解锁该章节需要观看一次广告，解锁后1小时内可自由切换。',
         confirmText: '观看广告',
         cancelText: '取消',
         success: (res) => {
@@ -856,6 +876,10 @@ Page({
         const base = await getCategories();
         const categories = Array.isArray(base) ? [...base] : [];
         if (!categories.includes('Mistakes (错题本)')) categories.push('Mistakes (错题本)');
+        // 收藏夹仅在有收藏单词时才作为可选词书出现
+        if (getFavorites().length > 0 && !categories.includes(FAVORITES_LIST_NAME)) {
+            categories.push(FAVORITES_LIST_NAME);
+        }
         const current = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
         const idx = Math.max(0, categories.indexOf(current));
         this.setData({ categories, categoryPickerIndex: idx });
@@ -903,10 +927,97 @@ Page({
             }
             this.loadWords(finalSettings || mergedSettings);
         }
-        
+
         if (this.data.isPC) {
             this.setData({ inputFocus: true });
         }
+
+        // 处理外部跳转带来的待收藏单词
+        this.processPendingFavoriteImport();
+    },
+
+    // 解析 words 参数：优先 JSON 数组 [{word,meaning},...]，回退到单个 word/meaning。
+    parseFavoriteQuery(query) {
+        const q = query || {};
+        const out = [];
+        const seen = new Set();
+        const push = (word, meaning, scene) => {
+            const w = word != null ? String(word).trim() : '';
+            if (!w || seen.has(w)) return;
+            seen.add(w);
+            const item = { word: w, meaning: meaning != null ? String(meaning).trim() : '' };
+            if (scene != null && String(scene).trim()) item.scene = String(scene).trim();
+            out.push(item);
+        };
+
+        // words 可能是：①真数组（来自 extraData 兜底）②JSON 字符串（来自 query）
+        let arr = null;
+        if (Array.isArray(q.words)) {
+            arr = q.words;
+        } else if (q.words != null && String(q.words).trim()) {
+            const raw = String(q.words);
+            // 微信 onLoad(options) 已自动 decode 过一次，先直接 parse；
+            // 仅当直接 parse 失败时，才尝试再 decode 一次（兼容未被框架 decode 的来源）。
+            // 不无条件 decode，避免把释义里字面的 %xx 误还原（如 "100%20off"）。
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) arr = parsed;
+            } catch (e1) {
+                try {
+                    const parsed = JSON.parse(decodeURIComponent(raw));
+                    if (Array.isArray(parsed)) arr = parsed;
+                } catch (e2) {
+                    console.warn('[favImport] words 参数解析失败', e2);
+                }
+            }
+        }
+        if (Array.isArray(arr)) {
+            arr.forEach((it) => {
+                if (it && typeof it === 'object') push(it.word, it.meaning, it.scene || q.scene);
+            });
+        }
+
+        // 单个单词参数（与 words 并存时也一并收入）
+        if (q.word != null && String(q.word).trim()) {
+            push(q.word, q.meaning, q.scene);
+        }
+        return out;
+    },
+
+    processPendingFavoriteImport() {
+        let pending = null;
+        try { pending = wx.getStorageSync('pending_fav_import'); } catch (e) {}
+        if (!pending || !pending.query) return;
+        // 防重复：消费即清除
+        try { wx.removeStorageSync('pending_fav_import'); } catch (e) {}
+
+        const words = this.parseFavoriteQuery(pending.query);
+        if (words.length === 0) return;
+
+        const res = addFavorites(words);
+        if (!res || !res.success) {
+            wx.showToast({ title: (res && res.message) || '收藏失败', icon: 'none' });
+            return;
+        }
+
+        // 确保收藏夹出现在词书列表里
+        if (!(this.data.categories || []).includes(FAVORITES_LIST_NAME)) {
+            this.setData({ categories: [...(this.data.categories || []), FAVORITES_LIST_NAME] });
+        }
+
+        const addedText = res.added > 0 ? `已收藏 ${res.added} 个新单词` : '单词已在收藏中';
+        wx.showModal({
+            title: '收藏成功',
+            content: `${addedText}（共 ${res.total} 个）。是否切换到「${FAVORITES_LIST_NAME}」开始练习？`,
+            confirmText: '去练习',
+            cancelText: '稍后',
+            success: (r) => {
+                if (r.confirm) {
+                    const idx = Math.max(0, (this.data.categories || []).indexOf(FAVORITES_LIST_NAME));
+                    this.applyCategorySelection(FAVORITES_LIST_NAME, idx);
+                }
+            }
+        });
     },
 
     async loadSubcategories(settingsOverride) {
@@ -1061,6 +1172,30 @@ Page({
                     } else {
                         this.setData({ words: [], loading: false, currentWord: null, prevWordInfo: null });
                         wx.showToast({ title: '暂无错题', icon: 'none' });
+                    }
+                }
+            );
+        }
+
+        if (category === FAVORITES_LIST_NAME) {
+            const favorites = getFavorites();
+            const savedIndex = Number(getProgress(category, subKey) || 0);
+            const startIndex = normalizeIndex(savedIndex, favorites.length);
+            return this.setData(
+                {
+                    words: favorites,
+                    originalWords: [...favorites],
+                    isShuffled: false,
+                    loading: false,
+                    currentIndex: startIndex,
+                    currentWord: null
+                },
+                () => {
+                    if (favorites.length > 0) {
+                        this.startWord(startIndex);
+                    } else {
+                        this.setData({ words: [], loading: false, currentWord: null, prevWordInfo: null });
+                        wx.showToast({ title: '暂无收藏单词', icon: 'none' });
                     }
                 }
             );

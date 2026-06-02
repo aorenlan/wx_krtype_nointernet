@@ -85,10 +85,29 @@ Page({
     originalItems: []
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 外部小程序跳转携带的单词参数：先暂存，再由练习页(nv-practice)读取处理。
+    // tabBar 页面无法通过 switchTab 携带参数，所以走 storage 中转。
+    // 注意：app.js 的 onLaunch/onShow 可能已通过 extraData 写入更可靠的数据（words 为数组），
+    // query string 可能被截断，故不覆盖已有的 extraData 来源数据。
+    if (options && (options.words || options.word)) {
+      try {
+        const existing = wx.getStorageSync('pending_fav_import');
+        const hasExtraData = existing && existing.query && Array.isArray(existing.query.words);
+        if (!hasExtraData) {
+          wx.setStorageSync('pending_fav_import', { query: options, ts: Date.now() });
+        }
+      } catch (e) {}
+    }
+
     // Check if user has already opted in to new version
     const useNewVersion = wx.getStorageSync('useNewVersion');
     if (useNewVersion) {
+      wx.switchTab({ url: '/pages/nv-practice/index' });
+      return;
+    }
+    // 旧版用户也直接进入练习页处理收藏（收藏功能属于新版练习流程）
+    if (options && (options.words || options.word)) {
       wx.switchTab({ url: '/pages/nv-practice/index' });
       return;
     }

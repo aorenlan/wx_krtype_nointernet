@@ -25,6 +25,20 @@
       <view class="arrow-icon">›</view>
     </view>
 
+    <!-- 免广告码入口 -->
+    <view class="card action-card" bindtap="openRedeemModal" style="margin-top: 12px;">
+      <view class="card-left">
+        <view class="icon-circle green">
+          <text class="action-icon">🎟</text>
+        </view>
+        <view class="extend-entry-texts">
+          <text class="card-text">免广告码</text>
+          <text class="extend-entry-desc">输入兑换码，免除切换课程广告</text>
+        </view>
+      </view>
+      <view class="arrow-icon">›</view>
+    </view>
+
     <!-- 趣味韩语入口 -->
     <view class="card action-card" bindtap="goToHiChat" style="margin-top: 20px;">
       <view class="card-left">
@@ -213,9 +227,9 @@
 
     <view class="list-container">
       <block wx:for="{{lists}}" wx:key="id">
-        <view class="card list-item">
+        <view class="card list-item {{item.isFavorites ? 'favorites-item' : ''}}">
           <view class="item-info">
-            <text class="item-name">{{item.name}}</text>
+            <text class="item-name">{{item.isFavorites ? '⭐ ' : ''}}{{item.name}}</text>
             <text class="item-meta">{{item.words.length}} 个单词 • {{item.formattedDate}}</text>
           </view>
           <view class="item-actions">
@@ -225,7 +239,7 @@
           </view>
         </view>
       </block>
-      
+
       <view class="empty-state" wx:if="{{lists.length === 0}}">
          <text class="empty-text">暂无词单，点击上方“手动输入”添加</text>
       </view>
@@ -324,6 +338,37 @@
   </block>
 
   </scroll-view>
+
+  <!-- 免广告码弹窗 -->
+  <view class="extend-modal-mask" wx:if="{{showRedeemModal}}" bindtap="closeRedeemModal">
+    <view class="extend-modal" catchtap="preventBubble">
+      <view class="extend-modal-handle"></view>
+      <scroll-view scroll-y class="extend-modal-body" show-scrollbar="{{false}}">
+        <view class="extend-modal-header">
+          <text class="extend-modal-title">免广告码</text>
+          <text class="extend-modal-close" bindtap="closeRedeemModal">×</text>
+        </view>
+        <view class="extend-notice" wx:if="{{redeemNotice}}">
+          <text class="extend-notice-label">公告</text>
+          <text class="extend-notice-text">{{redeemNotice}}</text>
+        </view>
+        <input
+          class="extend-input"
+          placeholder="请输入兑换码"
+          value="{{redeemCode}}"
+          bindinput="onRedeemCodeInput"
+        />
+        <button
+          class="extend-submit-btn"
+          bindtap="submitRedeemCode"
+          loading="{{redeemSubmitting}}"
+          disabled="{{redeemSubmitting}}"
+        >
+          兑换
+        </button>
+      </scroll-view>
+    </view>
+  </view>
 
   <view class="extend-modal-mask" wx:if="{{showExtendModal}}" bindtap="closeExtendModal">
     <view class="extend-modal" catchtap="preventBubble">

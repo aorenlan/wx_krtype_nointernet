@@ -177,6 +177,11 @@ page {
   color: #ea580c;
 }
 
+.icon-circle.green {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
 .action-icon {
   font-size: 18px;
 }
@@ -539,6 +544,21 @@ page {
 
 .action-icon.delete {
   color: #ef4444;
+}
+
+.favorites-item {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+}
+
+.favorites-item .item-name {
+  color: #4338ca;
+}
+
+.favorites-item .action-icon {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6366f1;
 }
 
 .empty-state {

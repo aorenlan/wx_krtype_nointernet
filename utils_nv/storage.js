@@ -4,6 +4,10 @@ const WORDS_CACHE_KEY_PREFIX = 'flashflow_words_cache_';
 const PROGRESS_KEY_PREFIX = 'flashflow_progress_';
 const DAILY_SENTENCE_HISTORY_KEY = 'kr_daily_sentence_history';
 
+// 固定的「单词收藏」词单：仅由外部小程序跳转链接自动写入。
+// 复用 imported lists 机制，但不占用 10 个词单上限、不可删除。
+export const FAVORITES_LIST_NAME = '单词收藏';
+
 export const getImportedLists = () => {
   const raw = wx.getStorageSync(STORAGE_KEY);
   if (!Array.isArray(raw)) return [];
@@ -118,6 +122,77 @@ export const deleteImportedList = (id) => {
   } catch (e) {
     console.error('Delete list error:', e);
     return { success: false, message: '删除失败: ' + e.message };
+  }
+};
+
+// 返回「单词收藏」词单（不存在则返回 null）。
+export const getFavoritesList = () => {
+  const lists = getImportedLists();
+  return lists.find(l => l && l.name === FAVORITES_LIST_NAME) || null;
+};
+
+// 返回「单词收藏」里的单词数组。
+export const getFavorites = () => {
+  const list = getFavoritesList();
+  return list && Array.isArray(list.words) ? list.words : [];
+};
+
+// 把跳转过来的单词合并进「单词收藏」词单，按 word 去重，新词置顶。
+// incoming: [{ word, meaning, ... }]
+// 返回 { success, added, total }
+export const addFavorites = (incoming) => {
+  try {
+    const items = (Array.isArray(incoming) ? incoming : [])
+      .map((w) => {
+        if (!w || typeof w !== 'object') return null;
+        const word = w.word != null ? String(w.word).trim() : '';
+        if (!word) return null;
+        return {
+          word,
+          meaning: w.meaning != null ? String(w.meaning).trim() : '',
+          // 保留可能携带的额外字段（场景、例句等），不强制要求
+          ...(w.scene != null ? { scene: String(w.scene) } : {}),
+        };
+      })
+      .filter(Boolean);
+
+    if (items.length === 0) {
+      return { success: false, added: 0, total: getFavorites().length, message: '没有可收藏的单词' };
+    }
+
+    const lists = getImportedLists();
+    let index = lists.findIndex(l => l && l.name === FAVORITES_LIST_NAME);
+
+    let favWords = index >= 0 && Array.isArray(lists[index].words) ? lists[index].words.slice() : [];
+    const existing = new Set(favWords.map(w => (w && w.word != null ? String(w.word).trim() : '')));
+
+    let added = 0;
+    // 新词置顶：倒序 unshift，保持传入顺序
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (existing.has(it.word)) continue;
+      existing.add(it.word);
+      favWords.unshift({ id: `fav_${Date.now()}_${added}`, ...it });
+      added += 1;
+    }
+
+    if (index >= 0) {
+      lists[index] = { ...lists[index], words: favWords, updatedAt: Date.now() };
+    } else {
+      // 置于列表最前；不受 10 个上限约束（直接写入，绕过 saveImportedList 的限制）
+      lists.unshift({
+        id: `favlist_${Date.now()}`,
+        name: FAVORITES_LIST_NAME,
+        words: favWords,
+        createdAt: Date.now(),
+      });
+    }
+
+    wx.setStorageSync(STORAGE_KEY, lists);
+    return { success: true, added, total: favWords.length };
+  } catch (e) {
+    console.error('Add favorites error:', e);
+    return { success: false, added: 0, total: getFavorites().length, message: e.message };
   }
 };
 

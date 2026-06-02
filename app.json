@@ -17,6 +17,9 @@
     "pages/number-learning-2/index",
     "pages/color-blocks/index"
   ],
+  "navigateToMiniProgramAppIdList": [
+    "wxa1228b63bef8864d"
+  ],
   "preloadRule": {
     "pages/index/index": {
       "network": "all",
