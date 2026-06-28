@@ -23,11 +23,18 @@ Component({
         selectedIconPath: "/assets/tabbar/re_练习.png",
         text: "练习"
       },
+      // 第二个 tab：原 News 已替换为「看图想韩语」，原配置保留如下，勿删
+      // {
+      //   pagePath: "/pages/news/index",
+      //   iconPath: "/assets/tabbar/re_story.png",
+      //   selectedIconPath: "/assets/tabbar/re_story.png",
+      //   text: "News"
+      // },
       {
-        pagePath: "/pages/news/index",
+        pagePath: "/pages/picture-words/index",
         iconPath: "/assets/tabbar/re_story.png",
         selectedIconPath: "/assets/tabbar/re_story.png",
-        text: "News"
+        text: "看图想韩语"
       },
       {
         pagePath: "/pages/story-workshop/index",

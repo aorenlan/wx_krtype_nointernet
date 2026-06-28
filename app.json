@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/nv-practice/index",
     "pages/news/index",
+    "pages/picture-words/index",
     "pages/srs-review/index",
     "pages/grammar-entry/index",
     "pages/story-workshop/index",
@@ -101,8 +102,8 @@
         "selectedIconPath": "assets/tabbar/re_练习.png"
       },
       {
-        "pagePath": "pages/news/index",
-        "text": "News",
+        "pagePath": "pages/picture-words/index",
+        "text": "看图想韩语",
         "iconPath": "assets/tabbar/re_story.png",
         "selectedIconPath": "assets/tabbar/re_story.png"
       },
