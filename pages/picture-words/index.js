@@ -26,6 +26,10 @@ const ANSWER_PANEL_HIDDEN = 'answer-panel is-hidden';
 const ANSWER_PANEL_VISIBLE = 'answer-panel is-visible';
 const CATEGORY_AD_UNIT_ID = 'adunit-17974771ea617fa3';
 const CATEGORY_AD_DATE_KEY = 'picture_words_category_ad_date_v1';
+const STUDY_SESSION_STORAGE_KEY = 'picture_words_study_sessions_v1';
+const SHUFFLE_STORAGE_KEY = 'picture_words_shuffle_enabled_v1';
+const STUDY_SESSION_SCHEMA = 1;
+const MAX_STUDY_SESSIONS = 80;
 
 let videoAd = null;
 
@@ -52,9 +56,13 @@ Page({
     currentGroupId: '',
     groupTitle: '看图想韩语',
     contentLoading: true,
+    catalogCacheKey: '',
+    contentVersion: '',
+    baseWords: [],
     words: [],
     current: 0,
     total: 0,
+    shuffleEnabled: false,
     // phase: 'asking' 看图猜词 | 'countdown' 倒计时 | 'reveal' 揭晓+跟读
     phase: 'asking',
     countdown: COUNTDOWN_START,
@@ -65,12 +73,18 @@ Page({
     readIndex: 0,
     readTotal: 0,
     readType: '',
+    koReadIndex: 0,
     readDone: false,
     groupDone: false,
     readTipText: '看图想韩语',
+    showRetryButton: false,
+    retryStepIndex: 0,
     cardKoreanText: '?',
+    cardKoreanClass: '',
     cardMetaText: '이게 뭐예요?',
+    cardMetaClass: '',
     cardEnglishText: '',
+    cardEnglishClass: '',
     questionText: QUESTION_KO,
     answerPanelClass: ANSWER_PANEL_HIDDEN,
     showNextButton: false,
@@ -105,9 +119,11 @@ Page({
     this._audioCache = {};
     this._ttsInflight = {};
     this._imagePrefetchCache = {};
+    const shuffleEnabled = this._readShuffleEnabled();
     this.setData({
       statusBarHeight,
-      navTotalHeight
+      navTotalHeight,
+      shuffleEnabled
     });
     this._ensureCacheDir();
     // 即使手机静音也出声（iOS 静音键常导致“没声音”）
@@ -134,9 +150,32 @@ Page({
 
   onHide() {
     this._setTabBarHidden(false);
+    this._pauseForTabSwitch();
+  },
+
+  _pauseForTabSwitch() {
+    const shouldPausePlayback = !this.data.groupDone && (
+      this.data.phase === 'countdown' ||
+      this.data.autoContinuePending ||
+      (this.data.phase === 'reveal' && (this.data.autoMode || !this.data.readDone))
+    );
+
     this._seqToken = (this._seqToken || 0) + 1;
     this._clearTimers();
     this._stopAudio();
+
+    if (shouldPausePlayback) {
+      this._setPausedAskingState('切换页面，已暂停');
+      return;
+    }
+
+    if (this.data.categoryPanelVisible) {
+      this.setData({
+        categoryPanelVisible: false,
+        categorySearchText: ''
+      });
+    }
+    this._saveStudySession();
   },
 
   // ---------- 音效 ----------
@@ -293,8 +332,179 @@ Page({
     }
   },
 
+  _readShuffleEnabled() {
+    try {
+      return wx.getStorageSync(SHUFFLE_STORAGE_KEY) === true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  _writeShuffleEnabled(enabled) {
+    try {
+      wx.setStorageSync(SHUFFLE_STORAGE_KEY, Boolean(enabled));
+    } catch (e) {}
+  },
+
+  _readStudySessions() {
+    try {
+      const value = wx.getStorageSync(STUDY_SESSION_STORAGE_KEY);
+      return value && typeof value === 'object' ? value : {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  _writeStudySessions(sessions) {
+    try {
+      wx.setStorageSync(STUDY_SESSION_STORAGE_KEY, sessions || {});
+    } catch (e) {}
+  },
+
+  _getSessionKey(catalogCacheKey, groupId) {
+    const catalogKey = String(catalogCacheKey || 'local');
+    return `${catalogKey}::${String(groupId || '')}`;
+  },
+
+  _getCurrentSessionKey() {
+    return this._getSessionKey(this.data.catalogCacheKey, this.data.currentGroupId);
+  },
+
+  _getStoredSession(catalogCacheKey, groupId) {
+    const key = this._getSessionKey(catalogCacheKey, groupId);
+    const sessions = this._readStudySessions();
+    const session = sessions[key];
+    if (!session || session.schemaVersion !== STUDY_SESSION_SCHEMA) return null;
+    if (session.groupId !== groupId) return null;
+    return session;
+  },
+
+  _isResumableSession(session, total) {
+    const count = Number(total || session && session.total || 0);
+    const index = Number(session && session.currentIndex);
+    return !!(
+      session &&
+      !session.done &&
+      Array.isArray(session.orderIds) &&
+      session.orderIds.length > 0 &&
+      index > 0 &&
+      index < count
+    );
+  },
+
+  _getResumableSession(groupId, total) {
+    const session = this._getStoredSession(this.data.catalogCacheKey, groupId);
+    return this._isResumableSession(session, total) ? session : null;
+  },
+
+  _saveStudySession(extra) {
+    const groupId = this.data.currentGroupId;
+    const catalogCacheKey = this.data.catalogCacheKey;
+    const words = Array.isArray(this.data.words) ? this.data.words : [];
+    if (!groupId || !catalogCacheKey || !words.length) return;
+
+    const sessions = this._readStudySessions();
+    const key = this._getCurrentSessionKey();
+    sessions[key] = {
+      schemaVersion: STUDY_SESSION_SCHEMA,
+      groupId,
+      groupName: this.data.groupTitle || groupId,
+      catalogCacheKey,
+      contentVersion: this.data.contentVersion || '',
+      currentIndex: Math.max(0, Number(this.data.current) || 0),
+      total: words.length,
+      orderIds: words.map((word) => String(word && word.id || '')).filter(Boolean),
+      shuffleEnabled: Boolean(this.data.shuffleEnabled),
+      done: Boolean(this.data.groupDone),
+      updatedAt: Date.now ? Date.now() : new Date().getTime(),
+      ...(extra || {})
+    };
+
+    const keys = Object.keys(sessions);
+    if (keys.length > MAX_STUDY_SESSIONS) {
+      keys
+        .sort((a, b) => Number(sessions[a] && sessions[a].updatedAt || 0) - Number(sessions[b] && sessions[b].updatedAt || 0))
+        .slice(0, keys.length - MAX_STUDY_SESSIONS)
+        .forEach((oldKey) => { delete sessions[oldKey]; });
+    }
+    this._writeStudySessions(sessions);
+  },
+
+  _shuffleWords(words) {
+    const list = (Array.isArray(words) ? words : []).slice();
+    for (let i = list.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = list[i];
+      list[i] = list[j];
+      list[j] = temp;
+    }
+    return list;
+  },
+
+  _buildOrderedWords(rawWords, session, shuffleEnabled) {
+    const list = (Array.isArray(rawWords) ? rawWords : []).slice();
+    if (!list.length) return [];
+    if (session && Array.isArray(session.orderIds) && session.orderIds.length) {
+      const byId = {};
+      list.forEach((word) => { if (word && word.id) byId[String(word.id)] = word; });
+      const used = {};
+      const ordered = [];
+      session.orderIds.forEach((id) => {
+        const key = String(id || '');
+        if (key && byId[key] && !used[key]) {
+          used[key] = true;
+          ordered.push(byId[key]);
+        }
+      });
+      list.forEach((word) => {
+        const key = String(word && word.id || '');
+        if (key && !used[key]) ordered.push(word);
+      });
+      return ordered.length ? ordered : list;
+    }
+    return shuffleEnabled ? this._shuffleWords(list) : list;
+  },
+
+  _getTextSizeClass(text, compactAt, tinyAt) {
+    const len = String(text || '').length;
+    if (tinyAt && len >= tinyAt) return 'tiny';
+    if (compactAt && len >= compactAt) return 'compact';
+    return '';
+  },
+
+  _getCardTextClasses(word) {
+    const meta = this._getCardMetaText(word);
+    return {
+      cardKoreanClass: this._getTextSizeClass(word && word.korean, 5, 8),
+      cardMetaClass: this._getTextSizeClass(meta, 18, 25),
+      cardEnglishClass: this._getTextSizeClass(word && word.en, 12, 18)
+    };
+  },
+
+  _getQuestionCardState(word) {
+    const questionText = this._getQuestionText(word);
+    return {
+      cardKoreanText: '?',
+      cardKoreanClass: '',
+      cardMetaText: questionText,
+      cardMetaClass: '',
+      cardEnglishText: '',
+      cardEnglishClass: '',
+      questionText
+    };
+  },
+
+  _getRevealCardState(word) {
+    return {
+      cardKoreanText: word && word.korean ? word.korean : '',
+      cardMetaText: this._getCardMetaText(word),
+      cardEnglishText: word && word.en ? word.en : '',
+      ...this._getCardTextClasses(word)
+    };
+  },
+
   async _loadInitialPack() {
-    await this._loadGroup(getSavedPictureWordGroupId(), { save: false, refresh: true });
+    await this._loadGroup(getSavedPictureWordGroupId(), { save: false, refresh: true, restoreSession: true });
   },
 
   _buildGroupOptions(groups) {
@@ -353,10 +563,22 @@ Page({
 
       const groups = Array.isArray(pack.groups) ? pack.groups : [];
       const group = pack.group || groups[0] || null;
-      const words = Array.isArray(pack.items) ? pack.items : [];
+      const rawWords = Array.isArray(pack.items) ? pack.items : [];
+      const catalogCacheKey = pack.catalogCacheKey || pack.cacheKey || `pictureWords:${pack.source || 'local'}:${pack.version || 'v'}:catalog`;
+      const savedSession = !opts.restart && opts.restoreSession && group
+        ? this._getStoredSession(catalogCacheKey, group.id)
+        : null;
+      const session = this._isResumableSession(savedSession, rawWords.length) ? savedSession : null;
+      const shuffleEnabled = session ? Boolean(session.shuffleEnabled) : this._readShuffleEnabled();
+      const words = this._buildOrderedWords(rawWords, session, shuffleEnabled);
+      const startIndex = session
+        ? Math.max(0, Math.min(Number(session.currentIndex) || 0, Math.max(words.length - 1, 0)))
+        : 0;
+      const currentWord = words[startIndex] || null;
       const questionText = group && group.promptKo ? group.promptKo : QUESTION_KO;
-      const firstQuestionText = words[0] && words[0].promptKo ? words[0].promptKo : questionText;
+      const firstQuestionText = currentWord && currentWord.promptKo ? currentWord.promptKo : questionText;
       const groupPickerIndex = this._getGroupPickerIndex(groups, group && group.id);
+      const questionState = this._getQuestionCardState(currentWord);
 
       if (group && opts.save !== false) {
         savePictureWordGroupId(group.id);
@@ -377,10 +599,14 @@ Page({
         currentGroupId: group ? group.id : '',
         groupTitle: group ? group.name : '看图想韩语',
         contentLoading: false,
+        catalogCacheKey,
+        contentVersion: pack.version || '',
+        baseWords: rawWords,
         words,
         total: words.length,
-        current: 0,
-        word: words[0] || null,
+        current: startIndex,
+        word: currentWord,
+        shuffleEnabled,
         phase: 'asking',
         countdown: COUNTDOWN_START,
         countdownPercent: 100,
@@ -390,13 +616,13 @@ Page({
         readIndex: 0,
         readTotal: 0,
         readType: '',
+        koReadIndex: 0,
         readDone: false,
         groupDone: false,
         readTipText: '看图想韩语',
-        cardKoreanText: '?',
-        cardMetaText: firstQuestionText,
-        cardEnglishText: '',
-        questionText: firstQuestionText,
+        showRetryButton: false,
+        retryStepIndex: 0,
+        ...questionState,
         answerPanelClass: ANSWER_PANEL_HIDDEN,
         showNextButton: false,
         nextButtonText: words.length <= 1 ? '完成' : '下一个 ›',
@@ -406,12 +632,14 @@ Page({
         autoPaused: false,
         autoContinuePending: false,
         popTick: (this.data.popTick + 1) % 2,
-        dbg: group ? `已加载：${group.name}` : '暂无分组'
+        dbg: group ? `已加载：${group.name}${session ? '，继续上次进度' : ''}` : '暂无分组'
+      }, () => {
+        this._saveStudySession();
       });
 
       this._prefetchTts(firstQuestionText, 'ko-KR');
-      if (words[0]) this._prefetchWordAudio(words[0]);
-      this._prefetchImagesForWords(words, 0);
+      if (currentWord) this._prefetchWordAudio(currentWord);
+      this._prefetchImagesForWords(words, startIndex);
       setTimeout(() => {
         if (this._contentToken === loadToken) this._playSfx('pop');
       }, 260);
@@ -479,7 +707,7 @@ Page({
     this.closeCategoryPanel();
     this._showCategoryAdOnceToday().then((ok) => {
       if (!ok) return;
-      this._loadGroup(group.id, { save: true });
+      this._loadGroupWithResumeChoice(group);
     });
   },
 
@@ -489,8 +717,132 @@ Page({
     if (!group || group.id === this.data.currentGroupId) return;
     this._showCategoryAdOnceToday().then((ok) => {
       if (!ok) return;
-      this._loadGroup(group.id, { save: true });
+      this._loadGroupWithResumeChoice(group);
     });
+  },
+
+  _loadGroupWithResumeChoice(group) {
+    if (!group || !group.id) return;
+    const session = this._getResumableSession(group.id, group.itemCount);
+    if (!session) {
+      this._loadGroup(group.id, { save: true, restart: true });
+      return;
+    }
+
+    const currentNo = Math.min(Number(session.currentIndex || 0) + 1, Number(session.total || group.itemCount || 0));
+    const total = Number(session.total || group.itemCount || 0);
+    wx.showModal({
+      title: '继续上次进度？',
+      content: `${group.name || group.id} 上次学到 ${currentNo}/${total}，要继续还是重新开始？`,
+      confirmText: '继续',
+      cancelText: '重新开始',
+      success: (res) => {
+        this._loadGroup(group.id, {
+          save: true,
+          restoreSession: !!(res && res.confirm),
+          restart: !(res && res.confirm)
+        });
+      },
+      fail: () => {
+        this._loadGroup(group.id, { save: true, restart: true });
+      }
+    });
+  },
+
+  toggleShuffle() {
+    this._applyShuffleMode(!this.data.shuffleEnabled, { toast: true });
+  },
+
+  setShuffleMode(e) {
+    const value = e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.shuffle
+      : 0;
+    const enabled = String(value) === '1' || value === true;
+    this._applyShuffleMode(enabled, { toast: true });
+  },
+
+  reshuffleCurrentGroup() {
+    this._applyShuffleMode(true, { forceReshuffle: true, toast: true });
+  },
+
+  _applyShuffleMode(enabled, options) {
+    const opts = options || {};
+    if (!this.data.word || this.data.contentLoading) return false;
+    if (!this.data.groupDone && (this.data.phase !== 'asking' || this.data.autoContinuePending)) {
+      wx.showToast({ title: '本词结束后再切换随机', icon: 'none', duration: 1200 });
+      return false;
+    }
+
+    const shuffleEnabled = Boolean(enabled);
+    const forceReshuffle = Boolean(opts.forceReshuffle);
+    if (!forceReshuffle && shuffleEnabled === this.data.shuffleEnabled) {
+      if (opts.toast) {
+        wx.showToast({ title: shuffleEnabled ? '当前已随机' : '当前已顺序', icon: 'none', duration: 1000 });
+      }
+      return false;
+    }
+
+    this._clearTimers();
+    this._stopAudio();
+    this._seqToken = (this._seqToken || 0) + 1;
+
+    this._writeShuffleEnabled(shuffleEnabled);
+
+    const sourceWords = (Array.isArray(this.data.baseWords) && this.data.baseWords.length)
+      ? this.data.baseWords
+      : this.data.words;
+    const words = this._buildOrderedWords(sourceWords, null, shuffleEnabled);
+    const firstWord = words[0] || null;
+    const firstQuestionText = this._getQuestionText(firstWord);
+    const questionState = this._getQuestionCardState(firstWord);
+
+    this.setData({
+      shuffleEnabled,
+      words,
+      total: words.length,
+      current: 0,
+      word: firstWord,
+      phase: 'asking',
+      countdown: COUNTDOWN_START,
+      countdownPercent: 100,
+      inputValue: '',
+      inputError: false,
+      readLabel: '',
+      readIndex: 0,
+      readTotal: 0,
+      readType: '',
+      koReadIndex: 0,
+      readDone: false,
+      groupDone: false,
+      readTipText: '看图想韩语',
+      showRetryButton: false,
+      retryStepIndex: 0,
+      ...questionState,
+      answerPanelClass: ANSWER_PANEL_HIDDEN,
+      autoPaused: false,
+      autoContinuePending: false,
+      showNextButton: false,
+      nextButtonText: words.length <= 1 ? '完成' : '下一个 ›',
+      showAskBadge: true,
+      showCountBadge: false,
+      showAskBubble: true,
+      popTick: (this.data.popTick + 1) % 2,
+      dbg: shuffleEnabled ? '已开启随机顺序' : '已切回顺序播放'
+    }, () => {
+      this._saveStudySession();
+    });
+
+    this._prefetchTts(firstQuestionText, 'ko-KR');
+    this._prefetchCurrentReadAudio();
+    this._prefetchImagesForWords(words, 0);
+    if (opts.toast) {
+      wx.showToast({
+        title: shuffleEnabled ? (forceReshuffle ? '已重新打乱' : '已随机打乱') : '已按顺序播放',
+        icon: 'none',
+        duration: 1000
+      });
+    }
+    return true;
   },
 
   toggleMode() {
@@ -508,9 +860,15 @@ Page({
       readDone: false,
       groupDone: false,
       readTipText: '看图想韩语',
+      koReadIndex: 0,
+      showRetryButton: false,
+      retryStepIndex: 0,
       cardKoreanText: '?',
+      cardKoreanClass: '',
       cardMetaText: this.data.questionText || QUESTION_KO,
+      cardMetaClass: '',
       cardEnglishText: '',
+      cardEnglishClass: '',
       answerPanelClass: ANSWER_PANEL_HIDDEN,
       showNextButton: false,
       nextButtonText: '下一个 ›',
@@ -537,6 +895,10 @@ Page({
     this._clearTimers();
     this._stopAudio();
     this._seqToken = (this._seqToken || 0) + 1;
+    this._setPausedAskingState('已暂停');
+  },
+
+  _setPausedAskingState(dbgText) {
     const questionText = this._getQuestionText(this.data.word);
     this.setData({
       autoPaused: true,
@@ -550,17 +912,27 @@ Page({
       readIndex: 0,
       readTotal: 0,
       readType: '',
+      koReadIndex: 0,
       readTipText: '看图想韩语',
+      showRetryButton: false,
+      retryStepIndex: 0,
       cardKoreanText: '?',
+      cardKoreanClass: '',
       cardMetaText: questionText,
+      cardMetaClass: '',
       cardEnglishText: '',
+      cardEnglishClass: '',
       questionText,
       answerPanelClass: ANSWER_PANEL_HIDDEN,
       showNextButton: false,
       showAskBadge: true,
       showCountBadge: false,
       showAskBubble: true,
-      dbg: '已暂停'
+      categoryPanelVisible: false,
+      categorySearchText: '',
+      dbg: dbgText || '已暂停'
+    }, () => {
+      this._saveStudySession();
     });
   },
 
@@ -575,10 +947,16 @@ Page({
       countdown: COUNTDOWN_START,
       countdownPercent: 100,
       readDone: false,
+      koReadIndex: 0,
       readTipText: '正在提问',
+      showRetryButton: false,
+      retryStepIndex: 0,
       cardKoreanText: '?',
+      cardKoreanClass: '',
       cardMetaText: questionText,
+      cardMetaClass: '',
       cardEnglishText: '',
+      cardEnglishClass: '',
       questionText,
       answerPanelClass: ANSWER_PANEL_HIDDEN,
       autoPaused: false,
@@ -619,10 +997,11 @@ Page({
     this.setData({
       phase: 'reveal',
       readDone: false,
+      koReadIndex: 0,
       readTipText: '准备朗读',
-      cardKoreanText: this.data.word && this.data.word.korean ? this.data.word.korean : '',
-      cardMetaText: this._getCardMetaText(this.data.word),
-      cardEnglishText: this.data.word && this.data.word.en ? this.data.word.en : '',
+      showRetryButton: false,
+      retryStepIndex: 0,
+      ...this._getRevealCardState(this.data.word),
       answerPanelClass: ANSWER_PANEL_VISIBLE,
       showNextButton: false,
       showAskBadge: false,
@@ -644,29 +1023,56 @@ Page({
       const step = READ_PLAN[i];
       const word = this.data.word;
       const text = step.type === 'ko' ? word.korean : (step.type === 'cn' ? word.cn : word.en);
+      const koReadIndex = step.type === 'ko' ? step.index : 3;
+      const stepTip = step.type === 'en' ? '英文朗读' : `${step.label} ${step.index} / ${step.total}`;
 
       this.setData({
         readLabel: step.label,
         readIndex: step.index,
         readTotal: step.total,
         readType: step.type,
+        koReadIndex,
         readDone: false,
-        readTipText: step.label + ' ' + step.index + ' / ' + step.total,
-        cardKoreanText: word.korean || '',
-        cardMetaText: this._getCardMetaText(word),
-        cardEnglishText: word.en || '',
+        readTipText: stepTip,
+        showRetryButton: false,
+        retryStepIndex: i,
+        ...this._getRevealCardState(word),
         showNextButton: false,
         dbg: '准备朗读 ' + step.label + ' ' + step.index + '/' + step.total
       });
 
-      await this._speak(text, step.lang, {
+      let ok = await this._speak(text, step.lang, {
         channel: 'read',
         token: myToken,
         phase: 'reveal',
         maxMs: 12000
       });
 
+      if (!ok && this._isTokenAlive(myToken) && this.data.phase === 'reveal' && this.data.word && this.data.word.id === wordId) {
+        this.setData({ readTipText: `${stepTip} · 重试中`, dbg: '朗读未完成，重试 ' + text });
+        await this._delay(180);
+        ok = await this._speak(text, step.lang, {
+          channel: 'read',
+          token: myToken,
+          phase: 'reveal',
+          maxMs: 12000
+        });
+      }
+
       if (!this._isTokenAlive(myToken) || this.data.phase !== 'reveal') return;
+      if (!this.data.word || this.data.word.id !== wordId) return;
+      if (!ok) {
+        this.setData({
+          autoPaused: true,
+          showRetryButton: true,
+          retryStepIndex: i,
+          showNextButton: false,
+          readTipText: '朗读未完成，请重试',
+          dbg: '朗读失败，暂停在当前步骤'
+        });
+        return;
+      }
+
       if (i < READ_PLAN.length - 1) {
         await this._delay(READ_STEP_GAP_MS);
       }
@@ -678,10 +1084,12 @@ Page({
         readLabel: '',
         readIndex: 0,
         readTotal: 0,
+        readType: '',
+        koReadIndex: 3,
         readTipText: '',
-        cardKoreanText: this.data.word && this.data.word.korean ? this.data.word.korean : '',
-        cardMetaText: this._getCardMetaText(this.data.word),
-        cardEnglishText: this.data.word && this.data.word.en ? this.data.word.en : '',
+        showRetryButton: false,
+        retryStepIndex: 0,
+        ...this._getRevealCardState(this.data.word),
         answerPanelClass: ANSWER_PANEL_VISIBLE,
         showNextButton: !this.data.autoMode,
         nextButtonText: (this.data.current + 1 >= this.data.total) ? '完成' : '下一个 ›',
@@ -937,6 +1345,21 @@ Page({
 
   preventBubble() {},
 
+  retryCurrentRead() {
+    if (this.data.phase !== 'reveal' || !this.data.word) return;
+    const stepIndex = Math.max(0, Math.min(Number(this.data.retryStepIndex) || 0, READ_PLAN.length - 1));
+    this.setData({
+      autoPaused: false,
+      showRetryButton: false,
+      showNextButton: false,
+      readDone: false,
+      readTipText: '准备重试',
+      dbg: '准备重试朗读'
+    }, () => {
+      this._runReadPlan(stepIndex);
+    });
+  },
+
   // 手动模式：输入韩文原词，正确才进下一个
   submitInput() {
     const word = this.data.word;
@@ -969,15 +1392,19 @@ Page({
         readLabel: '',
         readIndex: 0,
         readTotal: 0,
+        readType: '',
+        koReadIndex: 3,
         readTipText: '',
-        cardKoreanText: this.data.word && this.data.word.korean ? this.data.word.korean : '',
-        cardMetaText: this._getCardMetaText(this.data.word),
-        cardEnglishText: this.data.word && this.data.word.en ? this.data.word.en : '',
+        showRetryButton: false,
+        retryStepIndex: 0,
+        ...this._getRevealCardState(this.data.word),
         answerPanelClass: ANSWER_PANEL_VISIBLE,
         autoPaused: false,
         autoContinuePending: false,
         showNextButton: false,
         dbg: '本组完成，卡片保持显示'
+      }, () => {
+        this._saveStudySession({ done: true });
       });
       return;
     }
@@ -985,6 +1412,7 @@ Page({
     const nextWord = this.data.words[next];
     const nextQuestionText = this._getQuestionText(nextWord);
     const shouldAutoContinue = Boolean(opts.autoContinue && this.data.autoMode);
+    const questionState = this._getQuestionCardState(nextWord);
     this.setData({
       current: next,
       word: nextWord,
@@ -993,12 +1421,11 @@ Page({
       countdownPercent: 100,
       inputValue: '',
       inputError: false,
-      readLabel: '', readIndex: 0, readTotal: 0, readType: '', readDone: false, groupDone: false,
+      readLabel: '', readIndex: 0, readTotal: 0, readType: '', koReadIndex: 0, readDone: false, groupDone: false,
       readTipText: '看图想韩语',
-      cardKoreanText: '?',
-      cardMetaText: nextQuestionText,
-      cardEnglishText: '',
-      questionText: nextQuestionText,
+      showRetryButton: false,
+      retryStepIndex: 0,
+      ...questionState,
       answerPanelClass: ANSWER_PANEL_HIDDEN,
       autoPaused: false,
       autoContinuePending: shouldAutoContinue,
@@ -1009,6 +1436,7 @@ Page({
       showAskBubble: true,
       popTick: (this.data.popTick + 1) % 2
     }, () => {
+      this._saveStudySession();
       if (shouldAutoContinue) {
         this._stepTimer = setTimeout(() => this.startSequence(), AUTO_CHAIN_START_DELAY_MS);
       }
@@ -1023,9 +1451,16 @@ Page({
     this._clearTimers();
     this._stopAudio();
     this._seqToken = (this._seqToken || 0) + 1;
-    const firstWord = this.data.words[0];
+    const sourceWords = (Array.isArray(this.data.baseWords) && this.data.baseWords.length)
+      ? this.data.baseWords
+      : this.data.words;
+    const words = this._buildOrderedWords(sourceWords, null, this.data.shuffleEnabled);
+    const firstWord = words[0];
     const firstQuestionText = this._getQuestionText(firstWord);
+    const questionState = this._getQuestionCardState(firstWord);
     this.setData({
+      words,
+      total: words.length,
       current: 0,
       word: firstWord,
       phase: 'asking',
@@ -1033,20 +1468,21 @@ Page({
       countdownPercent: 100,
       inputValue: '',
       inputError: false,
-      readLabel: '', readIndex: 0, readTotal: 0, readType: '', readDone: false, groupDone: false,
+      readLabel: '', readIndex: 0, readTotal: 0, readType: '', koReadIndex: 0, readDone: false, groupDone: false,
       readTipText: '看图想韩语',
-      cardKoreanText: '?',
-      cardMetaText: firstQuestionText,
-      cardEnglishText: '',
-      questionText: firstQuestionText,
+      showRetryButton: false,
+      retryStepIndex: 0,
+      ...questionState,
       answerPanelClass: ANSWER_PANEL_HIDDEN,
       autoPaused: false,
       autoContinuePending: false,
       showNextButton: false,
-      nextButtonText: this.data.total <= 1 ? '完成' : '下一个 ›',
+      nextButtonText: words.length <= 1 ? '完成' : '下一个 ›',
       showAskBadge: true,
       showCountBadge: false,
       showAskBubble: true
+    }, () => {
+      this._saveStudySession({ done: false });
     });
     this._prefetchTts(firstQuestionText, 'ko-KR');
     this._prefetchCurrentReadAudio();

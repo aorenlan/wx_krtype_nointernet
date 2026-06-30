@@ -56,20 +56,23 @@
 
       <!-- 单词卡片：常驻固定高度，只更新文字内容 -->
       <view class="{{answerPanelClass}}">
-        <view wx:if="{{readTipText && !readDone && !groupDone}}" class="read-tip">{{readTipText}}</view>
-        <view class="answer-ko">{{cardKoreanText}}</view>
-        <view class="answer-meta">{{cardMetaText}}</view>
+        <view class="read-tip {{readTipText && !readDone && !groupDone ? '' : 'is-placeholder'}}">{{readTipText || '朗读提示'}}</view>
+        <view class="answer-ko {{cardKoreanClass}}">{{cardKoreanText}}</view>
+        <view class="answer-meta {{cardMetaClass}}">{{cardMetaText}}</view>
 
-        <!-- 进度三点：韩文跟读 1/2/3 亮起 -->
-        <view class="dots">
-          <view class="d {{(readType === 'ko' && readIndex >= 1) || readType === 'en' ? 'active' : ''}}"></view>
-          <view class="d {{(readType === 'ko' && readIndex >= 2) || readType === 'en' ? 'active' : ''}}"></view>
-          <view class="d {{(readType === 'ko' && readIndex >= 3) || readType === 'en' ? 'active' : ''}}"></view>
+        <view class="read-progress">
+          <view class="dots">
+            <view class="d {{koReadIndex >= 1 ? 'active' : ''}}"></view>
+            <view class="d {{koReadIndex >= 2 ? 'active' : ''}}"></view>
+            <view class="d {{koReadIndex >= 3 ? 'active' : ''}}"></view>
+          </view>
+          <view class="stage-chip {{readType === 'en' ? 'active' : ''}}">英文</view>
         </view>
 
-        <view class="answer-en {{readType === 'en' ? 'hl' : ''}}">{{cardEnglishText}}</view>
+        <view class="answer-en {{readType === 'en' ? 'hl' : ''}} {{cardEnglishClass}}">{{cardEnglishText}}</view>
 
         <view class="reveal-actions">
+          <view wx:if="{{!groupDone && showRetryButton}}" class="ghost-btn warn" catchtap="retryCurrentRead">重试朗读</view>
           <view wx:if="{{!groupDone && showNextButton}}" class="ghost-btn" catchtap="goNext">{{nextButtonText}}</view>
           <view wx:if="{{groupDone}}" class="ghost-btn" catchtap="restart">再来一组</view>
         </view>
@@ -98,6 +101,18 @@
           <view class="category-sub">每天首次切换看一次广告，今日解锁后可自由切换</view>
         </view>
         <view class="category-close" catchtap="closeCategoryPanel">×</view>
+      </view>
+
+      <view class="category-order-card">
+        <view class="category-order-main">
+          <view class="category-order-title">播放顺序</view>
+          <view class="category-order-sub">{{shuffleEnabled ? '随机播放，会记住本轮打乱后的顺序' : '按上传顺序播放'}}</view>
+        </view>
+        <view class="order-segment">
+          <view class="order-segment-item {{!shuffleEnabled ? 'active' : ''}}" data-shuffle="0" catchtap="setShuffleMode">顺序</view>
+          <view class="order-segment-item {{shuffleEnabled ? 'active' : ''}}" data-shuffle="1" catchtap="setShuffleMode">随机</view>
+        </view>
+        <view wx:if="{{shuffleEnabled}}" class="reshuffle-btn" catchtap="reshuffleCurrentGroup">重新打乱</view>
       </view>
 
       <view class="category-search">

@@ -228,13 +228,13 @@ async function fetchRemoteCatalog(existingCatalog) {
     return existingCatalog;
   }
 
-  const remoteRaw = await requestJson(catalogUrl);
+  const remoteRaw = await requestJson(withCacheBuster(catalogUrl, version));
   const rawGroups = Array.isArray(remoteRaw && remoteRaw.groups) ? remoteRaw.groups : [];
   if (!rawGroups.length) return null;
 
   return buildCatalogFromRawGroups(rawGroups, {
     source: 'remote',
-    version: safeString(remoteRaw && remoteRaw.version, version),
+    version,
     schemaVersion: Number(remoteRaw && remoteRaw.schemaVersion) || Number(manifest && manifest.schemaVersion) || 1,
     defaultGroupId: safeString(remoteRaw && remoteRaw.defaultGroupId, DEFAULT_GROUP_ID),
     manifestUrl: REMOTE_MANIFEST_URL,
