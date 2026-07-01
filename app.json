@@ -5,6 +5,8 @@
     "pages/news/index",
     "pages/picture-words/index",
     "pages/srs-review/index",
+    "pages/photo-learn/index",
+    "pages/photo-learn-history/index",
     "pages/grammar-entry/index",
     "pages/story-workshop/index",
     "pages/hi-chat/index",
@@ -29,9 +31,26 @@
     "pages/nv-practice/index": {
       "network": "all",
       "packages": ["grammar"]
+    },
+    "pages/picture-words/index": {
+      "network": "all",
+      "packages": ["grammar"]
+    },
+    "pages/photo-learn/index": {
+      "network": "all",
+      "packages": ["grammar"]
+    },
+    "pages/grammar-entry/index": {
+      "network": "all",
+      "packages": ["grammar"]
+    },
+    "pages/nv-settings/index": {
+      "network": "all",
+      "packages": ["grammar"]
     }
   },
   "window": {
+    "backgroundColor": "#f8f8f9",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#0f172a",
     "navigationBarTitleText": "韩语打字",
@@ -108,10 +127,10 @@
         "selectedIconPath": "assets/tabbar/re_story.png"
       },
       {
-        "pagePath": "pages/story-workshop/index",
-        "text": "故事坊",
-        "iconPath": "assets/tabbar/re_talk.png",
-        "selectedIconPath": "assets/tabbar/re_talk.png"
+        "pagePath": "pages/photo-learn/index",
+        "text": "拍照",
+        "iconPath": "assets/tabbar/re_eye.png",
+        "selectedIconPath": "assets/tabbar/re_eye.png"
       },
       {
         "pagePath": "pages/grammar-entry/index",

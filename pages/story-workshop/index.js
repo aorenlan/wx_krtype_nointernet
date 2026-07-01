@@ -7,6 +7,7 @@ const formatTime = (ts) => {
 };
 
 import { getWords, getGrammars } from '../../utils_nv/api';
+const { syncPageTabBar } = require('../../utils/tabbar');
 
 const createAiModel = () => {
   try {
@@ -449,9 +450,7 @@ Page({
         }
     });
 
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2, hidden: false });
-    }
+    syncPageTabBar(this, { hidden: true });
     
     // Check if we need to force refresh (e.g. after new story)
     // Check both globalData and Storage

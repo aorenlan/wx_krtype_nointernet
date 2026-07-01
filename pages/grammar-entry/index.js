@@ -1,46 +1,31 @@
+const { buildGrammarTargetUrl } = require('../../utils/grammar-target');
+const { syncPageTabBar } = require('../../utils/tabbar');
+
 Page({
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 3 });
-    }
+    syncPageTabBar(this, { selected: 3, hidden: false });
 
-    const settings = wx.getStorageSync('settings') || {};
-    const category = String(settings.category || '');
+    if (this._opening) return;
+    this.openGrammar();
+  },
 
-    const doNavigate = async () => {
-      const m = category.match(/^Yonsei\s*(\d)$/i);
-      if (!m) {
-        wx.showToast({ title: '语法功能正在开发', icon: 'none' });
-        wx.switchTab({ url: '/pages/nv-practice/index' });
-        return;
-      }
-
-      const bookNum = m[1];
-      const book = `Yonsei ${bookNum}`;
-      let lessonId = String(settings.yonseiLessonId || '').trim();
-
-      if (!lessonId) {
-        try {
-          const { getYonseiLessons } = require('../../utils_nv/api.js');
-          const lessons = await getYonseiLessons(category);
-          if (lessons && lessons.length > 0) {
-            lessonId = String(lessons[0].id);
+  async openGrammar() {
+    this._opening = true;
+    const targetUrl = await buildGrammarTargetUrl();
+    wx.redirectTo({
+      url: targetUrl,
+      fail: (err) => {
+        console.warn('Redirect grammar failed, fallback to reLaunch', err);
+        wx.reLaunch({
+          url: targetUrl,
+          fail: (launchErr) => {
+            console.error('Open grammar failed', launchErr);
           }
-        } catch (err) {
-          console.error('Auto fetch lesson failed', err);
-        }
+        });
+      },
+      complete: () => {
+        this._opening = false;
       }
-
-      if (!lessonId) {
-        wx.showToast({ title: '请先在设置中选择课次', icon: 'none' });
-        wx.switchTab({ url: '/pages/nv-practice/index' });
-        return;
-      }
-
-      const url = `/subpackages/grammar/pages/index/index?book=${encodeURIComponent(book)}&lessonId=${encodeURIComponent(lessonId)}`;
-      wx.redirectTo({ url });
-    };
-
-    doNavigate();
+    });
   }
 });

@@ -1,7 +1,7 @@
 <custom-nav
   title="每日一句历史"
-  subtitle=""
-  theme="light"
+  subtitle="看过的场景句"
+  theme="dark"
   showBack="{{true}}"
   showSettings="{{false}}"
 ></custom-nav>
@@ -18,8 +18,19 @@
   </view>
 
   <scroll-view wx:else scroll-y class="list" lower-threshold="120" bindscrolltolower="loadMore">
+    <view class="history-hero">
+      <view class="history-mark">
+        <text>H</text>
+      </view>
+      <view class="history-copy">
+        <text class="history-title">历史回看</text>
+        <text class="history-sub">{{history.length}} 句已同步到这里</text>
+      </view>
+    </view>
+
     <block wx:for="{{history}}" wx:for-index="idx" wx:key="_id">
       <view class="item" bindtap="openItem" data-idx="{{idx}}" data-id="{{item._id}}" data-ts="{{item.timestamp}}">
+        <view class="item-dot"></view>
         <view class="item-main">
           <text class="item-source">{{item.source}}</text>
           <text class="item-date">{{item.day || ''}}</text>

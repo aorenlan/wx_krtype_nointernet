@@ -1,23 +1,24 @@
+const { syncTabBarComponent } = require('../utils/tabbar');
+
 Component({
   data: {
-    selected: 0,
+    selected: -1,
     dark: false,
     hidden: false
   },
   lifetimes: {
     attached() {
-      this.syncTheme();
+      this.syncTabBarState();
     }
   },
   pageLifetimes: {
     show() {
-      this.syncTheme();
+      this.syncTabBarState();
     }
   },
   methods: {
-    syncTheme() {
-      const storedSettings = wx.getStorageSync('settings') || {};
-      this.setData({ dark: !!storedSettings.darkMode });
+    syncTabBarState(options) {
+      syncTabBarComponent(this, options);
     }
   }
 })

@@ -1,0 +1,84 @@
+<view class="history-page">
+  <view class="top-nav" style="height: {{statusBarHeight + navBarHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <button class="back-button" bindtap="goBack" hover-class="button-press">‹</button>
+    <text class="top-title">拍照历史</text>
+  </view>
+
+  <scroll-view class="history-scroll" scroll-y style="padding-top: {{statusBarHeight + navBarHeight + 22}}px;">
+    <view class="summary-card">
+      <view class="summary-icon">
+        <view class="clock-icon"></view>
+      </view>
+      <view class="summary-copy">
+        <text class="summary-title">拍照学韩语记录</text>
+        <text class="summary-subtitle">已保存 {{records.length}} 张识别词卡</text>
+      </view>
+    </view>
+
+    <view wx:if="{{records.length}}" class="record-list">
+      <view wx:for="{{records}}" wx:key="id" class="record-item">
+        <button
+          class="record-card {{expandedRecordId === item.id ? 'is-expanded' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="toggleRecord"
+          hover-class="record-card-press"
+        >
+          <image class="record-image" src="{{item.imagePath}}" mode="aspectFill"></image>
+          <view class="record-copy">
+            <view class="record-heading">
+              <text class="record-title">{{item.title}}</text>
+              <text class="record-badge">{{item.words.length}}词</text>
+            </view>
+            <text class="record-desc">{{item.desc}}</text>
+            <text class="record-time">{{item.timeText}}</text>
+          </view>
+          <text class="record-arrow {{expandedRecordId === item.id ? 'is-open' : ''}}">⌄</text>
+        </button>
+
+        <view wx:if="{{expandedRecordId === item.id}}" class="record-expand">
+          <view wx:if="{{item.words.length}}" class="expand-word-list">
+            <view
+              wx:for="{{item.words}}"
+              wx:for-item="word"
+              wx:key="id"
+              class="expand-word {{speakingWordId === word.text ? 'is-speaking' : ''}}"
+              data-word="{{word.text}}"
+              data-word-id="{{word.text}}"
+              bindtap="playHistoryWord"
+              hover-class="expand-word-press"
+            >
+              <text class="expand-word-ko">{{word.text}}</text>
+              <text wx:if="{{word.meaning}}" class="expand-word-meaning">{{word.meaning}}</text>
+            </view>
+          </view>
+          <text wx:else class="expand-empty">{{item.desc}}</text>
+          <button class="practice-button" data-id="{{item.id}}" catchtap="practiceRecord" hover-class="practice-button-press">
+            练习
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="empty-card">
+      <view class="empty-icon">
+        <view class="camera-mini"></view>
+      </view>
+      <text class="empty-title">还没有识别记录</text>
+      <text class="empty-copy">回到拍照页，拍一张图生成韩语词卡。</text>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{showPracticeConfirm}}" class="practice-modal-mask" catchtap="cancelPracticeConfirm" catchtouchmove="preventTouchMove">
+    <view class="practice-modal" catchtap="preventModalBubble">
+      <view class="modal-mark">
+        <view class="modal-mark-dot"></view>
+      </view>
+      <text class="modal-title">切换到拍照练习</text>
+      <text class="modal-copy">将把这组 {{practiceConfirmCount}} 个单词加入拍照练习分组，新加入的词会置顶。</text>
+      <view class="modal-actions">
+        <view class="modal-button secondary" catchtap="cancelPracticeConfirm">取消</view>
+        <view class="modal-button primary" catchtap="confirmPracticeRecord">开始练习</view>
+      </view>
+    </view>
+  </view>
+</view>

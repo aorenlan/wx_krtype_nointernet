@@ -15,7 +15,14 @@
       <view class="dot"></view>
       <text>看图想韩语</text>
     </view>
-    <view class="count-pill">{{total ? (current + 1 < 10 ? '0' + (current + 1) : (current + 1)) : '00'}} / {{total < 10 ? '0' + total : total}}</view>
+    <view class="top-actions">
+      <button wx:if="{{!contentLoading && word && !categoryPanelVisible && !showCategoryAdConfirm && !showResumeChoice && (groupDone || autoPaused || (phase === 'asking' && !autoContinuePending))}}" class="share-pill" open-type="share" hover-class="share-pill-press">
+        <view class="share-glow"></view>
+        <image class="share-icon" src="/assets/icons/share.svg" mode="aspectFit"></image>
+        <text class="share-label">分享</text>
+      </button>
+      <view class="count-pill">{{total ? (current + 1 < 10 ? '0' + (current + 1) : (current + 1)) : '00'}} / {{total < 10 ? '0' + total : total}}</view>
+    </view>
   </view>
 
   <!-- 模式切换 -->
@@ -103,6 +110,24 @@
         <view class="category-close" catchtap="closeCategoryPanel">×</view>
       </view>
 
+      <view wx:if="{{total}}" class="category-practice-card" catchtap="practiceCurrentGroup">
+        <view class="category-practice-icon">拼</view>
+        <view class="category-practice-copy">
+          <view class="category-practice-title">开始拼写练习</view>
+          <view class="category-practice-sub">{{groupTitle}} · {{total}}词</view>
+        </view>
+        <view class="category-practice-action">开始</view>
+      </view>
+
+      <view wx:if="{{showPicturePracticeConfirm}}" class="category-practice-confirm">
+        <view class="practice-confirm-title">开始拼写练习？</view>
+        <view class="practice-confirm-copy">使用「{{picturePracticeConfirmTitle}}」的 {{picturePracticeConfirmCount}} 个单词，进入练习页后直接练韩文拼写。</view>
+        <view class="practice-confirm-actions">
+          <view class="practice-confirm-btn secondary" catchtap="cancelPicturePracticeConfirm">取消</view>
+          <view class="practice-confirm-btn primary" catchtap="confirmPicturePracticeCurrentGroup">开始拼写</view>
+        </view>
+      </view>
+
       <view class="category-order-card">
         <view class="category-order-main">
           <view class="category-order-title">播放顺序</view>
@@ -141,5 +166,45 @@
       </scroll-view>
     </view>
   </view>
+
+  <view wx:if="{{showCategoryAdConfirm}}" class="pw-dialog-mask" catchtap="cancelCategoryAdConfirm">
+    <view class="pw-dialog" catchtap="preventBubble">
+      <view class="pw-dialog-mark">
+        <view class="pw-dialog-ring"></view>
+        <view class="pw-dialog-dot"></view>
+      </view>
+      <view class="pw-dialog-title">解锁今日分类切换</view>
+      <view class="pw-dialog-copy">每天第一次切换分类需要看一次激励视频。看完后，今天所有分类都可以自由切换。</view>
+      <view class="pw-dialog-note">
+        <view class="pw-dialog-note-dot"></view>
+        <text>同一天只需要解锁一次</text>
+      </view>
+      <view class="pw-dialog-actions">
+        <view class="pw-dialog-btn secondary" catchtap="cancelCategoryAdConfirm">先不切</view>
+        <view class="pw-dialog-btn primary {{categoryAdLoading ? 'is-loading' : ''}}" catchtap="confirmCategoryAdConfirm">{{categoryAdLoading ? '加载中' : '去观看'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showResumeChoice}}" class="pw-dialog-mask" catchtap="preventBubble">
+    <view class="pw-dialog resume" catchtap="preventBubble">
+      <view class="pw-dialog-mark small">
+        <view class="pw-dialog-ring"></view>
+        <view class="pw-dialog-dot"></view>
+      </view>
+      <view class="pw-dialog-title">继续 {{resumeChoiceTitle}}？</view>
+      <view class="pw-dialog-copy">{{resumeChoiceCopy}}</view>
+      <view class="pw-resume-progress">
+        <text>上次进度</text>
+        <view>{{resumeChoiceMeta}}</view>
+      </view>
+      <view class="pw-dialog-actions">
+        <view class="pw-dialog-btn secondary" catchtap="restartResumeChoice">重新开始</view>
+        <view class="pw-dialog-btn primary" catchtap="continueResumeChoice">继续</view>
+      </view>
+    </view>
+  </view>
+
+  <canvas type="2d" id="pictureShareCanvas" class="share-canvas"></canvas>
 
 </view>

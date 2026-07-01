@@ -16,7 +16,7 @@
   </view>
 
   <view class="content">
-    <view class="mask" wx:if="{{!sidebarCollapsed}}" bindtap="toggleSidebar"></view>
+    <view wx:if="{{!sidebarCollapsed}}" class="mask" catchtap="closeSidebar"></view>
     
     <view class="collapse-trigger-fixed" wx:if="{{items.length > 1}}" bindtap="toggleSidebar">
       <view class="menu-icon">
@@ -24,18 +24,20 @@
         <view class="line"></view>
         <view class="line"></view>
       </view>
+      <text class="catalog-trigger-text">目录</text>
     </view>
     
-    <view wx:if="{{items.length > 1}}" class="sidebar {{sidebarCollapsed ? 'collapsed' : ''}}">
+    <view wx:if="{{items.length > 1 && !sidebarCollapsed}}" class="sidebar" catchtap="preventBubble">
       <view class="sidebar-inner">
+        <view class="sheet-handle"></view>
         <view class="sidebar-top">
-          <text class="sidebar-title">目录</text>
+          <text class="sidebar-title">语法目录</text>
           <view class="sidebar-close-btn" bindtap="toggleSidebar">
             <text>×</text>
           </view>
         </view>
 
-        <scroll-view scroll-y class="sidebar-list">
+        <scroll-view scroll-y class="sidebar-list" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
           <block wx:for="{{items}}" wx:key="key">
             <view class="dir-item {{currentKey === item.key ? 'active' : ''}}" bindtap="selectItem" data-key="{{item.key}}">
               <text class="dir-text">{{item.grammar}}</text>
@@ -45,7 +47,7 @@
       </view>
     </view>
 
-    <scroll-view scroll-y class="main {{items.length > 1 ? '' : 'full'}}" 
+    <scroll-view scroll-y enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}" class="main {{items.length > 1 ? '' : 'full'}}"
       bindtouchstart="handleTouchStart"
       bindtouchend="handleTouchEnd">
       <view class="card" wx:if="{{current}}">
@@ -108,8 +110,10 @@
       </view>
 
       <view class="empty" wx:else>
-        <text>暂无语法</text>
+        <text>当前课程暂无语法</text>
       </view>
     </scroll-view>
   </view>
 </view>
+
+<tabbar selected="{{3}}" hidden="{{!sidebarCollapsed}}"></tabbar>

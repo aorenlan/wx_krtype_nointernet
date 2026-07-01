@@ -1,7 +1,7 @@
 /** app.wxss */
 page {
-  background-color: #09090b; /* zinc-950 */
-  color: #f8fafc; /* slate-50 */
+  background-color: #f8f8f9;
+  color: #202126;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   height: 100%;
   box-sizing: border-box;

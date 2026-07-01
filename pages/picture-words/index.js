@@ -1,9 +1,14 @@
+import { addPictureWordsPracticeWords, PICTURE_WORDS_PRACTICE_CATEGORY } from '../../utils_nv/storage';
+
 const {
   loadPictureWordPack,
   getSavedPictureWordGroupId,
   savePictureWordGroupId
 } = require('./content');
 const { sha256 } = require('../../utils/sha256');
+const { drawLearningShareCard, safeText } = require('../../utils/share-card');
+const { syncPageTabBar } = require('../../utils/tabbar');
+const { shouldSkipAd } = require('../../utils/ad-free');
 
 // 朗读脚本：韩文跟读 3 遍 + 英文 1 遍
 // type 用于界面提示文案；lang 决定 edgeTts 语音
@@ -49,6 +54,15 @@ Page({
     categoryList: [],
     categoryPanelVisible: false,
     categorySearchText: '',
+    showCategoryAdConfirm: false,
+    categoryAdLoading: false,
+    showResumeChoice: false,
+    resumeChoiceTitle: '',
+    resumeChoiceCopy: '',
+    resumeChoiceMeta: '',
+    showPicturePracticeConfirm: false,
+    picturePracticeConfirmTitle: '',
+    picturePracticeConfirmCount: 0,
     groupPickerIndex: 0,
     hasCategorySwitch: false,
     showCategoryPicker: false,
@@ -97,11 +111,13 @@ Page({
     autoContinuePending: false,
     inputValue: '',
     inputError: false,
+    shareImagePath: '',
     popTick: 0,            // 自增触发卡片弹入动画（配合 pop 音效）
     dbg: '就绪'            // 调试信息，定位流程卡在哪
   },
 
-  onLoad() {
+  onLoad(options) {
+    this._initialShareOptions = options || {};
     let statusBarHeight = 20;
     let navTotalHeight = 64;
     try {
@@ -135,14 +151,16 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1, hidden: !!this.data.categoryPanelVisible });
-    }
+    this._syncTabBarVisibility();
   },
 
   onUnload() {
     this._setTabBarHidden(false);
     this._seqToken = (this._seqToken || 0) + 1;
+    if (this._shareImageTimer) {
+      clearTimeout(this._shareImageTimer);
+      this._shareImageTimer = null;
+    }
     this._clearTimers();
     this._stopAudio();
     this._destroySfx();
@@ -206,13 +224,104 @@ Page({
   },
 
   _setTabBarHidden(hidden) {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1, hidden: Boolean(hidden) });
+    syncPageTabBar(this, { selected: 1, hidden: Boolean(hidden) });
+  },
+
+  _shouldHideTabBar() {
+    if (this.data.showCategoryAdConfirm || this.data.showResumeChoice) return true;
+    if (this.data.categoryPanelVisible) return true;
+    if (this.data.groupDone || this.data.autoPaused) return false;
+    if (this.data.autoContinuePending) return true;
+    return this.data.phase === 'countdown' || (this.data.phase === 'reveal' && this.data.autoMode);
+  },
+
+  _syncTabBarVisibility() {
+    this._setTabBarHidden(this._shouldHideTabBar());
+  },
+
+  _getPictureShareMeta() {
+    const word = this.data.word || {};
+    const korean = safeText(word.korean || word.word, '看图想韩语');
+    const cn = safeText(word.cn || word.chinese || word.meaning);
+    const en = safeText(word.en || word.english);
+    const groupTitle = safeText(this.data.groupTitle, '图片词卡');
+    const subtitles = [cn, en].filter(Boolean);
+    return {
+      korean,
+      cn,
+      en,
+      groupTitle,
+      image: safeText(word.image),
+      subtitles,
+      key: [this.data.currentGroupId, word.id, korean, cn, en, word.image].join('|')
+    };
+  },
+
+  _scheduleShareImage() {
+    if (this._shareImageTimer) {
+      clearTimeout(this._shareImageTimer);
+      this._shareImageTimer = null;
     }
+    if (!this.data.word) return;
+    this._shareImageTimer = setTimeout(() => {
+      this._shareImageTimer = null;
+      this._drawShareImage();
+    }, 160);
+  },
+
+  async _drawShareImage() {
+    const meta = this._getPictureShareMeta();
+    if (!meta.korean || !this.data.word) return;
+    if (this._shareImageKey === meta.key && this.data.shareImagePath) return;
+    this._shareImageKey = meta.key;
+    try {
+      const imagePath = await drawLearningShareCard(this, {
+        selector: '#pictureShareCanvas',
+        background: meta.image,
+        brand: '看图想韩语',
+        kicker: meta.groupTitle,
+        title: meta.korean,
+        subtitles: meta.subtitles,
+        footer: '韩语打字练习',
+        accentColor: '#e9a936'
+      });
+      if (this._shareImageKey === meta.key && imagePath) {
+        this.setData({ shareImagePath: imagePath });
+      }
+    } catch (error) {
+      console.warn('[picture-words] draw share image failed', error);
+    }
+  },
+
+  onShareAppMessage() {
+    const meta = this._getPictureShareMeta();
+    const titleSuffix = meta.subtitles.length ? ` · ${meta.subtitles[0]}` : '';
+    const groupId = safeText(this.data.currentGroupId);
+    const wordId = safeText(this.data.word && this.data.word.id);
+    const params = [];
+    if (groupId) params.push(`groupId=${encodeURIComponent(groupId)}`);
+    if (wordId) params.push(`wordId=${encodeURIComponent(wordId)}`);
+    const path = params.length
+      ? `/pages/picture-words/index?${params.join('&')}`
+      : '/pages/picture-words/index';
+    return {
+      title: `${meta.korean}${titleSuffix}`,
+      path,
+      imageUrl: this.data.shareImagePath || meta.image || ''
+    };
+  },
+
+  onShareTimeline() {
+    const meta = this._getPictureShareMeta();
+    return {
+      title: `看图想韩语：${meta.korean}`,
+      imageUrl: this.data.shareImagePath || meta.image || ''
+    };
   },
 
   // ---------- 分类切换广告 ----------
   _initCategoryAd() {
+    if (shouldSkipAd('picture-words')) return;
     if (!wx.createRewardedVideoAd || videoAd) return;
     videoAd = wx.createRewardedVideoAd({
       adUnitId: CATEGORY_AD_UNIT_ID
@@ -232,6 +341,7 @@ Page({
   },
 
   _hasShownCategoryAdToday() {
+    if (shouldSkipAd('picture-words')) return true;
     try {
       return wx.getStorageSync(CATEGORY_AD_DATE_KEY) === this._getTodayKey();
     } catch (e) {
@@ -246,27 +356,67 @@ Page({
   },
 
   _showCategoryAdOnceToday() {
+    if (shouldSkipAd('picture-words')) return Promise.resolve(true);
     if (this._hasShownCategoryAdToday()) return Promise.resolve(true);
 
-    return new Promise((resolve) => {
-      wx.showModal({
-        title: '切换分类',
-        content: '每天首次切换分类需要看一次激励视频。看完后，今天再切分类就不用重复观看。',
-        confirmText: '去观看',
-        cancelText: '先不切',
-        success: (res) => {
-          if (!res || !res.confirm) {
-            resolve(false);
-            return;
-          }
-          this._playCategoryRewardAd().then(resolve);
-        },
-        fail: () => resolve(false)
+    if (this._categoryAdPromise) return this._categoryAdPromise;
+
+    this._categoryAdPromise = new Promise((resolve) => {
+      this._categoryAdResolve = (ok) => {
+        this._categoryAdResolve = null;
+        this._categoryAdPromise = null;
+        resolve(Boolean(ok));
+      };
+      this.setData({
+        showCategoryAdConfirm: true,
+        categoryAdLoading: false
+      }, () => {
+        this._setTabBarHidden(true);
       });
+    });
+
+    return this._categoryAdPromise;
+  },
+
+  _finishCategoryAdConfirm(ok) {
+    const resolve = this._categoryAdResolve;
+    this._categoryAdResolve = null;
+    this._categoryAdPromise = null;
+    if (resolve) resolve(Boolean(ok));
+  },
+
+  cancelCategoryAdConfirm() {
+    if (this.data.categoryAdLoading) return;
+    this.setData({
+      showCategoryAdConfirm: false,
+      categoryAdLoading: false
+    }, () => {
+      this._syncTabBarVisibility();
+    });
+    this._finishCategoryAdConfirm(false);
+  },
+
+  confirmCategoryAdConfirm() {
+    if (this.data.categoryAdLoading) return;
+    this.setData({ categoryAdLoading: true });
+    this._playCategoryRewardAd().then((ok) => {
+      this.setData({
+        showCategoryAdConfirm: false,
+        categoryAdLoading: false
+      }, () => {
+        this._syncTabBarVisibility();
+      });
+      this._finishCategoryAdConfirm(ok);
     });
   },
 
   _playCategoryRewardAd() {
+    if (shouldSkipAd('picture-words')) {
+      return Promise.resolve(true);
+    }
+
+    if (!videoAd) this._initCategoryAd();
+
     if (!videoAd) {
       wx.showToast({ title: '广告暂不可用', icon: 'none', duration: 1200 });
       return Promise.resolve(false);
@@ -504,7 +654,14 @@ Page({
   },
 
   async _loadInitialPack() {
-    await this._loadGroup(getSavedPictureWordGroupId(), { save: false, refresh: true, restoreSession: true });
+    const initialGroupId = this._initialShareOptions && this._initialShareOptions.groupId;
+    const initialWordId = this._initialShareOptions && this._initialShareOptions.wordId;
+    await this._loadGroup(initialGroupId || getSavedPictureWordGroupId(), {
+      save: false,
+      refresh: true,
+      restoreSession: !initialWordId,
+      targetWordId: initialWordId
+    });
   },
 
   _buildGroupOptions(groups) {
@@ -565,15 +722,19 @@ Page({
       const group = pack.group || groups[0] || null;
       const rawWords = Array.isArray(pack.items) ? pack.items : [];
       const catalogCacheKey = pack.catalogCacheKey || pack.cacheKey || `pictureWords:${pack.source || 'local'}:${pack.version || 'v'}:catalog`;
-      const savedSession = !opts.restart && opts.restoreSession && group
+      const targetWordId = String(opts.targetWordId || '').trim();
+      const savedSession = !targetWordId && !opts.restart && opts.restoreSession && group
         ? this._getStoredSession(catalogCacheKey, group.id)
         : null;
       const session = this._isResumableSession(savedSession, rawWords.length) ? savedSession : null;
       const shuffleEnabled = session ? Boolean(session.shuffleEnabled) : this._readShuffleEnabled();
       const words = this._buildOrderedWords(rawWords, session, shuffleEnabled);
+      const targetIndex = targetWordId
+        ? words.findIndex((item) => String(item && item.id || '') === targetWordId)
+        : -1;
       const startIndex = session
         ? Math.max(0, Math.min(Number(session.currentIndex) || 0, Math.max(words.length - 1, 0)))
-        : 0;
+        : (targetIndex >= 0 ? targetIndex : 0);
       const currentWord = words[startIndex] || null;
       const questionText = group && group.promptKo ? group.promptKo : QUESTION_KO;
       const firstQuestionText = currentWord && currentWord.promptKo ? currentWord.promptKo : questionText;
@@ -635,6 +796,8 @@ Page({
         dbg: group ? `已加载：${group.name}${session ? '，继续上次进度' : ''}` : '暂无分组'
       }, () => {
         this._saveStudySession();
+        this._syncTabBarVisibility();
+        this._scheduleShareImage();
       });
 
       this._prefetchTts(firstQuestionText, 'ko-KR');
@@ -654,6 +817,9 @@ Page({
         showCategoryPicker: false,
         categoryPanelVisible: false,
         dbg: '分组加载失败'
+      }, () => {
+        this._syncTabBarVisibility();
+        this._scheduleShareImage();
       });
       wx.showToast({ title: '分组加载失败', icon: 'none', duration: 1200 });
     }
@@ -676,8 +842,19 @@ Page({
   },
 
   closeCategoryPanel() {
-    this.setData({ categoryPanelVisible: false, categorySearchText: '' });
-    this._setTabBarHidden(false);
+    const shouldCancelAdConfirm = this.data.showCategoryAdConfirm && !this.data.categoryAdLoading;
+    this._pendingPicturePracticeWords = null;
+    this.setData({
+      categoryPanelVisible: false,
+      categorySearchText: '',
+      showCategoryAdConfirm: false,
+      categoryAdLoading: false,
+      showPicturePracticeConfirm: false,
+      picturePracticeConfirmTitle: '',
+      picturePracticeConfirmCount: 0
+    });
+    if (shouldCancelAdConfirm) this._finishCategoryAdConfirm(false);
+    this._syncTabBarVisibility();
   },
 
   onCategorySearchInput(e) {
@@ -695,6 +872,70 @@ Page({
     });
   },
 
+  practiceCurrentGroup() {
+    const group = this.data.currentGroup || {};
+    const sourceWords = Array.isArray(this.data.baseWords) && this.data.baseWords.length
+      ? this.data.baseWords
+      : this.data.words;
+    const practiceWords = (Array.isArray(sourceWords) ? sourceWords : [])
+      .map((item) => ({
+        ...item,
+        word: item && item.korean ? item.korean : item && item.word,
+        meaning: item && item.cn ? item.cn : item && item.meaning,
+        sourceGroupId: group.id || this.data.currentGroupId || '',
+        sourceGroupName: group.name || this.data.groupTitle || ''
+      }))
+      .filter((item) => item && item.word);
+
+    if (!practiceWords.length) {
+      wx.showToast({ title: '暂无可练习单词', icon: 'none', duration: 1200 });
+      return;
+    }
+
+    this._pendingPicturePracticeWords = practiceWords;
+    this.setData({
+      showPicturePracticeConfirm: true,
+      picturePracticeConfirmTitle: group.name || this.data.groupTitle || '当前分类',
+      picturePracticeConfirmCount: practiceWords.length
+    });
+  },
+
+  cancelPicturePracticeConfirm() {
+    this._pendingPicturePracticeWords = null;
+    this.setData({
+      showPicturePracticeConfirm: false,
+      picturePracticeConfirmTitle: '',
+      picturePracticeConfirmCount: 0
+    });
+  },
+
+  confirmPicturePracticeCurrentGroup() {
+    const practiceWords = this._pendingPicturePracticeWords || [];
+    if (!practiceWords.length) {
+      wx.showToast({ title: '暂无可练习单词', icon: 'none', duration: 1200 });
+      this.cancelPicturePracticeConfirm();
+      return;
+    }
+
+    const result = addPictureWordsPracticeWords(practiceWords);
+    if (!result.success) {
+      wx.showToast({ title: result.message || '加入失败', icon: 'none', duration: 1200 });
+      return;
+    }
+
+    const settings = wx.getStorageSync('settings') || {};
+    wx.setStorageSync('settings', {
+      ...settings,
+      category: PICTURE_WORDS_PRACTICE_CATEGORY
+    });
+
+    this.closeCategoryPanel();
+    wx.showToast({ title: '正在打开拼写练习', icon: 'none', duration: 900 });
+    setTimeout(() => {
+      wx.switchTab({ url: '/pages/nv-practice/index' });
+    }, 180);
+  },
+
   selectCategory(e) {
     const groupId = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.groupId : '';
     const group = (this.data.groups || []).find((item) => item && item.id === groupId);
@@ -704,9 +945,9 @@ Page({
       return;
     }
 
-    this.closeCategoryPanel();
     this._showCategoryAdOnceToday().then((ok) => {
       if (!ok) return;
+      this.closeCategoryPanel();
       this._loadGroupWithResumeChoice(group);
     });
   },
@@ -731,22 +972,47 @@ Page({
 
     const currentNo = Math.min(Number(session.currentIndex || 0) + 1, Number(session.total || group.itemCount || 0));
     const total = Number(session.total || group.itemCount || 0);
-    wx.showModal({
-      title: '继续上次进度？',
-      content: `${group.name || group.id} 上次学到 ${currentNo}/${total}，要继续还是重新开始？`,
-      confirmText: '继续',
-      cancelText: '重新开始',
-      success: (res) => {
-        this._loadGroup(group.id, {
-          save: true,
-          restoreSession: !!(res && res.confirm),
-          restart: !(res && res.confirm)
-        });
-      },
-      fail: () => {
-        this._loadGroup(group.id, { save: true, restart: true });
-      }
+    this._resumeChoiceGroup = group;
+    this.setData({
+      showResumeChoice: true,
+      resumeChoiceTitle: group.name || group.id || '当前分类',
+      resumeChoiceCopy: '检测到上次学习进度，可以继续接着学，也可以从第一张重新开始。',
+      resumeChoiceMeta: `${currentNo}/${total}`
+    }, () => {
+      this._setTabBarHidden(true);
     });
+  },
+
+  restartResumeChoice() {
+    const group = this._resumeChoiceGroup;
+    this._resumeChoiceGroup = null;
+    this.setData({
+      showResumeChoice: false,
+      resumeChoiceTitle: '',
+      resumeChoiceCopy: '',
+      resumeChoiceMeta: ''
+    }, () => {
+      this._syncTabBarVisibility();
+    });
+    if (group && group.id) {
+      this._loadGroup(group.id, { save: true, restart: true });
+    }
+  },
+
+  continueResumeChoice() {
+    const group = this._resumeChoiceGroup;
+    this._resumeChoiceGroup = null;
+    this.setData({
+      showResumeChoice: false,
+      resumeChoiceTitle: '',
+      resumeChoiceCopy: '',
+      resumeChoiceMeta: ''
+    }, () => {
+      this._syncTabBarVisibility();
+    });
+    if (group && group.id) {
+      this._loadGroup(group.id, { save: true, restoreSession: true, restart: false });
+    }
   },
 
   toggleShuffle() {
@@ -830,6 +1096,8 @@ Page({
       dbg: shuffleEnabled ? '已开启随机顺序' : '已切回顺序播放'
     }, () => {
       this._saveStudySession();
+      this._syncTabBarVisibility();
+      this._scheduleShareImage();
     });
 
     this._prefetchTts(firstQuestionText, 'ko-KR');
@@ -877,6 +1145,8 @@ Page({
       showAskBubble: true,
       countdown: COUNTDOWN_START,
       countdownPercent: 100
+    }, () => {
+      this._syncTabBarVisibility();
     });
     wx.showToast({ title: next ? '已切换：自动播放' : '已切换：手动输入', icon: 'none', duration: 1200 });
   },
@@ -933,6 +1203,7 @@ Page({
       dbg: dbgText || '已暂停'
     }, () => {
       this._saveStudySession();
+      this._syncTabBarVisibility();
     });
   },
 
@@ -966,6 +1237,8 @@ Page({
       showCountBadge: true,
       showAskBubble: true,
       dbg: '倒计时…朗读 ' + questionText
+    }, () => {
+      this._syncTabBarVisibility();
     });
     this._playSfx('tick'); // 第一声 3
     this._speak(questionText, 'ko-KR', {
@@ -1007,6 +1280,8 @@ Page({
       showAskBadge: false,
       showCountBadge: false,
       showAskBubble: false
+    }, () => {
+      this._syncTabBarVisibility();
     });
     this._runReadPlan(0);
   },
@@ -1045,7 +1320,8 @@ Page({
         channel: 'read',
         token: myToken,
         phase: 'reveal',
-        maxMs: 12000
+        maxMs: 12000,
+        audioUrl: this._getWordAudioUrl(word, step.lang)
       });
 
       if (!ok && this._isTokenAlive(myToken) && this.data.phase === 'reveal' && this.data.word && this.data.word.id === wordId) {
@@ -1055,7 +1331,8 @@ Page({
           channel: 'read',
           token: myToken,
           phase: 'reveal',
-          maxMs: 12000
+          maxMs: 12000,
+          audioUrl: this._getWordAudioUrl(word, step.lang)
         });
       }
 
@@ -1069,6 +1346,8 @@ Page({
           showNextButton: false,
           readTipText: '朗读未完成，请重试',
           dbg: '朗读失败，暂停在当前步骤'
+        }, () => {
+          this._syncTabBarVisibility();
         });
         return;
       }
@@ -1094,6 +1373,8 @@ Page({
         showNextButton: !this.data.autoMode,
         nextButtonText: (this.data.current + 1 >= this.data.total) ? '完成' : '下一个 ›',
         dbg: this.data.autoMode ? '本词朗读完成，准备下一张' : '本词朗读完成，停留在当前卡片'
+      }, () => {
+        this._syncTabBarVisibility();
       });
       if (this.data.autoMode) {
         this._autoNextTimer = setTimeout(() => {
@@ -1126,16 +1407,32 @@ Page({
     }
   },
 
-  _prefetchTts(text, lang) {
-    this._getCachedTtsSrc(text, lang).catch((e) => {
+  _getWordAudioUrl(word, lang) {
+    const audio = word && word.audio;
+    if (!audio) return '';
+    if (typeof audio === 'string') return audio.trim();
+
+    const normalizedLang = String(lang || 'ko-KR');
+    if (audio[normalizedLang]) return String(audio[normalizedLang]).trim();
+    if (normalizedLang === 'ko-KR') {
+      return String(audio.ko || audio.korean || '').trim();
+    }
+    if (normalizedLang === 'en-US') {
+      return String(audio.en || audio.english || '').trim();
+    }
+    return '';
+  },
+
+  _prefetchTts(text, lang, options) {
+    this._getCachedTtsSrc(text, lang, options).catch((e) => {
       console.warn('[picword audio] prefetch failed:', text, lang, e && e.message ? e.message : e);
     });
   },
 
   _prefetchWordAudio(word) {
     if (!word) return;
-    if (word.korean) this._prefetchTts(word.korean, 'ko-KR');
-    if (word.en) this._prefetchTts(word.en, 'en-US');
+    if (word.korean) this._prefetchTts(word.korean, 'ko-KR', { audioUrl: this._getWordAudioUrl(word, 'ko-KR') });
+    if (word.en) this._prefetchTts(word.en, 'en-US', { audioUrl: this._getWordAudioUrl(word, 'en-US') });
   },
 
   _prefetchCurrentReadAudio() {
@@ -1173,35 +1470,52 @@ Page({
     return `${word.roman || ''}${word.cn ? ' · ' + word.cn : ''}`.trim();
   },
 
-  _getCachedTtsSrc(text, lang) {
-    const normalizedText = String(text || '').trim();
-    const normalizedLang = String(lang || 'ko-KR');
-    if (!normalizedText) return Promise.reject(new Error('Missing TTS text'));
-
-    this._ensureCacheDir();
-    if (!this._audioCache) this._audioCache = {};
-    if (!this._ttsInflight) this._ttsInflight = {};
-
-    const cacheKey = this._getAudioCacheKey(normalizedText, normalizedLang);
-    const cachePath = `${AUDIO_CACHE_DIR}/${cacheKey}.mp3`;
-    const memorized = this._audioCache[cacheKey];
-
-    if (memorized && this._hasLocalFile(memorized)) {
-      return Promise.resolve(memorized);
+  _downloadRemoteAudioToCache(remoteAudioUrl, cachePath, cacheKey) {
+    if (!remoteAudioUrl || !wx.downloadFile) {
+      return Promise.reject(new Error('wx.downloadFile unavailable'));
     }
-    if (this._hasLocalFile(cachePath)) {
-      this._audioCache[cacheKey] = cachePath;
-      return Promise.resolve(cachePath);
-    }
-    if (this._ttsInflight[cacheKey]) {
-      return this._ttsInflight[cacheKey];
-    }
+
+    return new Promise((resolve, reject) => {
+      wx.downloadFile({
+        url: remoteAudioUrl,
+        success: (res) => {
+          const statusCode = Number(res && res.statusCode);
+          if (statusCode < 200 || statusCode >= 300 || !res.tempFilePath) {
+            reject(new Error(`远程音频下载失败: ${statusCode || 'unknown'}`));
+            return;
+          }
+
+          const fs = wx.getFileSystemManager();
+          fs.readFile({
+            filePath: res.tempFilePath,
+            success: (readRes) => {
+              this._ensureCacheDir();
+              try { fs.unlinkSync(cachePath); } catch (e) {}
+              fs.writeFile({
+                filePath: cachePath,
+                data: readRes.data,
+                success: () => {
+                  this._audioCache[cacheKey] = cachePath;
+                  resolve(cachePath);
+                },
+                fail: (e) => reject(new Error('写入远程音频缓存失败: ' + JSON.stringify(e)))
+              });
+            },
+            fail: (e) => reject(new Error('读取远程音频失败: ' + JSON.stringify(e)))
+          });
+        },
+        fail: (e) => reject(new Error('远程音频请求失败: ' + JSON.stringify(e)))
+      });
+    });
+  },
+
+  _requestEdgeTtsToCache(normalizedText, normalizedLang, cachePath, cacheKey) {
     if (!wx.cloud || !wx.cloud.callFunction) {
       return Promise.reject(new Error('wx.cloud 未初始化'));
     }
 
     const fs = wx.getFileSystemManager();
-    const request = new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       console.log('[picword audio] edgeTts fetch:', normalizedText, normalizedLang);
       wx.cloud.callFunction({
         name: 'edgeTts',
@@ -1229,6 +1543,39 @@ Page({
         fail: (e) => reject(new Error('云函数调用失败: ' + JSON.stringify(e)))
       });
     });
+  },
+
+  _getCachedTtsSrc(text, lang, options) {
+    const normalizedText = String(text || '').trim();
+    const normalizedLang = String(lang || 'ko-KR');
+    const remoteAudioUrl = String(options && options.audioUrl || '').trim();
+    if (!normalizedText) return Promise.reject(new Error('Missing TTS text'));
+
+    this._ensureCacheDir();
+    if (!this._audioCache) this._audioCache = {};
+    if (!this._ttsInflight) this._ttsInflight = {};
+
+    const cacheKey = this._getAudioCacheKey(normalizedText, normalizedLang);
+    const cachePath = `${AUDIO_CACHE_DIR}/${cacheKey}.mp3`;
+    const memorized = this._audioCache[cacheKey];
+
+    if (memorized && this._hasLocalFile(memorized)) {
+      return Promise.resolve(memorized);
+    }
+    if (this._hasLocalFile(cachePath)) {
+      this._audioCache[cacheKey] = cachePath;
+      return Promise.resolve(cachePath);
+    }
+    if (this._ttsInflight[cacheKey]) {
+      return this._ttsInflight[cacheKey];
+    }
+
+    const request = remoteAudioUrl
+      ? this._downloadRemoteAudioToCache(remoteAudioUrl, cachePath, cacheKey).catch((e) => {
+        console.warn('[picword audio] remote audio fallback:', remoteAudioUrl, e && e.message ? e.message : e);
+        return this._requestEdgeTtsToCache(normalizedText, normalizedLang, cachePath, cacheKey);
+      })
+      : this._requestEdgeTtsToCache(normalizedText, normalizedLang, cachePath, cacheKey);
 
     this._ttsInflight[cacheKey] = request.then((src) => {
       delete this._ttsInflight[cacheKey];
@@ -1249,7 +1596,7 @@ Page({
 
     try {
       this.setData({ dbg: '取音频缓存: ' + normalizedText });
-      const src = await this._getCachedTtsSrc(normalizedText, lang);
+      const src = await this._getCachedTtsSrc(normalizedText, lang, { audioUrl: opts.audioUrl });
       if (!this._isTokenAlive(token)) return false;
       if (phase && this.data.phase !== phase) return false;
       return await this._playAudioSrc(src, normalizedText, opts);
@@ -1356,6 +1703,7 @@ Page({
       readTipText: '准备重试',
       dbg: '准备重试朗读'
     }, () => {
+      this._syncTabBarVisibility();
       this._runReadPlan(stepIndex);
     });
   },
@@ -1405,6 +1753,7 @@ Page({
         dbg: '本组完成，卡片保持显示'
       }, () => {
         this._saveStudySession({ done: true });
+        this._syncTabBarVisibility();
       });
       return;
     }
@@ -1435,11 +1784,13 @@ Page({
       showCountBadge: false,
       showAskBubble: true,
       popTick: (this.data.popTick + 1) % 2
-    }, () => {
-      this._saveStudySession();
-      if (shouldAutoContinue) {
-        this._stepTimer = setTimeout(() => this.startSequence(), AUTO_CHAIN_START_DELAY_MS);
-      }
+      }, () => {
+        this._saveStudySession();
+        this._syncTabBarVisibility();
+        this._scheduleShareImage();
+        if (shouldAutoContinue) {
+          this._stepTimer = setTimeout(() => this.startSequence(), AUTO_CHAIN_START_DELAY_MS);
+        }
     });
     this._prefetchTts(nextQuestionText, 'ko-KR');
     this._prefetchCurrentReadAudio();
@@ -1483,6 +1834,8 @@ Page({
       showAskBubble: true
     }, () => {
       this._saveStudySession({ done: false });
+      this._syncTabBarVisibility();
+      this._scheduleShareImage();
     });
     this._prefetchTts(firstQuestionText, 'ko-KR');
     this._prefetchCurrentReadAudio();

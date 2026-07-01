@@ -1,0 +1,138 @@
+<view class="photo-page">
+  <view class="top-nav" style="height: {{statusBarHeight + navBarHeight}}px; padding-top: {{statusBarHeight}}px;">
+    <text class="top-title">拍照学语言</text>
+    <button class="top-share-btn" open-type="share" hover-class="top-share-press">
+      <image class="top-share-icon" src="/assets/icons/share.svg" mode="aspectFit"></image>
+    </button>
+  </view>
+
+  <view class="home-page {{currentRecord ? 'has-current-result' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 58}}px;">
+    <view class="hero-copy">
+      <text class="app-title">拍照学语言</text>
+      <view class="app-subtitle {{heroLeaving ? 'subtitle-leaving' : ''}} {{heroFinal ? 'subtitle-final' : ''}}">
+        <view wx:if="{{heroHaloActive}}" class="hello-halo"></view>
+        <text wx:for="{{heroChars}}" wx:key="index" class="type-char tone-{{item.tone}}">{{item.text}}</text>
+        <text wx:if="{{typingActive}}" class="typing-cursor"></text>
+      </view>
+    </view>
+
+    <button class="capture-card {{isAnalyzing ? 'is-analyzing' : ''}}" bindtap="goCamera" hover-class="capture-press" disabled="{{isAnalyzing}}">
+      <view class="capture-shine"></view>
+      <view class="planet-system">
+        <view class="planet planet-one"></view>
+        <view class="planet planet-two"></view>
+        <view class="planet planet-three"></view>
+        <view class="planet planet-four"></view>
+        <view class="planet planet-five"></view>
+      </view>
+      <view class="capture-icon">
+        <view class="camera-mark">
+          <view class="camera-bump"></view>
+          <view class="camera-frame">
+            <view class="camera-lens"></view>
+          </view>
+        </view>
+      </view>
+      <text class="capture-label">{{isAnalyzing ? '正在识别' : '点击拍照'}}</text>
+    </button>
+
+    <view wx:if="{{photoQuotaEnabled}}" class="photo-quota {{photoQuotaRemaining <= 0 ? 'is-empty' : ''}}" bindtap="openPhotoQuotaModal">
+      <view class="photo-quota-dot"></view>
+      <text class="photo-quota-text">{{photoQuotaText}}</text>
+    </view>
+
+    <view wx:if="{{isAnalyzing}}" class="analysis-status is-live">
+      <view class="analysis-dot"></view>
+      <text class="analysis-text">{{analysisStatus}}</text>
+    </view>
+
+    <view wx:if="{{sharedWords.length}}" class="shared-word-card">
+      <view class="shared-word-head">
+        <view>
+          <text class="shared-kicker">朋友分享</text>
+          <text class="shared-title">{{sharedSceneName || '拍照学韩语词卡'}}</text>
+        </view>
+        <text class="shared-count">{{sharedWords.length}}词</text>
+      </view>
+      <view class="shared-word-grid">
+        <view wx:for="{{sharedWords}}" wx:key="text" class="shared-word-item">
+          <text class="shared-word-ko">{{item.text}}</text>
+          <text wx:if="{{item.meaning}}" class="shared-word-meaning">{{item.meaning}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{currentRecord}}" class="current-result">
+      <view class="current-result-head">
+        <image class="current-image" src="{{currentRecord.imagePath}}" mode="aspectFill"></image>
+        <view class="current-copy">
+          <view class="current-title-row">
+            <text class="current-kicker">本次识别</text>
+            <text class="current-count">{{currentRecord.words.length}}词</text>
+          </view>
+          <text class="current-title">{{currentRecord.title}}</text>
+          <text class="current-time">{{currentRecord.timeText}}</text>
+        </view>
+      </view>
+
+      <scroll-view wx:if="{{currentRecord.words.length}}" class="current-words" scroll-y="{{true}}" show-scrollbar="{{false}}">
+        <view class="current-word-grid">
+          <view
+            wx:for="{{currentRecord.words}}"
+            wx:for-item="word"
+            wx:for-index="wordIndex"
+            wx:key="wordIndex"
+            class="current-word {{speakingWordIndex === wordIndex ? 'is-speaking' : ''}}"
+            bindtap="playCurrentWord"
+            data-word="{{word.text}}"
+            data-index="{{wordIndex}}"
+            hover-class="current-word-press"
+          >
+            <text class="current-word-ko">{{word.text}}</text>
+            <text wx:if="{{word.meaning}}" class="current-word-meaning">{{word.meaning}}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <text wx:else class="current-empty">这张图没有识别出可练习单词</text>
+
+      <view class="current-actions">
+        <button class="current-practice" bindtap="practiceCurrentRecord" hover-class="current-practice-press">
+          练习
+        </button>
+        <button class="current-history-mini" bindtap="goHistory" hover-class="current-history-mini-press">
+          查看历史
+        </button>
+      </view>
+    </view>
+
+    <button wx:if="{{!currentRecord}}" class="history-link" bindtap="goHistory" hover-class="history-link-press">
+      <view class="history-link-icon">
+        <view class="tab-journal-icon"></view>
+      </view>
+      <view class="history-link-copy">
+        <text class="history-link-title">历史记录</text>
+        <text class="history-link-subtitle">查看全部拍照学韩语记录</text>
+      </view>
+      <view class="history-link-tail">
+        <text class="history-link-count">{{historyRecords.length}}条</text>
+        <text class="history-link-arrow">›</text>
+      </view>
+    </button>
+  </view>
+
+  <view class="photo-quota-mask {{showPhotoQuotaModal ? 'is-visible' : ''}}" catchtap="closePhotoQuotaModal" catchtouchmove="preventTouchMove">
+    <view class="photo-quota-dialog" catchtap="stopTapBubble">
+      <view class="photo-quota-mark">
+        <view class="photo-quota-mark-dot"></view>
+      </view>
+      <text class="photo-quota-title">今日识别次数已用完</text>
+      <text class="photo-quota-desc">看完广告可增加 {{photoQuotaRewardBonus}} 次拍照识别，继续生成韩语词卡。</text>
+      <view class="photo-quota-actions">
+        <button class="photo-quota-cancel" bindtap="closePhotoQuotaModal">稍后</button>
+        <button class="photo-quota-confirm {{photoQuotaAdLoading ? 'is-loading' : ''}}" disabled="{{photoQuotaAdLoading}}" bindtap="watchPhotoQuotaAd">看广告 +{{photoQuotaRewardBonus}}</button>
+      </view>
+    </view>
+  </view>
+
+  <canvas type="2d" id="photoShareCanvas" class="share-canvas"></canvas>
+</view>

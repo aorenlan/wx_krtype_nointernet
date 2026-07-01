@@ -5,6 +5,9 @@
     scroll-y="true"
     enable-back-to-top="true"
     enable-flex="true"
+    enhanced="{{true}}"
+    show-scrollbar="{{false}}"
+    bounces="{{true}}"
     style="height: {{scrollHeight}}px;"
   >
   
@@ -12,35 +15,46 @@
   <block wx:if="{{view === 'categories'}}">
     <view class="page-title">词库设置</view>
 
-    <view class="card action-card extend-entry-card" bindtap="openExtendModal">
+    <view class="card action-card extend-entry-card" catchtap="openExtendModal">
       <view class="card-left">
         <view class="icon-circle orange">
           <text class="action-icon">＋</text>
         </view>
         <view class="extend-entry-texts">
-          <text class="card-text">加一天</text>
-          <text class="extend-entry-desc">输入 id，复制链接，看广告后领取</text>
+          <text class="card-text">Web 学习工具</text>
         </view>
       </view>
       <view class="arrow-icon">›</view>
     </view>
 
-    <!-- 免广告码入口 -->
-    <view class="card action-card" bindtap="openRedeemModal" style="margin-top: 12px;">
+    <!-- 免广告入口 -->
+    <view class="card action-card" catchtap="openRedeemModal" style="margin-top: 12px;">
       <view class="card-left">
         <view class="icon-circle green">
-          <text class="action-icon">🎟</text>
+          <text class="action-icon ad-icon">AD</text>
         </view>
         <view class="extend-entry-texts">
-          <text class="card-text">免广告码</text>
-          <text class="extend-entry-desc">输入兑换码，免除切换课程广告</text>
+          <text class="card-text">免广告</text>
+          <text class="extend-entry-desc" wx:if="{{adFreeActive}}">剩余 {{adFreeRemainText}}</text>
+          <text class="extend-entry-desc" wx:else>兑换码或看广告免一天</text>
         </view>
+      </view>
+      <view class="arrow-icon">›</view>
+    </view>
+
+    <!-- 联系开发者入口 -->
+    <view class="card action-card" bindtap="onContactSupport" style="margin-top: 12px;">
+      <view class="card-left">
+        <view class="icon-circle blue">
+          <text class="action-icon">💬</text>
+        </view>
+        <text class="card-text">联系开发者</text>
       </view>
       <view class="arrow-icon">›</view>
     </view>
 
     <!-- 趣味韩语入口 -->
-    <view class="card action-card" bindtap="goToHiChat" style="margin-top: 20px;">
+    <view class="card action-card" bindtap="goToHiChat" style="margin-top: 12px;">
       <view class="card-left">
         <view class="icon-circle purple">
           <text class="action-icon">🎮</text>
@@ -51,7 +65,7 @@
     </view>
 
     <!-- 词库设置 -->
-    <view class="section-title" style="margin-top: 32px;">词库设置</view>
+    <view class="section-title" style="margin-top: 24px;">词库设置</view>
 
     <!-- Word Book List -->
     <view class="book-list">
@@ -92,15 +106,6 @@
     </view>
 
     <view class="action-cards">
-      <view class="card action-card" bindtap="onContactSupport">
-        <view class="card-left">
-          <view class="icon-circle blue">
-            <text class="action-icon">💬</text>
-          </view>
-          <text class="card-text">联系客服 (复制微信)</text>
-        </view>
-      </view>
-
       <view class="card action-card" bindtap="switchVersion">
         <view class="card-left">
           <view class="icon-circle gray">
@@ -179,6 +184,54 @@
           </view>
         </picker>
       </view>
+
+      <view class="setting-section" wx:if="{{currentCategory === photoRecognitionCategory}}">
+        <view class="section-title">拍照练习</view>
+        <view class="photo-manage-card">
+          <view class="photo-manage-copy">
+            <text class="photo-manage-title">已保存 {{photoRecognitionCount}} 个单词</text>
+            <text class="photo-manage-desc">从拍照历史加入，最新加入会排在前面。</text>
+          </view>
+          <view class="photo-manage-btn" bindtap="clearPhotoRecognitionWords">清空</view>
+        </view>
+        <view class="photo-word-heading" wx:if="{{photoRecognitionWords.length}}">
+          <text>单词列表</text>
+          <text>{{photoRecognitionWords.length}} 个</text>
+        </view>
+        <view class="photo-word-list" wx:if="{{photoRecognitionWords.length}}">
+          <view wx:for="{{photoRecognitionWords}}" wx:key="id" class="photo-word-row">
+            <view class="photo-word-copy">
+              <text class="photo-word-ko">{{item.word}}</text>
+              <text class="photo-word-meaning">{{item.meaning || '暂无释义'}}</text>
+            </view>
+            <view class="photo-word-delete" data-id="{{item.id}}" catchtap="removePhotoRecognitionWord">删除</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="setting-section" wx:if="{{currentCategory === pictureWordsPracticeCategory}}">
+        <view class="section-title">看图学韩语</view>
+        <view class="photo-manage-card">
+          <view class="photo-manage-copy">
+            <text class="photo-manage-title">已保存 {{pictureWordsPracticeCount}} 个单词</text>
+            <text class="photo-manage-desc">从看图分类加入，最新加入会排在前面。</text>
+          </view>
+          <view class="photo-manage-btn" bindtap="clearPictureWordsPracticeWords">清空</view>
+        </view>
+        <view class="photo-word-heading" wx:if="{{pictureWordsPracticeWords.length}}">
+          <text>单词列表</text>
+          <text>{{pictureWordsPracticeWords.length}} 个</text>
+        </view>
+        <view class="photo-word-list" wx:if="{{pictureWordsPracticeWords.length}}">
+          <view wx:for="{{pictureWordsPracticeWords}}" wx:key="id" class="photo-word-row">
+            <view class="photo-word-copy">
+              <text class="photo-word-ko">{{item.word}}</text>
+              <text class="photo-word-meaning">{{item.meaning || '暂无释义'}}</text>
+            </view>
+            <view class="photo-word-delete" data-id="{{item.id}}" catchtap="removePictureWordsPracticeWord">删除</view>
+          </view>
+        </view>
+      </view>
     </view>
   </block>
 
@@ -219,7 +272,10 @@
         <view class="icon-circle-large gray-bg">
           <text class="camera-icon">📷</text>
         </view>
-        <text class="action-text">拍照导入</text>
+        <view class="text-group">
+            <text class="action-text">拍照导入</text>
+            <text class="action-subtext">仅支持语境官网</text>
+        </view>
       </view>
     </view>
 
@@ -339,33 +395,110 @@
 
   </scroll-view>
 
-  <!-- 免广告码弹窗 -->
+  <view class="settings-confirm-mask" wx:if="{{showPhotoClearConfirm}}" bindtap="closePhotoClearConfirm" catchtouchmove="preventBubble">
+    <view class="settings-confirm-card" catchtap="preventBubble">
+      <view class="settings-confirm-mark">
+        <view class="settings-confirm-dot"></view>
+      </view>
+      <text class="settings-confirm-title">清空拍照练习</text>
+      <text class="settings-confirm-copy">会删除 {{photoRecognitionCount}} 个练习单词，拍照历史记录仍会保留。</text>
+      <view class="settings-confirm-actions">
+        <view class="settings-confirm-btn secondary" catchtap="closePhotoClearConfirm">取消</view>
+        <view class="settings-confirm-btn primary" catchtap="confirmClearPhotoRecognitionWords">清空</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="settings-confirm-mask" wx:if="{{showPictureWordsClearConfirm}}" bindtap="closePictureWordsClearConfirm" catchtouchmove="preventBubble">
+    <view class="settings-confirm-card" catchtap="preventBubble">
+      <view class="settings-confirm-mark">
+        <view class="settings-confirm-dot"></view>
+      </view>
+      <text class="settings-confirm-title">清空看图学韩语</text>
+      <text class="settings-confirm-copy">会删除 {{pictureWordsPracticeCount}} 个练习单词，看图分类原数据不会受影响。</text>
+      <view class="settings-confirm-actions">
+        <view class="settings-confirm-btn secondary" catchtap="closePictureWordsClearConfirm">取消</view>
+        <view class="settings-confirm-btn primary" catchtap="confirmClearPictureWordsPracticeWords">清空</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="settings-confirm-mask" wx:if="{{showDeleteListConfirm}}" bindtap="closeDeleteListConfirm" catchtouchmove="preventBubble">
+    <view class="settings-confirm-card" catchtap="preventBubble">
+      <view class="settings-confirm-mark danger">
+        <view class="settings-confirm-dot"></view>
+      </view>
+      <text class="settings-confirm-title">删除词单</text>
+      <text class="settings-confirm-copy">“{{pendingDeleteListName}}” 删除后不可恢复，已保存的其他词单不会受影响。</text>
+      <view class="settings-confirm-actions">
+        <view class="settings-confirm-btn secondary" catchtap="closeDeleteListConfirm">取消</view>
+        <view class="settings-confirm-btn danger" catchtap="confirmDeleteList">删除</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="settings-confirm-mask" wx:if="{{showSettingsGeneralConfirm}}" bindtap="closeSettingsGeneralConfirm" catchtouchmove="preventBubble">
+    <view class="settings-confirm-card" catchtap="preventBubble">
+      <view class="settings-confirm-mark {{settingsGeneralDanger ? 'danger' : ''}}">
+        <view class="settings-confirm-dot"></view>
+      </view>
+      <text class="settings-confirm-title">{{settingsGeneralTitle}}</text>
+      <text class="settings-confirm-copy">{{settingsGeneralCopy}}</text>
+      <view class="settings-confirm-actions">
+        <view class="settings-confirm-btn secondary" catchtap="closeSettingsGeneralConfirm">取消</view>
+        <view class="settings-confirm-btn {{settingsGeneralDanger ? 'danger' : 'primary'}}" catchtap="confirmSettingsGeneral">{{settingsGeneralPrimaryText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 免广告弹窗 -->
   <view class="extend-modal-mask" wx:if="{{showRedeemModal}}" bindtap="closeRedeemModal">
     <view class="extend-modal" catchtap="preventBubble">
       <view class="extend-modal-handle"></view>
       <scroll-view scroll-y class="extend-modal-body" show-scrollbar="{{false}}">
         <view class="extend-modal-header">
-          <text class="extend-modal-title">免广告码</text>
+          <text class="extend-modal-title">免广告</text>
           <text class="extend-modal-close" bindtap="closeRedeemModal">×</text>
         </view>
+
+        <view class="ad-free-status-card {{adFreeActive ? 'is-active' : 'is-idle'}}">
+          <view class="ad-free-status-top">
+            <text class="ad-free-status-badge">{{adFreeActive ? '生效中' : '未开启'}}</text>
+            <text class="ad-free-status-plus">每次完整观看 +24 小时</text>
+          </view>
+          <text class="ad-free-count-label">剩余免广告</text>
+          <text class="ad-free-countdown">{{adFreeRemainText}}</text>
+          <text class="ad-free-expire">{{adFreeExpireText}}</text>
+        </view>
+
         <view class="extend-notice" wx:if="{{redeemNotice}}">
           <text class="extend-notice-label">公告</text>
           <text class="extend-notice-text">{{redeemNotice}}</text>
         </view>
-        <input
-          class="extend-input"
-          placeholder="请输入兑换码"
-          value="{{redeemCode}}"
-          bindinput="onRedeemCodeInput"
-        />
-        <button
-          class="extend-submit-btn"
-          bindtap="submitRedeemCode"
-          loading="{{redeemSubmitting}}"
-          disabled="{{redeemSubmitting}}"
-        >
-          兑换
-        </button>
+
+        <view class="ad-free-section-label">兑换码</view>
+        <view class="ad-free-redeem-row">
+          <input
+            class="ad-free-redeem-input"
+            placeholder="输入免广告码"
+            value="{{redeemCode}}"
+            confirm-type="done"
+            bindconfirm="submitRedeemCode"
+            bindinput="onRedeemCodeInput"
+          />
+          <view class="ad-free-redeem-btn {{redeemSubmitting ? 'is-loading' : ''}}" bindtap="submitRedeemCode">
+            {{redeemSubmitting ? '验证中' : '兑换'}}
+          </view>
+        </view>
+
+        <view class="ad-free-section-label">看广告续时长</view>
+        <view class="ad-free-watch-card {{adFreeRewardSubmitting ? 'is-loading' : ''}}" bindtap="watchAdFreeOneDay">
+          <view class="ad-free-watch-copy">
+            <text class="ad-free-watch-title">看广告 +24 小时</text>
+            <text class="ad-free-watch-desc">完整观看一次，就在当前倒计时后继续追加。</text>
+          </view>
+          <view class="ad-free-watch-pill">{{adFreeRewardSubmitting ? '加载中' : '+24h'}}</view>
+        </view>
       </scroll-view>
     </view>
   </view>
@@ -375,8 +508,14 @@
       <view class="extend-modal-handle"></view>
       <scroll-view scroll-y class="extend-modal-body" show-scrollbar="{{false}}">
         <view class="extend-modal-header">
-          <text class="extend-modal-title">加一天时长</text>
+          <text class="extend-modal-title">Web 学习工具</text>
           <text class="extend-modal-close" bindtap="closeExtendModal">×</text>
+        </view>
+
+        <view class="extend-help-card">
+          <text class="extend-help-title">复制链接到浏览器打开</text>
+          <text class="extend-help-desc">这是网页版学习工具。打开后复制网页里的 id，回到这里填写，看完广告后给网页工具增加 1 天使用时长。</text>
+          <text class="extend-help-note">功能持续迭代中，后续会继续补充更多练习能力。</text>
         </view>
 
         <view class="extend-link-row">
@@ -391,7 +530,7 @@
 
         <input
           class="extend-input"
-          placeholder="请输入 id"
+          placeholder="请输入网页工具里的 id"
           value="{{extendUserId}}"
           bindinput="onExtendUserIdInput"
         />
@@ -402,10 +541,10 @@
           loading="{{extendSubmitting}}"
           disabled="{{extendSubmitting}}"
         >
-          加一天
+          看广告给 Web 工具加一天
         </button>
 
-        <view class="extend-ad-wrap">
+        <view class="extend-ad-wrap" wx:if="{{!adFreeActive}}">
           <ad-custom
             unit-id="adunit-f4c44c67aaa282e0"
             bindload="adLoad"

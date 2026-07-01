@@ -1,11 +1,16 @@
 import { getWords, getCategories, getYonseiLessons, getTopikLevels, getTopikSessions } from '../../utils_nv/api';
 import { decomposeKoreanStructure } from '../../utils/hangul';
-import { saveMistake, removeMistake, getMistakes, getProgress, saveProgressV2, getFavorites, addFavorites, FAVORITES_LIST_NAME } from '../../utils_nv/storage';
+import { saveMistake, removeMistake, getMistakes, getProgress, saveProgressV2, getFavorites, addFavorites, FAVORITES_LIST_NAME, getPhotoRecognitionWords, PHOTO_RECOGNITION_CATEGORY, getPictureWordsPracticeWords, PICTURE_WORDS_PRACTICE_CATEGORY } from '../../utils_nv/storage';
 import { KEYBOARD_LAYOUT } from '../../constants/index';
 const srs = require('../../utils/srs');
+const { syncPageTabBar } = require('../../utils/tabbar');
+const { shouldSkipAd } = require('../../utils/ad-free');
 
 const AUDIO_ORIGIN = 'https://enoss.aorenlan.fun';
 const AUDIO_BASE_PATH = '/kr_word';
+const EDGE_TTS_CACHE_NAMESPACE = 'edge_tts_v1';
+const EDGE_TTS_PRELOAD_AHEAD = 2;
+const EDGE_TTS_BATCH_SIZE = 12;
 
 const DEFAULT_SETTINGS = {
     practiceMode: 'study',
@@ -71,6 +76,16 @@ const safeWordId = (w) => {
     return '';
 };
 
+const hashAudioCacheText = (value) => {
+    const input = String(value || '');
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+};
+
 const composeHangulFromKeyPrefix = (keys) => {
     if (!keys || keys.length === 0) return '';
     if (keys[0] === 'SPACE') return ' ';
@@ -120,6 +135,10 @@ const sanitizeSettings = (raw) => {
     const merged = Object.assign({}, DEFAULT_SETTINGS, raw || {});
     delete merged.darkMode;
     delete merged.showHint;
+    delete merged.photoPracticeId;
+    if (merged.category === '拍照识别') {
+        merged.category = PHOTO_RECOGNITION_CATEGORY;
+    }
     if (merged.practiceMode !== 'study' && merged.practiceMode !== 'flash') {
         merged.practiceMode = DEFAULT_SETTINGS.practiceMode;
     }
@@ -319,13 +338,17 @@ Page({
 
         this.wordAudio = null;
         this.cnAudio = null;
-        this._audioPlaySeq = 0;
-        this._hasUserGesture = false;
+	        this._audioPlaySeq = 0;
+	        this._currentIndexRuntime = 0;
+	        this._currentWordRuntime = null;
+	        this._wordRenderSeq = 0;
+	        this._hasUserGesture = false;
         this._autoPronouncedWordId = null;
         this._audioUrlMemo = new Map();
         this._audioFileLRU = new Map();
         this._audioFileLRUCapacity = 50;
         this._audioFileInFlight = new Map();
+        this._edgeTtsInFlight = new Map();
         this._preloadTask = null;
         this._preloadNextKey = null;
         this._hasPlayedAudioOnce = false;
@@ -467,6 +490,7 @@ Page({
     preventScroll() {},
 
     createVideoAd() {
+        if (shouldSkipAd('nv-practice')) return;
         if (this.videoAd) return;
         if (wx.createRewardedVideoAd) {
           this.videoAd = wx.createRewardedVideoAd({
@@ -523,14 +547,10 @@ Page({
         contentId = null;
       }
 
-      // 检查免广告码是否有效
-      try {
-        const adFreeExpire = wx.getStorageSync('kr_ad_free_expire');
-        if (adFreeExpire && Date.now() < Number(adFreeExpire)) {
-          callback && callback();
-          return;
-        }
-      } catch (e) {}
+      if (shouldSkipAd('nv-practice')) {
+        callback && callback();
+        return;
+      }
 
       // 检查是否在有效期内（7天）
       if (contentId) {
@@ -551,6 +571,8 @@ Page({
           console.error('Check unlock status failed', e);
         }
       }
+
+      if (!this.videoAd) this.createVideoAd();
 
       // 如果没有广告实例，直接执行回调
       if (!this.videoAd) {
@@ -679,6 +701,7 @@ Page({
         } catch (e) {}
         this._audioFileLRU = new Map();
         this._audioFileInFlight = new Map();
+        this._edgeTtsInFlight = new Map();
     },
 
     hasLocalAudioFile(p) {
@@ -848,6 +871,12 @@ Page({
             const lessonId = s.yonseiLessonId != null ? String(s.yonseiLessonId) : '';
             return `yonsei_${lessonId}`;
         }
+        if (category === PHOTO_RECOGNITION_CATEGORY) {
+            return 'photo_recognition';
+        }
+        if (category === PICTURE_WORDS_PRACTICE_CATEGORY) {
+            return 'picture_words_practice';
+        }
         return '';
     },
 
@@ -859,6 +888,16 @@ Page({
         const topikSession = s.topikSession != null ? String(s.topikSession) : '';
         const wordLengthFilter = s.wordLengthFilter != null ? String(s.wordLengthFilter) : '';
         const wordStartFilter = s.wordStartFilter != null ? String(s.wordStartFilter) : '';
+        if (category === PHOTO_RECOGNITION_CATEGORY) {
+            const photoWords = getPhotoRecognitionWords();
+            const latestId = photoWords[0] && photoWords[0].id != null ? String(photoWords[0].id) : '';
+            return `${category}__${photoWords.length}__${latestId}`;
+        }
+        if (category === PICTURE_WORDS_PRACTICE_CATEGORY) {
+            const pictureWords = getPictureWordsPracticeWords();
+            const latestId = pictureWords[0] && pictureWords[0].id != null ? String(pictureWords[0].id) : '';
+            return `${category}__${pictureWords.length}__${latestId}`;
+        }
         return `${category}__${lessonId}__${topikLevel}__${topikSession}__${wordLengthFilter}__${wordStartFilter}`;
     },
 
@@ -880,15 +919,21 @@ Page({
         if (getFavorites().length > 0 && !categories.includes(FAVORITES_LIST_NAME)) {
             categories.push(FAVORITES_LIST_NAME);
         }
+        if (getPhotoRecognitionWords().length > 0 && !categories.includes(PHOTO_RECOGNITION_CATEGORY)) {
+            categories.push(PHOTO_RECOGNITION_CATEGORY);
+        }
+        if (getPictureWordsPracticeWords().length > 0 && !categories.includes(PICTURE_WORDS_PRACTICE_CATEGORY)) {
+            categories.push(PICTURE_WORDS_PRACTICE_CATEGORY);
+        }
         const current = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
         const idx = Math.max(0, categories.indexOf(current));
         this.setData({ categories, categoryPickerIndex: idx });
     },
 
-    onShow: async function() {
-        this.clearAllTimers();
-        this.cancelCurrentAudioPlayback();
-        this.createVideoAd();
+	    onShow: async function() {
+	        this.clearAllTimers();
+	        this.cancelCurrentAudioPlayback();
+	        this.createVideoAd();
         if (this.videoAd) {
             if (!this._boundAdClose) {
                 this._boundAdClose = this.handleAdClose.bind(this);
@@ -897,8 +942,39 @@ Page({
             this.videoAd.onClose(this._boundAdClose);
         }
 
-        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().setData({ selected: 0 });
+	        syncPageTabBar(this, { selected: 0, hidden: false });
+	        let forceReloadInfo = null;
+	        try {
+	            const pendingReload = wx.getStorageSync('nv_practice_force_reload');
+	            if (pendingReload && typeof pendingReload === 'object') {
+	                forceReloadInfo = pendingReload;
+	                wx.removeStorageSync('nv_practice_force_reload');
+	            }
+	        } catch (e) {}
+	        let liveCategories = [...(this.data.categories || [])];
+        let categoriesChanged = false;
+        if (getFavorites().length > 0 && !liveCategories.includes(FAVORITES_LIST_NAME)) {
+            liveCategories.push(FAVORITES_LIST_NAME);
+            categoriesChanged = true;
+        }
+        const photoRecognitionCount = getPhotoRecognitionWords().length;
+        if (photoRecognitionCount > 0 && !liveCategories.includes(PHOTO_RECOGNITION_CATEGORY)) {
+            liveCategories.push(PHOTO_RECOGNITION_CATEGORY);
+            categoriesChanged = true;
+        } else if (photoRecognitionCount <= 0 && liveCategories.includes(PHOTO_RECOGNITION_CATEGORY)) {
+            liveCategories = liveCategories.filter((item) => item !== PHOTO_RECOGNITION_CATEGORY);
+            categoriesChanged = true;
+        }
+        const pictureWordsPracticeCount = getPictureWordsPracticeWords().length;
+        if (pictureWordsPracticeCount > 0 && !liveCategories.includes(PICTURE_WORDS_PRACTICE_CATEGORY)) {
+            liveCategories.push(PICTURE_WORDS_PRACTICE_CATEGORY);
+            categoriesChanged = true;
+        } else if (pictureWordsPracticeCount <= 0 && liveCategories.includes(PICTURE_WORDS_PRACTICE_CATEGORY)) {
+            liveCategories = liveCategories.filter((item) => item !== PICTURE_WORDS_PRACTICE_CATEGORY);
+            categoriesChanged = true;
+        }
+        if (categoriesChanged) {
+            this.setData({ categories: liveCategories });
         }
         // 更新今日待复习数量 & 开发者模式
         const devEnabled = wx.getStorageSync('dev_mode_enabled') || false;
@@ -909,16 +985,17 @@ Page({
         const prevSettings = sanitizeSettings(this.data.settings || {});
         const prevKey = this.getWordsContentKey(prevSettings);
         const nextCategory = mergedSettings.category || DEFAULT_SETTINGS.category;
-        const categoryIndex = Math.max(0, (this.data.categories || []).indexOf(nextCategory));
+        const categoryIndex = Math.max(0, liveCategories.indexOf(nextCategory));
 
         this.setData({ settings: mergedSettings, categoryPickerIndex: categoryIndex });
         const finalSettings = await this.loadSubcategories(mergedSettings);
-        this.updateDisplayCategory();
+	        this.updateDisplayCategory();
 
-        const nextKey = this.getWordsContentKey(finalSettings || mergedSettings);
-        if (prevKey !== nextKey || !Array.isArray(this.data.words) || this.data.words.length === 0) {
-            this.stopNaggingLoop();
-            if (this._sentenceAudioCtx) {
+	        const nextKey = this.getWordsContentKey(finalSettings || mergedSettings);
+	        const forceReload = !!forceReloadInfo && (!forceReloadInfo.category || forceReloadInfo.category === nextCategory);
+	        if (forceReload || prevKey !== nextKey || !Array.isArray(this.data.words) || this.data.words.length === 0) {
+	            this.stopNaggingLoop();
+	            if (this._sentenceAudioCtx) {
                 try {
                     this._sentenceAudioCtx.stop();
                     this._sentenceAudioCtx.destroy();
@@ -1201,6 +1278,54 @@ Page({
             );
         }
 
+        if (category === PHOTO_RECOGNITION_CATEGORY) {
+            const photoWords = getPhotoRecognitionWords();
+            const savedIndex = Number(getProgress(category, subKey) || 0);
+            const startIndex = normalizeIndex(savedIndex, photoWords.length);
+            return this.setData(
+                {
+                    words: photoWords,
+                    originalWords: [...photoWords],
+                    isShuffled: false,
+                    loading: false,
+                    currentIndex: startIndex,
+                    currentWord: null
+                },
+                () => {
+                    if (photoWords.length > 0) {
+                        this.startWord(startIndex);
+                    } else {
+                        this.setData({ words: [], loading: false, currentWord: null, prevWordInfo: null });
+                        wx.showToast({ title: '暂无拍照练习单词', icon: 'none' });
+                    }
+                }
+            );
+        }
+
+        if (category === PICTURE_WORDS_PRACTICE_CATEGORY) {
+            const pictureWords = getPictureWordsPracticeWords();
+            const savedIndex = Number(getProgress(category, subKey) || 0);
+            const startIndex = normalizeIndex(savedIndex, pictureWords.length);
+            return this.setData(
+                {
+                    words: pictureWords,
+                    originalWords: [...pictureWords],
+                    isShuffled: false,
+                    loading: false,
+                    currentIndex: startIndex,
+                    currentWord: null
+                },
+                () => {
+                    if (pictureWords.length > 0) {
+                        this.startWord(startIndex);
+                    } else {
+                        this.setData({ words: [], loading: false, currentWord: null, prevWordInfo: null });
+                        wx.showToast({ title: '暂无看图练习单词', icon: 'none' });
+                    }
+                }
+            );
+        }
+
         const filters = {};
         if (category === 'TOPIK Vocabulary' && s.topikLevel) filters.topikLevel = s.topikLevel;
         if (category === 'TOPIK Vocabulary' && s.topikSession) filters.topikSession = s.topikSession;
@@ -1408,6 +1533,8 @@ Page({
         if (this.quizTimer) clearInterval(this.quizTimer);
         this.flashTimer = null;
         this.quizTimer = null;
+        if (this._quizAdvanceTimer) clearTimeout(this._quizAdvanceTimer);
+        this._quizAdvanceTimer = null;
         if (this.helpRevealTimer) clearTimeout(this.helpRevealTimer);
         this.helpRevealTimer = null;
         if (this.completeTimer) clearTimeout(this.completeTimer);
@@ -1420,6 +1547,10 @@ Page({
         this._preloadTimer = null;
         if (this._autoPronounceTimer) clearTimeout(this._autoPronounceTimer);
         this._autoPronounceTimer = null;
+        if (this._shareImageTimer) clearTimeout(this._shareImageTimer);
+        this._shareImageTimer = null;
+        if (this._audioGapTimer) clearTimeout(this._audioGapTimer);
+        this._audioGapTimer = null;
     },
 
     startModeLogic() {
@@ -1452,7 +1583,9 @@ Page({
                 });
                 if (this.quizTimer) clearInterval(this.quizTimer);
                 this.quizTimer = null;
-                setTimeout(() => {
+                if (this._quizAdvanceTimer) clearTimeout(this._quizAdvanceTimer);
+                this._quizAdvanceTimer = setTimeout(() => {
+                    this._quizAdvanceTimer = null;
                     if (!this.data.currentWord) return;
                     this.nextWord();
                 }, 600);
@@ -1551,48 +1684,67 @@ Page({
         };
     },
 
-    startWord(index) {
-        this.cancelCurrentAudioPlayback();
-        const words = this.data.words || [];
-        const safeIndex = normalizeIndex(index, words.length);
-        if (!Array.isArray(words) || words.length === 0) return;
+	    startWord(index, prevWordInfoOverride) {
+	        this.clearAllTimers();
+	        this.cancelCurrentAudioPlayback();
+	        const words = this.data.words || [];
+	        const safeIndex = normalizeIndex(index, words.length);
+	        if (!Array.isArray(words) || words.length === 0) return;
 
-        const wordObj = words[safeIndex];
-        const word = wordObj.word;
+	        const wordObj = words[safeIndex];
+	        const word = wordObj.word;
+	        const renderSeq = Number(this._wordRenderSeq || 0) + 1;
+	        this._wordRenderSeq = renderSeq;
+	        this._currentIndexRuntime = safeIndex;
+	        this._currentWordRuntime = wordObj;
         this._autoPronouncedWordId = null;
 
         const initialState = this.buildTypingState(word);
         this.persistCurrentProgress(safeIndex);
 
-        this.setData({
-            currentIndex: safeIndex,
-            currentWord: wordObj,
-            typingState: initialState,
+	        const nextState = {
+	            currentIndex: safeIndex,
+	            currentWord: wordObj,
+	            typingState: initialState,
             isCorrect: false,
             showAnswer: false,
             isError: false,
             hasInteracted: false,
             isWordVisible: true,
             helpReveal: false,
-            repeatCorrectCount: 0,
-            timeLeft: (this.data.settings && this.data.settings.timerDuration) || DEFAULT_SETTINGS.timerDuration,
-            meaningIsSmall: false
-        }, () => {
-            this.updateMeaningSize();
-            this.updateWordWrapMode(true);
-        });
+	            repeatCorrectCount: 0,
+	            timeLeft: (this.data.settings && this.data.settings.timerDuration) || DEFAULT_SETTINGS.timerDuration,
+	            meaningIsSmall: false
+	        };
+	        if (arguments.length > 1) {
+	            nextState.prevWordInfo = prevWordInfoOverride;
+	        }
 
-        this.clearAllTimers();
-        this.startModeLogic();
+		        this.setData(nextState, () => {
+		            if (
+		                this._wordRenderSeq !== renderSeq
+		                || this._currentIndexRuntime !== safeIndex
+		                || safeWordId(this._currentWordRuntime) !== safeWordId(wordObj)
+		            ) {
+		                return;
+		            }
+		            this.updateMeaningSize();
+		            this.updateWordWrapMode(true);
+		            this.startModeLogic();
+		            this.tryAutoPronounce();
+		        });
 
-        this.updateDisplay(initialState);
-        this.updateShiftState(initialState);
+	        this.updateDisplay(initialState);
+	        this.updateShiftState(initialState);
 
-        this.tryAutoPronounce();
-        if (this._preloadTimer) clearTimeout(this._preloadTimer);
-        this._preloadTimer = setTimeout(() => this.preloadNextWordAudio(), 60);
-        setTimeout(() => this.drawShareImage(), 500);
-    },
+		        if (this._preloadTimer) clearTimeout(this._preloadTimer);
+		        this._preloadTimer = setTimeout(() => this.preloadNextWordAudio(), 60);
+	        if (this._shareImageTimer) clearTimeout(this._shareImageTimer);
+	        this._shareImageTimer = setTimeout(() => {
+	            this._shareImageTimer = null;
+	            this.drawShareImage();
+	        }, 500);
+	    },
 
     updateMeaningSize() {
         const settings = this.data.settings || DEFAULT_SETTINGS;
@@ -1895,6 +2047,8 @@ Page({
         const remaining = prevWords.filter(w => safeWordId(w) !== id);
 
         if (remaining.length === 0) {
+            this._currentIndexRuntime = 0;
+            this._currentWordRuntime = null;
             this.setData({
                 words: [],
                 currentWord: null,
@@ -1914,27 +2068,30 @@ Page({
 
     nextWord() {
         if (!this._hasUserGesture) this._hasUserGesture = true;
-        // Save previous word info
-        const current = this.data.currentWord;
-        if (current) {
-            this.setData({
-                prevWordInfo: {
-                    word: current.word,
-                    meaning: current.meaning,
-                    isCorrect: this.data.isCorrect
-                }
-            });
-        }
+        const current = this._currentWordRuntime || this.data.currentWord;
         const len = Array.isArray(this.data.words) ? this.data.words.length : 0;
-        const nextIndex = normalizeIndex(Number(this.data.currentIndex || 0) + 1, len);
-        this.startWord(nextIndex);
+        if (len <= 0) return;
+        const currentIndex = Number.isFinite(Number(this._currentIndexRuntime))
+            ? Number(this._currentIndexRuntime)
+            : Number(this.data.currentIndex || 0);
+        const nextIndex = normalizeIndex(currentIndex + 1, len);
+        const prevWordInfo = current ? {
+            word: current.word,
+            meaning: current.meaning,
+            isCorrect: this.data.isCorrect
+        } : null;
+        this.startWord(nextIndex, prevWordInfo);
     },
 
     prevWord() {
         if (!this._hasUserGesture) this._hasUserGesture = true;
         const len = Array.isArray(this.data.words) ? this.data.words.length : 0;
-        const prevIndex = normalizeIndex(Number(this.data.currentIndex || 0) - 1, len);
-        this.startWord(prevIndex);
+        if (len <= 0) return;
+        const currentIndex = Number.isFinite(Number(this._currentIndexRuntime))
+            ? Number(this._currentIndexRuntime)
+            : Number(this.data.currentIndex || 0);
+        const prevIndex = normalizeIndex(currentIndex - 1, len);
+        this.startWord(prevIndex, null);
     },
 
     ensureAudioContexts() {
@@ -1954,25 +2111,36 @@ Page({
         return next;
     },
 
-    stopAudioContext(audioCtx) {
-        if (!audioCtx) return;
-        try {
-            if (audioCtx.__nvPendingSettle) {
-                audioCtx.__nvPendingSettle(false);
-            }
-        } catch (e) {}
-        try { audioCtx.stop && audioCtx.stop(); } catch (e) {}
-        try { audioCtx.offEnded && audioCtx.offEnded(); } catch (e) {}
-        try { audioCtx.offError && audioCtx.offError(); } catch (e) {}
-        try { audioCtx.offCanplay && audioCtx.offCanplay(); } catch (e) {}
-        try { audioCtx.offStop && audioCtx.offStop(); } catch (e) {}
-    },
+	    stopAudioContext(audioCtx) {
+	        if (!audioCtx) return;
+	        try {
+	            if (audioCtx.__nvPendingSettle) {
+	                audioCtx.__nvPendingSettle(false);
+	            }
+	        } catch (e) {}
+	        try { audioCtx.__nvPendingSettle = null; } catch (e) {}
+	        try { audioCtx.stop && audioCtx.stop(); } catch (e) {}
+	        try { audioCtx.offPlay && audioCtx.offPlay(); } catch (e) {}
+	        try { audioCtx.offWaiting && audioCtx.offWaiting(); } catch (e) {}
+	        try { audioCtx.offEnded && audioCtx.offEnded(); } catch (e) {}
+	        try { audioCtx.offError && audioCtx.offError(); } catch (e) {}
+	        try { audioCtx.offCanplay && audioCtx.offCanplay(); } catch (e) {}
+	        try { audioCtx.offStop && audioCtx.offStop(); } catch (e) {}
+	    },
 
-    cancelCurrentAudioPlayback() {
-        const seq = this.bumpAudioPlaySeq();
-        this.stopAudioContext(this.wordAudio);
-        this.stopAudioContext(this.cnAudio);
-        return seq;
+	    cancelCurrentAudioPlayback() {
+	        const seq = this.bumpAudioPlaySeq();
+	        if (this._autoPronounceTimer) {
+	            clearTimeout(this._autoPronounceTimer);
+	            this._autoPronounceTimer = null;
+	        }
+	        if (this._audioGapTimer) {
+	            clearTimeout(this._audioGapTimer);
+	            this._audioGapTimer = null;
+	        }
+	        this.stopAudioContext(this.wordAudio);
+	        this.stopAudioContext(this.cnAudio);
+	        return seq;
     },
 
     notifyMissingAudioOnce(wordId, isChinese) {
@@ -2007,6 +2175,259 @@ Page({
         const suffix = isChinese ? '_cn' : '';
         return `${folder}__${w0}__${suffix}`;
     },
+
+    shouldPreferEdgeTtsAudio() {
+        const category = (this.data.settings && this.data.settings.category) || '';
+        return category === PHOTO_RECOGNITION_CATEGORY || category === '拍照识别' || category === PICTURE_WORDS_PRACTICE_CATEGORY;
+    },
+
+    ensureAudioCacheDir() {
+        if (!wx.env || !wx.env.USER_DATA_PATH || !wx.getFileSystemManager) return '';
+        const dir = `${wx.env.USER_DATA_PATH}/audio_cache`;
+        const fs = wx.getFileSystemManager();
+        try {
+            fs.accessSync(dir);
+        } catch (e) {
+            try { fs.mkdirSync(dir, { recursive: true }); } catch (e2) {}
+        }
+        return dir;
+    },
+
+    getEdgeTtsCachePath(cacheKey, text, lang) {
+        const dir = this.ensureAudioCacheDir();
+        if (!dir) return '';
+        const key = `${EDGE_TTS_CACHE_NAMESPACE}|${lang}|${cacheKey}|${String(text || '').trim()}`;
+        return `${dir}/edge_${hashAudioCacheText(key)}.mp3`;
+    },
+
+    getCachedEdgeTtsFile(cacheKey, text, lang) {
+        const cachePath = this.getEdgeTtsCachePath(cacheKey, text, lang);
+        if (!cachePath) return '';
+        if (!this.hasLocalAudioFile(cachePath)) return '';
+        this.setAudioFileToLRU(cacheKey, cachePath);
+        return cachePath;
+    },
+
+    removeCachedEdgeTtsFile(cacheKey, text, lang) {
+        const cachePath = this.getEdgeTtsCachePath(cacheKey, text, lang);
+        if (!cachePath) return;
+        this.removeAudioFromLRU(cacheKey);
+        const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
+        if (fs && fs.unlinkSync) {
+            try { fs.unlinkSync(cachePath); } catch (e) {}
+        }
+    },
+
+    buildEdgeTtsCacheItem(cacheKey, text, lang) {
+        const key = cacheKey ? String(cacheKey) : '';
+        const normalizedText = String(text || '').trim();
+        const normalizedLang = String(lang || 'ko-KR');
+        if (!key || !normalizedText) return null;
+        const cachePath = this.getEdgeTtsCachePath(key, normalizedText, normalizedLang);
+        if (!cachePath) return null;
+        const flightKey = `${key}__${hashAudioCacheText(`${normalizedLang}|${normalizedText}`)}`;
+        return {
+            cacheKey: key,
+            text: normalizedText,
+            lang: normalizedLang,
+            cachePath,
+            flightKey
+        };
+    },
+
+    writeEdgeTtsCacheFile(item, audioBase64) {
+        const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
+        if (!fs || !item || !item.cachePath || !audioBase64) return Promise.resolve('');
+        this.ensureAudioCacheDir();
+        try { fs.unlinkSync(item.cachePath); } catch (e) {}
+        return new Promise((resolve) => {
+            fs.writeFile({
+                filePath: item.cachePath,
+                data: audioBase64,
+                encoding: 'base64',
+                success: () => {
+                    this.setAudioFileToLRU(item.cacheKey, item.cachePath);
+                    resolve(item.cachePath);
+                },
+                fail: (e) => {
+                    console.warn('[NV audio] edgeTts batch writeFile failed:', JSON.stringify(e));
+                    resolve('');
+                }
+            });
+        });
+    },
+
+    fetchEdgeTtsBatchToLRU(rawItems) {
+        if (!Array.isArray(rawItems) || rawItems.length === 0) return Promise.resolve([]);
+        if (!wx.cloud || !wx.cloud.callFunction) {
+            console.warn('[NV audio] edgeTts unavailable: wx.cloud not initialized');
+            return Promise.resolve([]);
+        }
+
+        if (!this._edgeTtsInFlight) this._edgeTtsInFlight = new Map();
+
+        const seen = new Set();
+        const toFetch = [];
+        const waiters = [];
+
+        rawItems.forEach((raw) => {
+            const item = this.buildEdgeTtsCacheItem(raw && raw.cacheKey, raw && raw.text, raw && raw.lang);
+            if (!item || seen.has(item.flightKey)) return;
+            seen.add(item.flightKey);
+
+            if (this.hasLocalAudioFile(item.cachePath)) {
+                this.setAudioFileToLRU(item.cacheKey, item.cachePath);
+                waiters.push(Promise.resolve(item.cachePath));
+                return;
+            }
+
+            const inFlight = this._edgeTtsInFlight.get(item.flightKey);
+            if (inFlight) {
+                waiters.push(inFlight);
+                return;
+            }
+            toFetch.push(item);
+        });
+
+        const startBatch = (chunk) => {
+            const resolvers = new Map();
+            chunk.forEach((item) => {
+                const itemPromise = new Promise((resolve) => {
+                    resolvers.set(item.flightKey, resolve);
+                }).then((path) => {
+                    try { this._edgeTtsInFlight.delete(item.flightKey); } catch (e) {}
+                    return path || '';
+                }).catch(() => {
+                    try { this._edgeTtsInFlight.delete(item.flightKey); } catch (e) {}
+                    return '';
+                });
+                this._edgeTtsInFlight.set(item.flightKey, itemPromise);
+                waiters.push(itemPromise);
+            });
+
+            const finish = (item, path) => {
+                const resolve = resolvers.get(item.flightKey);
+                if (resolve) resolve(path || '');
+            };
+
+            wx.cloud.callFunction({
+                name: 'edgeTts',
+                timeout: 20000,
+                data: {
+                    items: chunk.map((item) => ({
+                        key: item.flightKey,
+                        text: item.text,
+                        lang: item.lang
+                    }))
+                },
+                success: async (res) => {
+                    const result = (res && res.result) || {};
+                    const resultItems = Array.isArray(result.items) ? result.items : [];
+                    const resultMap = new Map(resultItems.map((item) => [String(item.key || ''), item]));
+                    await Promise.all(chunk.map(async (item) => {
+                        const resultItem = resultMap.get(item.flightKey);
+                        if (!resultItem || !resultItem.ok || !resultItem.audioBase64) {
+                            console.warn('[NV audio] edgeTts batch item failed:', item.text);
+                            finish(item, '');
+                            return;
+                        }
+                        const path = await this.writeEdgeTtsCacheFile(item, resultItem.audioBase64);
+                        finish(item, path);
+                    }));
+                },
+                fail: (e) => {
+                    console.warn('[NV audio] edgeTts batch callFunction fail:', JSON.stringify(e));
+                    chunk.forEach((item) => finish(item, ''));
+                }
+            });
+        };
+
+        for (let i = 0; i < toFetch.length; i += EDGE_TTS_BATCH_SIZE) {
+            startBatch(toFetch.slice(i, i + EDGE_TTS_BATCH_SIZE));
+        }
+
+        return Promise.all(waiters);
+    },
+
+    fetchEdgeTtsToLRU(cacheKey, text, lang, forceRefresh = false) {
+        const key = cacheKey ? String(cacheKey) : '';
+        const normalizedText = String(text || '').trim();
+        const normalizedLang = String(lang || 'ko-KR');
+        if (!key || !normalizedText) return Promise.resolve('');
+
+        const cachePath = this.getEdgeTtsCachePath(key, normalizedText, normalizedLang);
+        if (!cachePath) return Promise.resolve('');
+        if (!forceRefresh && this.hasLocalAudioFile(cachePath)) {
+            this.setAudioFileToLRU(key, cachePath);
+            return Promise.resolve(cachePath);
+        }
+        if (!wx.cloud || !wx.cloud.callFunction) {
+            console.warn('[NV audio] edgeTts unavailable: wx.cloud not initialized');
+            return Promise.resolve('');
+        }
+
+        if (!this._edgeTtsInFlight) this._edgeTtsInFlight = new Map();
+        const flightKey = `${key}__${hashAudioCacheText(`${normalizedLang}|${normalizedText}`)}`;
+        if (this._edgeTtsInFlight.has(flightKey)) return this._edgeTtsInFlight.get(flightKey);
+
+        const fs = wx.getFileSystemManager ? wx.getFileSystemManager() : null;
+        const request = new Promise((resolve) => {
+            console.log('[NV audio] edgeTts fetch:', normalizedText, normalizedLang);
+            wx.cloud.callFunction({
+                name: 'edgeTts',
+                timeout: 15000,
+                data: { text: normalizedText, lang: normalizedLang },
+                success: (res) => {
+                    const result = (res && res.result) || {};
+                    if (!result.ok || !result.audioBase64 || !fs) {
+                        console.warn('[NV audio] edgeTts failed:', result.error || 'no audio');
+                        resolve('');
+                        return;
+                    }
+                    this.writeEdgeTtsCacheFile({ cacheKey: key, cachePath }, result.audioBase64).then(resolve);
+                },
+                fail: (e) => {
+                    console.warn('[NV audio] edgeTts callFunction fail:', JSON.stringify(e));
+                    resolve('');
+                }
+            });
+        }).then((path) => {
+            try { this._edgeTtsInFlight.delete(flightKey); } catch (e) {}
+            return path;
+        }).catch(() => {
+            try { this._edgeTtsInFlight.delete(flightKey); } catch (e) {}
+            return '';
+        });
+
+        this._edgeTtsInFlight.set(flightKey, request);
+        return request;
+    },
+
+	    async playEdgeTtsFallback(audioCtx, cacheKey, text, lang, playSeq, wordId) {
+	        const normalizedText = String(text || '').trim();
+	        if (!audioCtx || !cacheKey || !normalizedText) return false;
+	        const stillCurrent = () => playSeq == null || this.isAudioRequestCurrent(playSeq, wordId);
+
+	        let src = await this.fetchEdgeTtsToLRU(cacheKey, normalizedText, lang);
+	        if (!stillCurrent()) return null;
+	        if (!src) {
+	            src = await this.fetchEdgeTtsToLRU(cacheKey, normalizedText, lang, true);
+	            if (!stillCurrent()) return null;
+	            if (!src) return false;
+	        }
+
+	        let ok = await this.playSrcOnce(audioCtx, src);
+	        if (!stillCurrent()) return null;
+	        if (ok) return true;
+
+	        this.removeCachedEdgeTtsFile(cacheKey, normalizedText, lang);
+	        src = await this.fetchEdgeTtsToLRU(cacheKey, normalizedText, lang, true);
+	        if (!stillCurrent()) return null;
+	        if (!src) return false;
+	        ok = await this.playSrcOnce(audioCtx, src);
+	        if (!stillCurrent()) return null;
+	        return !!ok;
+	    },
 
     buildAudioUrls(rawWord, isChinese) {
         const w0 = String(rawWord || '').trim().replace(/\s+/g, '_');
@@ -2247,7 +2668,12 @@ Page({
             // Timeout Logic
             // If it's a local file, we expect it to be fast. If it stalls, it's likely corrupt or context issue.
             // If it's network, it might take longer.
-            const isLocal = src.startsWith('http://usr/') || src.startsWith('wxfile://') || src.startsWith('/');
+            const isLocal = src.startsWith('http://usr/')
+                || src.startsWith('usr/')
+                || src.startsWith('http://tmp/')
+                || src.startsWith('tmp/')
+                || src.startsWith('wxfile://')
+                || src.startsWith('/');
             const retryDelay = isLocal ? 500 : 1500; // 500ms for local, 1.5s for network warning
 
             retryTimer = setTimeout(() => {
@@ -2272,20 +2698,25 @@ Page({
         });
     },
 
-    async playWithFallback(audioCtx, urls, cacheKey) {
+    async playWithFallback(audioCtx, urls, cacheKey, shouldContinue) {
         if (!audioCtx || !urls || urls.length === 0) return false;
+        const isCurrent = typeof shouldContinue === 'function' ? shouldContinue : () => true;
+        if (!isCurrent()) return null;
 
         const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
         if (memo) {
             console.log('[PlayFallback] Trying memo:', memo);
             const ok = await this.playSrcOnce(audioCtx, memo, cacheKey, memo);
+            if (!isCurrent()) return null;
             if (ok) return true;
         }
 
         for (const url of urls) {
+            if (!isCurrent()) return null;
             if (!url) continue;
             console.log('[PlayFallback] Trying url:', url);
             const ok = await this.playSrcOnce(audioCtx, url, cacheKey, url);
+            if (!isCurrent()) return null;
             if (ok) {
                 console.log('[PlayFallback] Success:', url);
                 return true;
@@ -2298,15 +2729,24 @@ Page({
 
     preloadNextWordAudio() {
         const s = this.data.settings || DEFAULT_SETTINGS;
-        const shouldPreload = !!(s.autoPronounce || this._hasPlayedAudioOnce);
+        const preferEdgeTts = this.shouldPreferEdgeTtsAudio();
+        const shouldPreload = preferEdgeTts || !!(s.autoPronounce || this._hasPlayedAudioOnce);
         if (!shouldPreload) return;
 
         const words = Array.isArray(this.data.words) ? this.data.words : [];
+        if (words.length === 0) return;
+
+        const currentIndex = Number(this.data.currentIndex || 0);
+        const preloadMeaning = !!s.pronounceMeaning;
+
+        if (preferEdgeTts) {
+            this.preloadEdgeTtsWindow(currentIndex, preloadMeaning);
+            return;
+        }
+
         if (words.length <= 1) return;
 
         const PRELOAD_COUNT = 5;
-        const currentIndex = Number(this.data.currentIndex || 0);
-        const preloadMeaning = !!s.pronounceMeaning;
         
         // Optimization: limit loop if words count is small
         const loopCount = Math.min(PRELOAD_COUNT, words.length - 1);
@@ -2326,11 +2766,91 @@ Page({
         }
     },
 
+    buildEdgeTtsPreloadItems(wordInfo, includeMeaning) {
+        const item = wordInfo && typeof wordInfo === 'object' ? wordInfo : { word: wordInfo };
+        const word = String((item && item.word) || '').trim();
+        if (!word) return [];
+
+        const requests = [{
+            cacheKey: this.getAudioCacheKey(word, false),
+            text: word,
+            lang: 'ko-KR'
+        }];
+
+        if (includeMeaning && item && item.meaning) {
+            requests.push({
+                cacheKey: this.getAudioCacheKey(word, true),
+                text: String(item.meaning || '').trim(),
+                lang: 'zh-CN'
+            });
+        }
+
+        return requests;
+    },
+
+    preloadEdgeTtsRequests(rawItems) {
+        if (!Array.isArray(rawItems) || rawItems.length === 0) return;
+        if (!this._attemptedPreloadKeys) this._attemptedPreloadKeys = new Set();
+
+        const pending = [];
+        rawItems.forEach((raw) => {
+            const item = this.buildEdgeTtsCacheItem(raw && raw.cacheKey, raw && raw.text, raw && raw.lang);
+            if (!item) return;
+            if (this.getAudioFileFromLRU(item.cacheKey)) return;
+            if (this.hasLocalAudioFile(item.cachePath)) {
+                this.setAudioFileToLRU(item.cacheKey, item.cachePath);
+                return;
+            }
+
+            const preloadKey = `edge__${item.flightKey}`;
+            const inFlight = this._edgeTtsInFlight && this._edgeTtsInFlight.has(item.flightKey);
+            if (this._attemptedPreloadKeys.has(preloadKey) && !inFlight) return;
+            this._attemptedPreloadKeys.add(preloadKey);
+            pending.push(item);
+        });
+
+        if (pending.length > 0) {
+            this.fetchEdgeTtsBatchToLRU(pending).catch(() => {});
+        }
+    },
+
+    preloadEdgeTtsWindow(indexOverride, includeMeaning) {
+        const words = Array.isArray(this.data.words) ? this.data.words : [];
+        if (words.length === 0) return;
+
+        const currentIndex = Number(indexOverride != null ? indexOverride : this.data.currentIndex || 0);
+        const loopCount = Math.min(EDGE_TTS_PRELOAD_AHEAD, Math.max(words.length - 1, 0));
+        const seen = new Set();
+        const requests = [];
+
+        for (let i = 0; i <= loopCount; i++) {
+            const nextIndex = normalizeIndex(currentIndex + i, words.length);
+            if (seen.has(nextIndex)) continue;
+            seen.add(nextIndex);
+
+            const next = words[nextIndex];
+            if (!next || !next.word) continue;
+            requests.push(...this.buildEdgeTtsPreloadItems(next, includeMeaning));
+        }
+
+        this.preloadEdgeTtsRequests(requests);
+    },
+
+    preloadEdgeTtsForWord(wordInfo, includeMeaning) {
+        this.preloadEdgeTtsRequests(this.buildEdgeTtsPreloadItems(wordInfo, includeMeaning));
+    },
+
     _preloadSingleAudio(word, isChinese) {
         if (!word) return;
         const cacheKey = this.getAudioCacheKey(word, isChinese);
         // Check if already in LRU
         if (this.getAudioFileFromLRU(cacheKey)) return;
+
+        if (!isChinese) {
+            const edgeCached = this.getCachedEdgeTtsFile(cacheKey, word, 'ko-KR');
+            if (edgeCached) return;
+        }
+        if (this.shouldPreferEdgeTtsAudio()) return;
 
         // Check if already attempted in this session (avoid redundant requests)
         if (!this._attemptedPreloadKeys) this._attemptedPreloadKeys = new Set();
@@ -2349,6 +2869,66 @@ Page({
         this.downloadAudioToLRU(cacheKey, candidates).catch(() => {});
     },
 
+    isAudioRequestCurrent(playSeq, wordId) {
+        return this._audioPlaySeq === playSeq && !!this.data.currentWord && safeWordId(this.data.currentWord) === wordId;
+    },
+
+    async playAudioPartWithFallback(audioCtx, current, isChinese, playSeq, wordId) {
+        if (!audioCtx || !current || !current.word) return false;
+
+        const word = String(current.word || '').trim();
+        const edgeText = isChinese ? String(current.meaning || '').trim() : word;
+        const lang = isChinese ? 'zh-CN' : 'ko-KR';
+        if (!word || !edgeText) return false;
+
+	        const cacheKey = this.getAudioCacheKey(word, isChinese);
+	        const edgeCached = this.getCachedEdgeTtsFile(cacheKey, edgeText, lang);
+	        if (edgeCached) {
+	            const ok = await this.playSrcOnce(audioCtx, edgeCached);
+	            if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	            if (ok) return true;
+	            this.removeCachedEdgeTtsFile(cacheKey, edgeText, lang);
+	        }
+
+	        if (this.shouldPreferEdgeTtsAudio()) {
+	            const ok = await this.playEdgeTtsFallback(audioCtx, cacheKey, edgeText, lang, playSeq, wordId);
+	            return this.isAudioRequestCurrent(playSeq, wordId) ? ok : null;
+	        }
+
+        const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
+        const urls = memo ? [memo, ...this.buildAudioUrls(word, isChinese)] : this.buildAudioUrls(word, isChinese);
+        const local = cacheKey ? this.getAudioFileFromLRU(cacheKey) : '';
+        let ok = false;
+
+	        if (local) {
+	            ok = await this.playSrcOnce(audioCtx, local);
+	            if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	            if (!ok) {
+	                if (!this.hasLocalAudioFile(local)) {
+	                    this.removeAudioFromLRU(cacheKey);
+                }
+                if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	                ok = await this.playWithFallback(audioCtx, urls, cacheKey, () => this.isAudioRequestCurrent(playSeq, wordId));
+            }
+	        } else {
+	            const downloaded = await this.downloadAudioToLRU(cacheKey, urls);
+	            if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	            if (downloaded) {
+	                ok = await this.playSrcOnce(audioCtx, downloaded);
+	                if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	                if (!ok) {
+	                    if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+		                    ok = await this.playWithFallback(audioCtx, urls, cacheKey, () => this.isAudioRequestCurrent(playSeq, wordId));
+	                }
+	            }
+	        }
+
+	        if (!this.isAudioRequestCurrent(playSeq, wordId)) return null;
+	        if (ok) return true;
+	        ok = await this.playEdgeTtsFallback(audioCtx, cacheKey, edgeText, lang, playSeq, wordId);
+	        return this.isAudioRequestCurrent(playSeq, wordId) ? ok : null;
+	    },
+
     async playWordAudio() {
         this._hasUserGesture = true;
         const current = this.data.currentWord;
@@ -2358,85 +2938,25 @@ Page({
         this._hasPlayedAudioOnce = true;
 
         const wordId = safeWordId(current);
-        const word = current.word;
         const playMeaning = !!(this.data.settings && this.data.settings.pronounceMeaning);
-
-        const koCacheKey = this.getAudioCacheKey(word, false);
-        const koMemo = koCacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(koCacheKey) : '';
-        const koUrls = koMemo ? [koMemo, ...this.buildAudioUrls(word, false)] : this.buildAudioUrls(word, false);
-        const koLocal = koCacheKey ? this.getAudioFileFromLRU(koCacheKey) : '';
-        let koOk = false;
-        if (koLocal) {
-            const ok = await this.playSrcOnce(this.wordAudio, koLocal);
-            if (!ok) {
-                // If local play failed, only remove from cache if file is missing (avoid re-download if file exists but decode failed)
-                if (!this.hasLocalAudioFile(koLocal)) {
-                    this.removeAudioFromLRU(koCacheKey);
-                }
-                if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-                koOk = await this.playWithFallback(this.wordAudio, koUrls, koCacheKey);
-            } else {
-                koOk = true;
-            }
-        } else {
-            const downloaded = await this.downloadAudioToLRU(koCacheKey, koUrls);
-            if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-            if (downloaded) {
-                const ok = await this.playSrcOnce(this.wordAudio, downloaded);
-                if (!ok) {
-                    if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-                    koOk = await this.playWithFallback(this.wordAudio, koUrls, koCacheKey);
-                } else {
-                    koOk = true;
-                }
-            } else {
-                koOk = await this.playWithFallback(this.wordAudio, koUrls, koCacheKey);
-            }
+        if (this.shouldPreferEdgeTtsAudio()) {
+            this.preloadEdgeTtsWindow(Number(this.data.currentIndex || 0), playMeaning);
         }
 
-        if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
+        const koOk = await this.playAudioPartWithFallback(this.wordAudio, current, false, playSeq, wordId);
+        if (koOk == null) return;
         if (!koOk) {
             this.notifyMissingAudioOnce(wordId, false);
             return;
         }
+
         if (playMeaning) {
-            const cnCacheKey = this.getAudioCacheKey(word, true);
-            const cnMemo = cnCacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cnCacheKey) : '';
-            const cnUrls = cnMemo ? [cnMemo, ...this.buildAudioUrls(word, true)] : this.buildAudioUrls(word, true);
-            const cnLocal = cnCacheKey ? this.getAudioFileFromLRU(cnCacheKey) : '';
-            let cnOk = false;
-            if (cnLocal) {
-                const ok = await this.playSrcOnce(this.cnAudio, cnLocal);
-                if (!ok) {
-                    // If local play failed, only remove from cache if file is missing
-                    if (!this.hasLocalAudioFile(cnLocal)) {
-                        this.removeAudioFromLRU(cnCacheKey);
-                    }
-                    if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-                    cnOk = await this.playWithFallback(this.cnAudio, cnUrls, cnCacheKey);
-                } else {
-                    cnOk = true;
-                }
-            } else {
-                const downloaded = await this.downloadAudioToLRU(cnCacheKey, cnUrls);
-                if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-                if (downloaded) {
-                    const ok = await this.playSrcOnce(this.cnAudio, downloaded);
-                    if (!ok) {
-                        if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
-                        cnOk = await this.playWithFallback(this.cnAudio, cnUrls, cnCacheKey);
-                    } else {
-                        cnOk = true;
-                    }
-                } else {
-                    cnOk = await this.playWithFallback(this.cnAudio, cnUrls, cnCacheKey);
-                }
-            }
-            if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
+            const cnOk = await this.playAudioPartWithFallback(this.cnAudio, current, true, playSeq, wordId);
+            if (cnOk == null) return;
             if (!cnOk) this.notifyMissingAudioOnce(wordId, true);
         }
 
-        if (this._audioPlaySeq !== playSeq || !this.data.currentWord || safeWordId(this.data.currentWord) !== wordId) return;
+        if (!this.isAudioRequestCurrent(playSeq, wordId)) return;
         this.preloadNextWordAudio();
     },
 
@@ -2460,8 +2980,8 @@ Page({
             this._autoPronounceTimer = null;
             if (!this.data.currentWord || this.data.currentWord.id !== current.id) return;
             this.playWordAudio();
-        }, 80);
-    },
+	        }, 20);
+	    },
 
     showWordDetail() {
         if (this.data.showWordTooltip) {
@@ -2471,8 +2991,8 @@ Page({
         const { currentWord, settings, ttsEnabled } = this.data;
         if (!currentWord) return;
 
-        // flash 模式下：若 wordtts=true 且用户开了朗读开关，点击单词只朗读不开弹窗
-        if (settings && settings.practiceMode === 'flash' && ttsEnabled && currentWord.wordtts) {
+        // flash 模式下：用户开了朗读开关时，点击单词只朗读不开弹窗。
+        if (settings && settings.practiceMode === 'flash' && ttsEnabled && currentWord.word) {
             this.playWordAudio();
             return;
         }

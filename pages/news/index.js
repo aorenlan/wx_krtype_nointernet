@@ -1,4 +1,5 @@
 const { sha256 } = require('../../utils/sha256');
+const { syncPageTabBar } = require('../../utils/tabbar');
 
 const AUDIO_ORIGIN = 'https://enoss.aorenlan.fun';
 const TTS_BASE_PATH = 'krtts';
@@ -50,9 +51,7 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 });
-    }
+    syncPageTabBar(this, { selected: 1, hidden: false });
   },
 
   onUnload() {

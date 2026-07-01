@@ -1,8 +1,48 @@
+const { TAB_BAR_ITEMS, getCurrentTabIndex, normalizeSelected } = require('../../utils/tabbar');
+const { buildGrammarTargetUrl } = require('../../utils/grammar-target');
+
+const GRAMMAR_TAB_INDEX = TAB_BAR_ITEMS.findIndex((item) => item.pagePath === '/pages/grammar-entry/index');
+
+let tabSwitching = false;
+
+function releaseTabSwitching() {
+  setTimeout(() => {
+    tabSwitching = false;
+  }, 220);
+}
+
+function openGrammarPage(done) {
+  buildGrammarTargetUrl()
+    .then((url) => {
+      wx.navigateTo({
+        url,
+        success: done,
+        fail: (err) => {
+          console.warn('[tabbar] navigate grammar failed, fallback to tab entry', err);
+          wx.switchTab({
+            url: '/pages/grammar-entry/index',
+            fail: (switchErr) => {
+              console.warn('[tabbar] switch grammar entry failed', switchErr);
+            },
+            complete: done
+          });
+        }
+      });
+    })
+    .catch((err) => {
+      console.error('[tabbar] build grammar url failed', err);
+      wx.switchTab({
+        url: '/pages/grammar-entry/index',
+        complete: done
+      });
+    });
+}
+
 Component({
   properties: {
     selected: {
       type: Number,
-      value: 0
+      value: -1
     },
     dark: {
       type: Boolean,
@@ -16,56 +56,36 @@ Component({
   data: {
     color: "#94a3b8",
     selectedColor: "#6366f1",
-    list: [
-      {
-        pagePath: "/pages/nv-practice/index",
-        iconPath: "/assets/tabbar/re_练习.png",
-        selectedIconPath: "/assets/tabbar/re_练习.png",
-        text: "练习"
-      },
-      // 第二个 tab：原 News 已替换为「看图想韩语」，原配置保留如下，勿删
-      // {
-      //   pagePath: "/pages/news/index",
-      //   iconPath: "/assets/tabbar/re_story.png",
-      //   selectedIconPath: "/assets/tabbar/re_story.png",
-      //   text: "News"
-      // },
-      {
-        pagePath: "/pages/picture-words/index",
-        iconPath: "/assets/tabbar/re_story.png",
-        selectedIconPath: "/assets/tabbar/re_story.png",
-        text: "看图想韩语"
-      },
-      {
-        pagePath: "/pages/story-workshop/index",
-        iconPath: "/assets/tabbar/re_talk.png",
-        selectedIconPath: "/assets/tabbar/re_talk.png",
-        text: "故事坊"
-      },
-      {
-        pagePath: "/pages/grammar-entry/index",
-        iconPath: "/assets/tabbar/re_语法.png",
-        selectedIconPath: "/assets/tabbar/re_语法.png",
-        text: "语法"
-      },
-      {
-        pagePath: "/pages/nv-settings/index",
-        iconPath: "/assets/tabbar/re_设置.png",
-        selectedIconPath: "/assets/tabbar/re_设置.png",
-        text: "设置"
-      }
-    ]
+    list: TAB_BAR_ITEMS
   },
   methods: {
     switchTab(e) {
-      const data = e.currentTarget.dataset
-      const url = data.path
+      const data = e.currentTarget.dataset;
+      const index = normalizeSelected(data.index, this.data.selected);
+      const item = this.data.list[index];
+      const url = data.path || (item && item.pagePath);
+      if (!url || tabSwitching) return;
+
+      const currentIndex = getCurrentTabIndex();
+      const selectedIndex = currentIndex >= 0
+        ? currentIndex
+        : (this.data.selected >= 0 ? normalizeSelected(this.data.selected, 0) : -1);
+      if (selectedIndex >= 0 && index === selectedIndex) return;
+
+      tabSwitching = true;
+
+      if (index === GRAMMAR_TAB_INDEX) {
+        openGrammarPage(releaseTabSwitching);
+        return;
+      }
+
       wx.switchTab({
         url,
-        fail: () => {
-          wx.redirectTo({ url })
-        }
-      })
+        fail: (err) => {
+          console.warn('[tabbar] switchTab failed', url, err);
+        },
+        complete: releaseTabSwitching
+      });
     }
   }
-})
+});

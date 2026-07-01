@@ -203,3 +203,157 @@
     box-shadow: 0 0 0 6rpx rgba(250, 204, 21, 0.70), 0 18rpx 30rpx rgba(15, 23, 42, 0.16);
   }
 }
+
+/* Unified tactile keyboard skin */
+.keyboard-container {
+  padding: 10rpx 16rpx 38rpx;
+  border-top-left-radius: 32px;
+  border-top-right-radius: 32px;
+  background: #17181d;
+  box-shadow: 0 -16rpx 44rpx rgba(24, 25, 30, 0.16);
+}
+
+.keyboard-container.light {
+  background: transparent;
+}
+
+.keyboard-inner {
+  gap: 10rpx;
+}
+
+.keyboard-row {
+  gap: 8rpx;
+}
+
+.key-btn {
+  height: 96rpx;
+  border-radius: 18rpx;
+  background: rgba(38, 39, 45, 0.94);
+  box-shadow:
+    0 10rpx 18rpx rgba(0, 0, 0, 0.18),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+  transition: opacity 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.keyboard-container.light .key-btn {
+  background: rgba(255, 255, 255, 0.96);
+  color: #202126;
+  box-shadow:
+    0 10rpx 22rpx rgba(24, 25, 30, 0.075),
+    inset 0 0 0 1rpx rgba(24, 25, 30, 0.04),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+}
+
+.key-btn-hover {
+  opacity: 0.9;
+  transform: scale(0.94);
+}
+
+.active-target,
+.keyboard-container.light .active-target {
+  background: #fff8ea !important;
+  color: #202126 !important;
+  box-shadow:
+    0 0 0 4rpx rgba(246, 179, 90, 0.62),
+    0 16rpx 30rpx rgba(246, 179, 90, 0.18) !important;
+}
+
+.keyboard-container.legacy .active-target {
+  background: #17181d !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 0 4rpx rgba(24, 25, 30, 0.22),
+    0 16rpx 30rpx rgba(24, 25, 30, 0.18) !important;
+}
+
+.keyboard-container.legacy .active-target .key-main,
+.keyboard-container.legacy .active-target .key-sub,
+.keyboard-container.legacy .active-target.text-white {
+  color: #ffffff !important;
+}
+
+.key-main {
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 34rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.keyboard-container.light .key-main {
+  color: #202126;
+}
+
+.key-sub {
+  right: 9rpx;
+  bottom: 7rpx;
+  color: currentColor;
+  font-size: 19rpx;
+  font-weight: 800;
+  opacity: 0.42;
+}
+
+.special-key {
+  height: 96rpx;
+  border-radius: 18rpx;
+  background: rgba(38, 39, 45, 0.94);
+  box-shadow:
+    0 10rpx 18rpx rgba(0, 0, 0, 0.18),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+.keyboard-container.light .special-key {
+  background: rgba(240, 243, 241, 0.96);
+  box-shadow:
+    inset 0 0 0 1rpx rgba(24, 25, 30, 0.04),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+}
+
+.shift-active,
+.keyboard-container.light .shift-active {
+  background: #fff8ea !important;
+  box-shadow:
+    0 0 0 4rpx rgba(246, 179, 90, 0.58),
+    0 16rpx 30rpx rgba(246, 179, 90, 0.16) !important;
+}
+
+.icon-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 36rpx;
+  font-weight: 900;
+}
+
+.keyboard-container.light .icon-text {
+  color: #53635e;
+}
+
+.space-row {
+  margin-top: 14rpx;
+  padding: 0 42rpx;
+}
+
+.space-btn {
+  height: 90rpx;
+  border-radius: 999rpx;
+  background: rgba(38, 39, 45, 0.78);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 28rpx;
+  font-weight: 900;
+  letter-spacing: 1rpx;
+  box-shadow:
+    0 10rpx 20rpx rgba(0, 0, 0, 0.14),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
+}
+
+.keyboard-container.light .space-btn {
+  background: rgba(255, 255, 255, 0.96);
+  color: #53635e;
+  box-shadow:
+    0 10rpx 24rpx rgba(24, 25, 30, 0.07),
+    inset 0 0 0 1rpx rgba(24, 25, 30, 0.04);
+}
+
+.space-pulse,
+.keyboard-container.light .space-pulse {
+  background: #fff8ea !important;
+  color: #202126 !important;
+}

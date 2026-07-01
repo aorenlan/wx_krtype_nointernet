@@ -86,6 +86,19 @@ function normalizeGroup(raw, index) {
 
 function normalizeItem(raw, group, index) {
   const baseId = safeString(raw && raw.id, `${group.id}-${index + 1}`);
+  const rawAudio = raw && raw.audio;
+  let audio = {};
+  if (typeof rawAudio === 'string') {
+    const audioUrl = safeString(rawAudio, '');
+    audio = audioUrl ? { ko: audioUrl, 'ko-KR': audioUrl } : {};
+  } else if (rawAudio && typeof rawAudio === 'object' && !Array.isArray(rawAudio)) {
+    audio = Object.keys(rawAudio).reduce((next, key) => {
+      const value = safeString(rawAudio[key], '');
+      if (value) next[key] = value;
+      return next;
+    }, {});
+  }
+
   return {
     id: baseId,
     groupId: group.id,
@@ -97,6 +110,7 @@ function normalizeItem(raw, group, index) {
     promptKo: safeString(raw && raw.promptKo, group.promptKo || '이게 뭐예요?'),
     tags: Array.isArray(raw && raw.tags) ? raw.tags.slice() : [],
     level: safeString(raw && raw.level, group.level || ''),
+    audio,
     sort: Number(raw && raw.sort) || index
   };
 }

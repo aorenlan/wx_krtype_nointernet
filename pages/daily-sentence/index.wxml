@@ -1,7 +1,7 @@
 <custom-nav
   title="每日一句"
-  subtitle="{{sentence.source}}"
-  theme="light"
+  subtitle="看场景记一句"
+  theme="dark"
   showBack="{{true}}"
   customBack="{{true}}"
   showSettings="{{false}}"
@@ -32,6 +32,12 @@
       </view>
     </view>
 
+    <view class="hero-copy">
+      <text class="hero-kicker">오늘의 한마디</text>
+      <text class="hero-source">{{sentence.source}}</text>
+      <text class="hero-context">{{displayCurrentCard.context}}</text>
+    </view>
+
     <view class="card-stage" catchtouchmove="preventMove" bindtouchstart="onSwipeStart" bindtouchend="onSwipeEnd">
       <view class="card next {{nextAnimClass}}" hidden="{{!hasNext}}">
         <view class="card-top">
@@ -58,7 +64,7 @@
         </view>
         <text class="romaji">{{displayCurrentCard.romaji}}</text>
 
-        <scroll-view scroll-y class="card-body" bounces="{{false}}">
+        <scroll-view scroll-y class="card-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
           <view class="desc">
             <text class="desc-title">适用语境</text>
             <text class="desc-text">{{displayCurrentCard.context}}</text>

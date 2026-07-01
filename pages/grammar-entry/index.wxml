@@ -1,1 +1,7 @@
-<view></view>
+<view class="grammar-entry-page">
+  <view class="grammar-entry-card">
+    <view class="grammar-entry-dot"></view>
+    <view class="grammar-entry-title">语法加载中</view>
+    <view class="grammar-entry-sub">正在打开课程内容</view>
+  </view>
+</view>

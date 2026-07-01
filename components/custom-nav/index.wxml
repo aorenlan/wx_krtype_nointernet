@@ -24,6 +24,7 @@
          We'll assume some right padding to avoid overlap. -->
     <view class="nav-right">
        <view class="checkin-pill" catchtap="onCheckinTap" wx:if="{{showCheckin && checkinText}}">
+        <view class="checkin-dot"></view>
         <text class="checkin-text">{{checkinText}}</text>
       </view>
       

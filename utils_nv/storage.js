@@ -7,6 +7,11 @@ const DAILY_SENTENCE_HISTORY_KEY = 'kr_daily_sentence_history';
 // 固定的「单词收藏」词单：仅由外部小程序跳转链接自动写入。
 // 复用 imported lists 机制，但不占用 10 个词单上限、不可删除。
 export const FAVORITES_LIST_NAME = '单词收藏';
+export const PHOTO_RECOGNITION_CATEGORY = '拍照练习';
+export const PICTURE_WORDS_PRACTICE_CATEGORY = '看图学韩语';
+
+const PHOTO_RECOGNITION_WORDS_KEY = 'photo_recognition_words';
+const PICTURE_WORDS_PRACTICE_KEY = 'picture_words_practice_words';
 
 export const getImportedLists = () => {
   const raw = wx.getStorageSync(STORAGE_KEY);
@@ -193,6 +198,228 @@ export const addFavorites = (incoming) => {
   } catch (e) {
     console.error('Add favorites error:', e);
     return { success: false, added: 0, total: getFavorites().length, message: e.message };
+  }
+};
+
+const normalizePhotoRecognitionWord = (item, index = 0, now = Date.now()) => {
+  if (!item || typeof item !== 'object') return null;
+  const word = item.word != null ? String(item.word).trim() : '';
+  if (!word) return null;
+  const meaning = item.meaning != null ? String(item.meaning).trim() : '';
+  const scene = item.scene != null ? String(item.scene).trim() : '';
+  const sourceId = item.sourceId != null ? String(item.sourceId).trim() : '';
+  const createdAt = Number(item.createdAt) || now;
+  return {
+    id: item.id != null ? String(item.id) : `photo_rec_${now}_${index}`,
+    word,
+    meaning,
+    sourceCategory: PHOTO_RECOGNITION_CATEGORY,
+    ...(scene ? { scene } : {}),
+    ...(sourceId ? { sourceId } : {}),
+    createdAt
+  };
+};
+
+const normalizePhotoRecognitionDedupeText = (value) => String(value || '')
+  .trim()
+  .replace(/\s+/g, '')
+  .toLowerCase();
+
+const getPhotoRecognitionDedupeKey = (item) => {
+  const meaning = normalizePhotoRecognitionDedupeText(item && item.meaning);
+  if (meaning) return `meaning:${meaning}`;
+  const word = normalizePhotoRecognitionDedupeText(item && item.word);
+  return word ? `word:${word}` : '';
+};
+
+export const getPhotoRecognitionWords = () => {
+  try {
+    const raw = wx.getStorageSync(PHOTO_RECOGNITION_WORDS_KEY);
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item, index) => normalizePhotoRecognitionWord(item, index))
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+};
+
+export const addPhotoRecognitionWords = (incoming) => {
+  try {
+    const now = Date.now();
+    const items = (Array.isArray(incoming) ? incoming : [])
+      .map((item, index) => normalizePhotoRecognitionWord(item, index, now))
+      .filter(Boolean);
+
+    const existingWords = getPhotoRecognitionWords();
+    if (!items.length) {
+      return { success: false, added: 0, total: existingWords.length, message: '没有可加入的单词' };
+    }
+
+    const existingKeys = new Set(existingWords.map(getPhotoRecognitionDedupeKey).filter(Boolean));
+    const incomingKeys = new Set();
+    const topWords = [];
+    let added = 0;
+    let updated = 0;
+
+    items.forEach((item, index) => {
+      const key = getPhotoRecognitionDedupeKey(item);
+      if (!key || incomingKeys.has(key)) return;
+      incomingKeys.add(key);
+      if (existingKeys.has(key)) {
+        updated += 1;
+      } else {
+        added += 1;
+      }
+      topWords.push({
+        ...item,
+        id: `photo_rec_${now}_${index}`,
+        createdAt: now,
+        updatedAt: now
+      });
+    });
+
+    if (!topWords.length) {
+      return { success: false, added: 0, updated: 0, total: existingWords.length, message: '没有可加入的单词' };
+    }
+
+    const restWords = existingWords.filter((item) => !incomingKeys.has(getPhotoRecognitionDedupeKey(item)));
+    const nextWords = [...topWords, ...restWords].slice(0, 500);
+
+    wx.setStorageSync(PHOTO_RECOGNITION_WORDS_KEY, nextWords);
+    return { success: true, added, updated, merged: topWords.length, total: nextWords.length };
+  } catch (e) {
+    console.error('Add photo recognition words error:', e);
+    return { success: false, added: 0, total: getPhotoRecognitionWords().length, message: e.message };
+  }
+};
+
+export const removePhotoRecognitionWord = (wordId) => {
+  try {
+    const targetId = wordId != null ? String(wordId) : '';
+    if (!targetId) return { success: false, removed: 0, total: getPhotoRecognitionWords().length, message: 'Invalid wordId' };
+    const words = getPhotoRecognitionWords();
+    const nextWords = words.filter((item) => String(item.id || '') !== targetId);
+    if (nextWords.length > 0) {
+      wx.setStorageSync(PHOTO_RECOGNITION_WORDS_KEY, nextWords);
+    } else {
+      wx.removeStorageSync(PHOTO_RECOGNITION_WORDS_KEY);
+    }
+    return { success: true, removed: words.length - nextWords.length, total: nextWords.length };
+  } catch (e) {
+    console.error('Remove photo recognition word error:', e);
+    return { success: false, removed: 0, total: getPhotoRecognitionWords().length, message: e.message };
+  }
+};
+
+export const clearPhotoRecognitionWords = () => {
+  try {
+    wx.removeStorageSync(PHOTO_RECOGNITION_WORDS_KEY);
+    return { success: true };
+  } catch (e) {
+    console.error('Clear photo recognition words error:', e);
+    return { success: false, message: e.message };
+  }
+};
+
+const normalizePictureWordsPracticeWord = (item, index = 0, now = Date.now()) => {
+  if (!item || typeof item !== 'object') return null;
+  const word = item.word != null ? String(item.word).trim() : String(item.korean || '').trim();
+  if (!word) return null;
+  const meaning = item.meaning != null ? String(item.meaning).trim() : String(item.cn || item.en || '').trim();
+  const image = item.image != null ? String(item.image).trim() : '';
+  const sourceGroupId = item.sourceGroupId != null ? String(item.sourceGroupId).trim() : String(item.groupId || '').trim();
+  const sourceGroupName = item.sourceGroupName != null ? String(item.sourceGroupName).trim() : String(item.groupName || '').trim();
+  const sourceId = item.sourceId != null ? String(item.sourceId).trim() : String(item.id || '').trim();
+  const createdAt = Number(item.createdAt) || now;
+  return {
+    id: item.id != null && String(item.id).indexOf('picword_') === 0 ? String(item.id) : `picword_${now}_${index}`,
+    word,
+    meaning,
+    sourceCategory: PICTURE_WORDS_PRACTICE_CATEGORY,
+    ...(image ? { image } : {}),
+    ...(sourceGroupId ? { sourceGroupId } : {}),
+    ...(sourceGroupName ? { sourceGroupName } : {}),
+    ...(sourceId ? { sourceId } : {}),
+    createdAt
+  };
+};
+
+export const getPictureWordsPracticeWords = () => {
+  try {
+    const raw = wx.getStorageSync(PICTURE_WORDS_PRACTICE_KEY);
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item, index) => normalizePictureWordsPracticeWord(item, index))
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+};
+
+export const addPictureWordsPracticeWords = (incoming) => {
+  try {
+    const now = Date.now();
+    const items = (Array.isArray(incoming) ? incoming : [])
+      .map((item, index) => normalizePictureWordsPracticeWord(item, index, now))
+      .filter(Boolean);
+
+    const existingWords = getPictureWordsPracticeWords();
+    if (!items.length) {
+      return { success: false, added: 0, total: existingWords.length, message: '没有可加入的单词' };
+    }
+
+    const makeKey = (item) => `${String(item.word || '').trim()}__${String(item.meaning || '').trim()}`;
+    const incomingKeys = new Set();
+    const topWords = [];
+
+    items.forEach((item, index) => {
+      const key = makeKey(item);
+      if (!key || incomingKeys.has(key)) return;
+      incomingKeys.add(key);
+      topWords.push({
+        ...item,
+        id: `picword_${now}_${index}`,
+        createdAt: now
+      });
+    });
+
+    const restWords = existingWords.filter((item) => !incomingKeys.has(makeKey(item)));
+    const nextWords = [...topWords, ...restWords].slice(0, 800);
+
+    wx.setStorageSync(PICTURE_WORDS_PRACTICE_KEY, nextWords);
+    return { success: true, added: topWords.length, total: nextWords.length };
+  } catch (e) {
+    console.error('Add picture words practice error:', e);
+    return { success: false, added: 0, total: getPictureWordsPracticeWords().length, message: e.message };
+  }
+};
+
+export const removePictureWordsPracticeWord = (wordId) => {
+  try {
+    const targetId = wordId != null ? String(wordId) : '';
+    if (!targetId) return { success: false, removed: 0, total: getPictureWordsPracticeWords().length, message: 'Invalid wordId' };
+    const words = getPictureWordsPracticeWords();
+    const nextWords = words.filter((item) => String(item.id || '') !== targetId);
+    if (nextWords.length > 0) {
+      wx.setStorageSync(PICTURE_WORDS_PRACTICE_KEY, nextWords);
+    } else {
+      wx.removeStorageSync(PICTURE_WORDS_PRACTICE_KEY);
+    }
+    return { success: true, removed: words.length - nextWords.length, total: nextWords.length };
+  } catch (e) {
+    console.error('Remove picture words practice error:', e);
+    return { success: false, removed: 0, total: getPictureWordsPracticeWords().length, message: e.message };
+  }
+};
+
+export const clearPictureWordsPracticeWords = () => {
+  try {
+    wx.removeStorageSync(PICTURE_WORDS_PRACTICE_KEY);
+    return { success: true };
+  } catch (e) {
+    console.error('Clear picture words practice error:', e);
+    return { success: false, message: e.message };
   }
 };
 

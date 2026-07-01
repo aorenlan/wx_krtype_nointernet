@@ -1,0 +1,51 @@
+.grammar-entry-page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: #f8f8f9;
+  color: #202126;
+}
+
+.grammar-entry-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14rpx;
+  padding: 36rpx 44rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 20rpx 60rpx rgba(24, 25, 30, 0.08);
+}
+
+.grammar-entry-dot {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 999rpx;
+  background: #111318;
+  box-shadow: 0 0 0 16rpx rgba(17, 19, 24, 0.06);
+  animation: grammar-entry-breathe 1.2s ease-in-out infinite;
+}
+
+.grammar-entry-title {
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.grammar-entry-sub {
+  color: #8b8d96;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+@keyframes grammar-entry-breathe {
+  0%,
+  100% {
+    opacity: 0.52;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

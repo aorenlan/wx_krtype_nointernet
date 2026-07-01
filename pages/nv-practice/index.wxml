@@ -6,7 +6,9 @@
   <!-- 每日一句入口 -->
   <view class="daily-sentence-entry" bindtap="openDailySentence">
     <view class="entry-left">
-      <image src="/assets/icons/danmaku.svg" class="entry-icon" mode="aspectFit" />
+      <view class="entry-mark">
+        <view class="entry-mark-dot"></view>
+      </view>
       <text class="entry-title">每日一句</text>
     </view>
     <view class="entry-right">
@@ -116,8 +118,8 @@
                 <text>›</text>
             </view>
 
-            <!-- 喇叭开关：仅 flash 模式 + wordtts=true 时显示 -->
-            <view wx:if="{{settings.practiceMode === 'flash' && currentWord.wordtts}}" class="tts-toggle-btn {{ttsEnabled ? 'tts-on' : 'tts-off'}}" catchtap="toggleTts">
+            <!-- 喇叭开关：flash 模式下可控制自动朗读 -->
+            <view wx:if="{{settings.practiceMode === 'flash' && currentWord.word}}" class="tts-toggle-btn {{ttsEnabled ? 'tts-on' : 'tts-off'}}" catchtap="toggleTts">
                 <image src="/assets/icons/volume.svg" style="width:18px;height:18px;" mode="aspectFit" />
             </view>
         </view>
@@ -127,8 +129,18 @@
 
   <!-- Empty State -->
   <view class="empty-state" wx:else>
-      <text>No words found.</text>
-      <button bindtap="loadWords" class="retry-btn">Retry</button>
+      <view class="empty-card">
+        <view class="empty-mark">
+          <view class="empty-mark-core"></view>
+        </view>
+        <text class="empty-kicker">{{displayCategory || settings.category || '当前词书'}}</text>
+        <text class="empty-title">暂无可练习单词</text>
+        <text class="empty-subtitle">可能是词书还在同步，或这个分类暂时没有内容。</text>
+        <view class="empty-actions">
+          <button bindtap="loadWords" class="empty-action primary">重新加载</button>
+          <button bindtap="openSettings" class="empty-action secondary">切换词书</button>
+        </view>
+      </view>
   </view>
 
   <!-- Keyboard -->
@@ -186,13 +198,13 @@
     <view class="detail-card" catchtap="playSentenceAudio">
       <view class="detail-header">
         <text class="detail-title">例句学习</text>
-        <view wx:if="{{currentWord.wordtts}}" class="detail-play-btn" catchtap="playWordAudio">
+        <view wx:if="{{currentWord.word}}" class="detail-play-btn" catchtap="playWordAudio">
           <image src="/assets/icons/volume.svg" style="width:20px;height:20px;" mode="aspectFit" />
           <text class="detail-play-text">朗读单词</text>
         </view>
         <view class="detail-close" catchtap="closeDetailModal">×</view>
       </view>
-      <scroll-view scroll-y class="detail-body">
+      <scroll-view scroll-y class="detail-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
         <view class="detail-section">
             <view class="detail-row">
                 <view class="detail-label-row">
@@ -219,7 +231,7 @@
         <text class="modal-title" bindtap="onDevTriggerTap">设置</text>
       </view>
       
-      <scroll-view scroll-y class="modal-body">
+      <scroll-view scroll-y class="modal-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
         <view class="setting-section">
           <view class="section-title">词书</view>
           <picker mode="selector" range="{{categories}}" value="{{categoryPickerIndex}}" bindchange="onCategoryPickerChange">
@@ -291,7 +303,7 @@
             <text>重复练习次数</text>
             <text class="setting-value">{{settings.repeatCount}}</text>
           </view>
-          <slider min="1" max="10" step="1" value="{{settings.repeatCount}}" bindchange="updateSetting" data-key="repeatCount" activeColor="#fad0c4" block-size="20"/>
+          <slider min="1" max="10" step="1" value="{{settings.repeatCount}}" bindchange="updateSetting" data-key="repeatCount" activeColor="#17181d" block-size="20"/>
         </view>
 
         <view class="setting-section">
@@ -349,7 +361,7 @@
             <text>闪现时长</text>
             <text class="setting-value">{{settings.flashDuration}}ms</text>
           </view>
-          <slider min="200" max="3000" step="100" value="{{settings.flashDuration}}" bindchange="updateSetting" data-key="flashDuration" activeColor="#fad0c4" block-size="20"/>
+          <slider min="200" max="3000" step="100" value="{{settings.flashDuration}}" bindchange="updateSetting" data-key="flashDuration" activeColor="#17181d" block-size="20"/>
         </view>
 
         <view class="setting-section">
@@ -362,27 +374,27 @@
 
           <view class="setting-item" bindtap="toggleSetting" data-key="enableKeyboardHint">
             <text>键盘提示</text>
-            <switch checked="{{settings.enableKeyboardHint}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="enableKeyboardHint"/>
+            <switch checked="{{settings.enableKeyboardHint}}" color="#17181d" bindchange="toggleSetting" catchtap="preventBubble" data-key="enableKeyboardHint"/>
           </view>
 
           <view class="setting-item" bindtap="toggleSetting" data-key="autoPronounce">
             <text>自动朗读单词</text>
-            <switch checked="{{settings.autoPronounce}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPronounce"/>
+            <switch checked="{{settings.autoPronounce}}" color="#17181d" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPronounce"/>
           </view>
 
           <view class="setting-item" bindtap="toggleSetting" data-key="pronounceMeaning">
             <text>朗读中文释义</text>
-            <switch checked="{{settings.pronounceMeaning}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="pronounceMeaning"/>
+            <switch checked="{{settings.pronounceMeaning}}" color="#17181d" bindchange="toggleSetting" catchtap="preventBubble" data-key="pronounceMeaning"/>
           </view>
 
           <view class="setting-item" bindtap="toggleSetting" data-key="autoPlaySentence">
             <text>自动朗读例句</text>
-            <switch checked="{{settings.autoPlaySentence}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPlaySentence"/>
+            <switch checked="{{settings.autoPlaySentence}}" color="#17181d" bindchange="toggleSetting" catchtap="preventBubble" data-key="autoPlaySentence"/>
           </view>
 
           <view class="setting-item" bindtap="toggleSetting" data-key="srsEnabled">
             <text>待复习功能</text>
-            <switch checked="{{settings.srsEnabled}}" color="#fad0c4" bindchange="toggleSetting" catchtap="preventBubble" data-key="srsEnabled"/>
+            <switch checked="{{settings.srsEnabled}}" color="#17181d" bindchange="toggleSetting" catchtap="preventBubble" data-key="srsEnabled"/>
           </view>
 
         </view>

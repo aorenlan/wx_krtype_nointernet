@@ -52,7 +52,7 @@ Page({
     meaningParts: [],
     usageParts: [],
     exampleParts: [],
-    sidebarCollapsed: false,
+    sidebarCollapsed: true,
     startX: 0,
     startY: 0
   },
@@ -302,7 +302,8 @@ Page({
       exampleParts,
       title: '语法',
       subTitle: book && lessonId ? `第${lessonId}课 · ${items.length}条` : (items.length ? `${items.length}条` : ''),
-      subtitle
+      subtitle,
+      sidebarCollapsed: true
     });
   },
 
@@ -311,6 +312,14 @@ Page({
       sidebarCollapsed: !this.data.sidebarCollapsed
     });
   },
+
+  closeSidebar() {
+    if (!this.data.sidebarCollapsed) {
+      this.setData({ sidebarCollapsed: true });
+    }
+  },
+
+  preventBubble() {},
 
   selectItem(e) {
     const key = e.currentTarget.dataset.key;

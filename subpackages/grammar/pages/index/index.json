@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "custom-nav": "/components/custom-nav/index"
+    "custom-nav": "/components/custom-nav/index",
+    "tabbar": "/components/tabbar/index"
   },
   "navigationStyle": "custom",
   "navigationBarBackgroundColor": "#ffffff",

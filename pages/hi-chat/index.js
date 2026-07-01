@@ -1,4 +1,5 @@
 const app = getApp();
+const { syncPageTabBar } = require('../../utils/tabbar');
 
 Page({
   data: {
@@ -22,9 +23,7 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 });
-    }
+    syncPageTabBar(this, { hidden: true });
     this.syncTheme();
   },
 

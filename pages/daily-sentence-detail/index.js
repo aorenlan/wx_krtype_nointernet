@@ -1,4 +1,5 @@
 import { addDailySentenceHistoryEntry } from '../../utils_nv/storage';
+const { shouldSkipAd } = require('../../utils/ad-free');
 
 const OSS_ORIGIN = 'https://enoss.aorenlan.fun';
 const OSS_BASE_PATH = '/kr_dailysentence';
@@ -316,6 +317,8 @@ const writeInterstitialStore = (store) => {
 };
 
 const maybeShowInterstitial = ({ dayKey, contentKey }) => {
+  if (shouldSkipAd('daily-sentence-detail')) return;
+
   const d = String(dayKey || '');
   if (!d) return;
   const c = String(contentKey || '');
