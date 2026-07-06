@@ -20,6 +20,7 @@
     "pages/number-learning-2/index",
     "pages/color-blocks/index"
   ],
+  "requiredBackgroundModes": ["audio"],
   "navigateToMiniProgramAppIdList": [
     "wxa1228b63bef8864d"
   ],

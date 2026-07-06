@@ -17,10 +17,257 @@
     </view>
   </view>
 
+  <view class="practice-top-tools {{practiceToolsOpen ? 'tools-open' : ''}}" wx:if="{{words.length > 0 && currentWord && !loading && !isKeyboardOpen}}">
+    <view class="practice-new-btn {{practiceToolsOpen ? 'active' : ''}}" catchtap="togglePracticeTools" hover-class="none">
+      <text>NEW!</text>
+      <view class="practice-new-dot"></view>
+    </view>
+    <view class="practice-tools-popover" wx:if="{{practiceToolsOpen}}" style="top: {{statusBarHeight + navBarHeight + 116}}px;">
+      <view class="practice-glass-btn {{dualColumnMode ? 'active' : ''}}" catchtap="tapPracticeDualTool" hover-class="none">
+        <view class="practice-glass-mark dual">
+          <view></view>
+          <view></view>
+        </view>
+        <view class="practice-glass-copy">
+          <text class="practice-glass-title">双列</text>
+          <text class="practice-glass-sub">{{dualColumnMode ? '拼记中' : '拼记'}}</text>
+        </view>
+      </view>
+      <view class="practice-glass-btn sleep {{sleepPlaying ? 'active' : ''}}" catchtap="tapPracticeSleepTool" hover-class="none">
+        <view class="practice-glass-mark sleep">眠</view>
+        <view class="practice-glass-copy">
+          <text class="practice-glass-title">单词助眠</text>
+          <text class="practice-glass-sub">{{sleepPlaying ? sleepActiveSummary : '白噪音'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="sleep-sheet-mask" wx:if="{{sleepPanelOpen}}" catchtap="closeSleepPanel"></view>
+  <view class="sleep-sheet" wx:if="{{sleepPanelOpen}}" catchtap="preventBubble">
+    <view class="sleep-sheet-header">
+      <view>
+        <text class="sleep-sheet-title">单词助眠</text>
+        <text class="sleep-sheet-sub">最多叠加 3 个声音，可与韩语朗读同时播放</text>
+      </view>
+      <view class="sleep-sheet-close" catchtap="closeSleepPanel">×</view>
+    </view>
+
+    <scroll-view class="sleep-sheet-body" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+      <view class="sleep-control-panel">
+        <view class="sleep-control-main">
+          <view class="sleep-now-info">
+            <text class="sleep-now-label">{{sleepPlaying ? '白噪音播放中' : '已选择'}}</text>
+            <text class="sleep-now-title">{{sleepActiveSummary}}</text>
+            <text class="sleep-now-timer" wx:if="{{sleepRemainingText}}">剩余 {{sleepRemainingText}}</text>
+          </view>
+          <view class="sleep-play-btn {{sleepPlaying ? 'playing' : ''}}" catchtap="toggleSleepMixer">
+            {{sleepPlaying ? '停止' : '播放'}}
+          </view>
+        </view>
+        <view class="sleep-cache-row">
+          <view class="sleep-cache-meta">
+            <text class="sleep-cache-label">音频缓存</text>
+            <text class="sleep-cache-desc">{{sleepCacheStatusText}}</text>
+          </view>
+          <view class="sleep-cache-mini {{sleepCacheDownloading ? 'loading' : ''}}" catchtap="downloadAllSleepSounds">
+            <text>{{sleepCacheDownloading ? sleepCacheButtonText : (sleepCacheReady ? '已下载' : '一键下载')}}</text>
+          </view>
+        </view>
+        <view class="sleep-cache-bar" wx:if="{{sleepCacheDownloading || sleepCachePercent > 0}}">
+          <view class="sleep-cache-fill" style="width: {{sleepCachePercent}}%;"></view>
+        </view>
+        <view class="sleep-timer-block">
+          <text class="sleep-timer-label">定时关闭</text>
+          <view class="sleep-timer-row">
+            <view
+              wx:for="{{sleepTimerOptions}}"
+              wx:key="minutes"
+              class="sleep-timer-chip {{sleepTimerMinutes === item.minutes ? 'active' : ''}}"
+              data-minutes="{{item.minutes}}"
+              catchtap="selectSleepTimer"
+            >
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+        <view class="sleep-word-loop-mini {{sleepWordLoopRunning ? 'running' : ''}}">
+          <text class="sleep-word-loop-name">单词循环</text>
+          <text class="sleep-word-loop-sub">{{sleepWordLoopRunning ? sleepWordLoopCurrent : '最多100词'}}</text>
+          <text class="sleep-word-loop-count" wx:if="{{sleepWordLoopRunning}}">{{sleepWordLoopProgressText}}</text>
+          <view class="sleep-word-loop-btn {{sleepWordLoopRunning ? 'running' : ''}}" catchtap="toggleSleepWordLoop">
+            {{sleepWordLoopRunning ? '停止' : '开始'}}
+          </view>
+        </view>
+      </view>
+
+      <view class="sleep-category-head">
+        <text>分类</text>
+        <text class="sleep-category-count">{{sleepCacheTotal}} 个声音</text>
+      </view>
+      <scroll-view class="sleep-category-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="sleep-category-row">
+          <view
+            wx:for="{{sleepCategories}}"
+            wx:key="id"
+            class="sleep-category-chip {{sleepActiveCategoryId === item.id ? 'active' : ''}}"
+            data-id="{{item.id}}"
+            catchtap="selectSleepCategory"
+          >
+            <text class="sleep-category-mark">{{item.mark}}</text>
+            <text>{{item.titleZh}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="sleep-section-title">环境音</view>
+      <view class="sleep-sound-grid">
+        <view
+          wx:for="{{sleepSoundOptions}}"
+          wx:key="id"
+          class="sleep-sound-card {{item.selected ? 'selected' : ''}} {{item.cached ? 'cached' : ''}} {{sleepPreviewingId === item.id ? 'previewing' : ''}} {{sleepPreviewLoadingId === item.id ? 'loading' : ''}}"
+          data-id="{{item.id}}"
+          catchtap="tapSleepSound"
+        >
+          <view class="sleep-card-mainline">
+            <view class="sleep-card-mark">{{item.mark}}</view>
+            <view class="sleep-card-copy">
+              <view class="sleep-card-name-row">
+                <text class="sleep-card-name">{{item.name}}</text>
+                <text class="sleep-card-desc">{{item.desc}}</text>
+              </view>
+              <view class="sleep-card-actions">
+                <view class="sleep-preview-btn {{sleepPreviewingId === item.id ? 'playing' : ''}} {{sleepPreviewLoadingId === item.id ? 'loading' : ''}}" data-id="{{item.id}}" catchtap="tapSleepSound">
+                  {{sleepPreviewLoadingId === item.id ? '加载' : (sleepPreviewingId === item.id ? '暂停' : '试听')}}
+                </view>
+                <text class="sleep-card-cache {{item.cached ? 'ready' : ''}}">{{sleepPreviewLoadingId === item.id ? '下载中' : item.cacheStatusText}}</text>
+              </view>
+            </view>
+            <view class="sleep-card-select {{item.selected ? 'selected' : ''}}" data-id="{{item.id}}" catchtap="toggleSleepSound">
+              {{item.selected ? '已选' : '加入'}}
+            </view>
+          </view>
+          <slider
+            class="sleep-volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="{{item.volume}}"
+            activeColor="#17181d"
+            backgroundColor="#e8edf3"
+            block-size="14"
+            data-id="{{item.id}}"
+            catchtap="preventBubble"
+            bindchange="changeSleepVolume"
+            bindchanging="changeSleepVolume"
+          />
+        </view>
+      </view>
+    </scroll-view>
+  </view>
 
   <view class="loading-container" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="dual-column-panel" wx:elif="{{dualColumnMode && !isKeyboardOpen && currentWord}}">
+    <view class="dual-column-header">
+      <view class="dual-column-title">
+        <view class="dual-title-mark">
+          <view></view>
+          <view></view>
+        </view>
+        <text>左右列拼记</text>
+      </view>
+      <text class="dual-column-count">{{currentIndex + 1}} / {{words.length}}</text>
+    </view>
+
+    <view class="dual-control-panel">
+      <view class="dual-control-left">
+        <view class="dual-mini-btn timer-start {{dualTimerRunning ? 'running' : ''}} {{dualActionLocked ? 'disabled' : ''}}" catchtap="toggleDualTimerStart">
+          {{dualTimerRunning ? '暂停' : (dualTimerPaused ? '继续' : '开始')}}
+        </view>
+        <view class="dual-timer-pill {{dualTimerRunning ? 'running' : ''}} {{dualTimerPaused ? 'paused' : ''}}" catchtap="openDualTimerActions">
+          <text>{{dualTimerText}}</text>
+        </view>
+        <view class="dual-mini-btn end" catchtap="stopDualTimer">结束</view>
+      </view>
+      <view class="dual-hide-switch {{dualHideKorean ? 'active' : ''}}" catchtap="toggleDualHideKorean">
+        <text>隐藏韩语</text>
+        <view class="dual-switch-track">
+          <view class="dual-switch-thumb"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="dual-column-labels">
+      <text>单词</text>
+      <text>释义</text>
+    </view>
+
+    <scroll-view
+      scroll-y
+      enhanced="{{true}}"
+      show-scrollbar="{{false}}"
+      scroll-into-view="{{dualScrollIntoView}}"
+      class="dual-column-list"
+    >
+      <view
+        id="dual-row-{{item.index}}"
+        class="dual-word-row {{item.active ? 'active' : ''}} {{item.completed ? 'completed' : ''}} {{item.justCompleted ? 'just-completed' : ''}}"
+        wx:for="{{dualColumnRows}}"
+        wx:key="rowKey"
+        catchtap="selectDualColumnWord"
+        data-index="{{item.index}}"
+      >
+        <view class="dual-word-mainline">
+          <view class="dual-word-cell dual-word-left">
+            <text class="dual-index">{{item.indexLabel}}</text>
+            <view class="dual-word-main">
+              <view wx:if="{{item.active && !item.completed}}" class="dual-input-row">
+                <input
+                  class="dual-native-input"
+                  value="{{item.inputValue}}"
+                  focus="{{item.inputFocus}}"
+                  placeholder="输入单词"
+                  placeholder-class="dual-native-placeholder"
+                  confirm-type="next"
+                  adjust-position="{{true}}"
+                  hold-keyboard="{{true}}"
+                  auto-blur="{{false}}"
+                  data-index="{{item.index}}"
+                  bindinput="onDualNativeInput"
+                  bindconfirm="onDualNativeConfirm"
+                  bindfocus="focusDualNativeInput"
+                  bindblur="blurDualNativeInput"
+                  catchtap="focusDualNativeInput"
+                />
+              </view>
+              <text wx:else class="dual-word-text {{item.completed ? 'completed' : 'muted'}} {{item.wordHidden ? 'hidden-word' : ''}}">{{item.displayWord}}</text>
+              <view class="dual-progress-track" wx:if="{{item.active}}">
+                <view class="dual-progress-fill" style="width: {{item.progress}}%;"></view>
+              </view>
+            </view>
+          </view>
+
+          <view class="dual-word-cell dual-word-right">
+            <view class="dual-meaning-wrap">
+              <text class="dual-meaning">{{item.meaning}}</text>
+              <text class="dual-phonetic" wx:if="{{item.phonetic}}">{{item.phonetic}}</text>
+            </view>
+            <view wx:if="{{item.active && !item.completed}}" class="dual-status dual-status-hint {{dualRevealWord ? 'active' : ''}}" catchtap="revealDualKoreanWord">提示</view>
+            <text wx:else class="dual-status">{{item.completed ? '✓' : ''}}</text>
+          </view>
+        </view>
+
+        <view class="dual-example-strip" wx:if="{{item.showExample}}" catchtap="playDualExampleAudio" data-index="{{item.index}}">
+          <text class="dual-example-sentence" wx:if="{{item.exampleSentence}}">{{item.exampleSentence}}</text>
+          <text class="dual-example-translation" wx:if="{{item.exampleTranslation}}">{{item.exampleTranslation}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="dual-keyboard-dismiss" wx:if="{{dualNativeInputFocus}}" catchtap="hideDualNativeKeyboard">⌄</view>
   </view>
 
   <!-- Main Card -->
@@ -180,7 +427,7 @@
       />
   </view>
 
-  <view class="keyboard-expand-fab" wx:if="{{!isKeyboardOpen}}" bindtap="toggleKeyboard">
+  <view class="keyboard-expand-fab" wx:if="{{!isKeyboardOpen && !dualColumnMode}}" bindtap="toggleKeyboard">
     <text class="keyboard-expand-icon">⌃</text>
   </view>
 
