@@ -28,6 +28,7 @@ const SLEEP_FALLBACK_CACHE_MARK = '_fallback_';
 const SLEEP_SOUND_CATEGORIES = SLEEP_MOODIST_CATEGORIES;
 const SLEEP_SOUND_OPTIONS = SLEEP_MOODIST_SOUNDS;
 const SLEEP_SOUND_TOTAL_BYTES = SLEEP_MOODIST_TOTAL_BYTES;
+const SLEEP_WORD_LOOP_MAX_PLAY_MS = 4200;
 const SLEEP_TIMER_OPTIONS = [
     { minutes: 0, label: '不定时' },
     { minutes: 15, label: '15分' },
@@ -1066,6 +1067,7 @@ Page({
         this.stopNaggingLoop();
         this.clearDualTimerInterval();
         this.clearSleepTimer && this.clearSleepTimer();
+        this.stopSleepBackgroundAudio && this.stopSleepBackgroundAudio();
         this.stopSleepAudioContexts && this.stopSleepAudioContexts();
         this.stopSleepPreviewAudio && this.stopSleepPreviewAudio();
         this.stopSleepWordLoop && this.stopSleepWordLoop({ silent: true });
@@ -1920,6 +1922,9 @@ Page({
     closeSleepPanel() {
         this._sleepPreviewToken = Number(this._sleepPreviewToken || 0) + 1;
         this.stopSleepPreviewAudio();
+        if (this._sleepWordLoopRunning && !this.data.sleepPlaying) {
+            this.stopSleepWordLoop({ silent: true });
+        }
         this.setData({
             sleepPanelOpen: false,
             sleepPreviewLoadingId: ''
@@ -1996,6 +2001,9 @@ Page({
         const ctx = this._sleepAudioContexts && this._sleepAudioContexts[id];
         if (ctx) {
             try { ctx.volume = Math.max(0, Math.min(1, (value / 100) * 0.7)); } catch (err) {}
+        }
+        if (this._sleepBackgroundAudio && this._sleepBackgroundAudioId === id) {
+            try { this._sleepBackgroundAudio.volume = Math.max(0, Math.min(1, (value / 100) * 0.7)); } catch (err) {}
         }
     },
 
@@ -2077,18 +2085,21 @@ Page({
             this._sleepWordAudio = wx.createInnerAudioContext();
             this._sleepWordAudio.autoplay = false;
             this._sleepWordAudio.obeyMuteSwitch = false;
+            this._sleepWordAudio.loop = false;
         }
         return this._sleepWordAudio;
     },
 
-    async playSleepWordLoopAudio(wordInfo) {
+    async playSleepWordLoopAudio(wordInfo, playToken) {
         if (!this._sleepWordLoopRunning || !wordInfo || !wordInfo.word) return false;
         this._hasUserGesture = true;
         const ctx = this.ensureSleepWordAudioContext();
+        try { ctx.loop = false; } catch (e) {}
         const word = String(wordInfo.word || '').trim();
         if (!word) return false;
         const cacheKey = this.getAudioCacheKey(word, false);
-        const stillRunning = () => !!this._sleepWordLoopRunning;
+        const stillRunning = () => !!this._sleepWordLoopRunning
+            && (!playToken || this._sleepWordPlayToken === playToken);
 
         const edgeCached = this.getCachedEdgeTtsFile(cacheKey, word, 'ko-KR');
         if (edgeCached) {
@@ -2134,6 +2145,28 @@ Page({
         return edgeSrc ? this.playSrcOnce(ctx, edgeSrc) : false;
     },
 
+    playSleepWordLoopAudioWithLimit(wordInfo, token) {
+        const playToken = `${token}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        this._sleepWordPlayToken = playToken;
+        let timeoutId = null;
+        const timeoutPromise = new Promise((resolve) => {
+            timeoutId = setTimeout(() => {
+                if (this._sleepWordPlayToken === playToken) {
+                    console.warn('[sleep word loop] playback timeout:', wordInfo && wordInfo.word);
+                    this.stopAudioContext(this._sleepWordAudio);
+                    resolve(false);
+                }
+            }, SLEEP_WORD_LOOP_MAX_PLAY_MS);
+        });
+        return Promise.race([
+            this.playSleepWordLoopAudio(wordInfo, playToken),
+            timeoutPromise
+        ]).finally(() => {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (this._sleepWordPlayToken === playToken) this._sleepWordPlayToken = '';
+        });
+    },
+
     waitSleepWordLoopGap(ms, token) {
         return new Promise((resolve) => {
             this._sleepWordLoopGapResolve = resolve;
@@ -2157,7 +2190,7 @@ Page({
                 sleepWordLoopProgressText: `${cursor + 1}/${list.length}`
             });
 
-            await this.playSleepWordLoopAudio(wordInfo);
+            await this.playSleepWordLoopAudioWithLimit(wordInfo, token);
             if (!this._sleepWordLoopRunning || this._sleepWordLoopToken !== token) break;
 
             this._sleepWordLoopCursor = (cursor + 1) % list.length;
@@ -2195,6 +2228,7 @@ Page({
     stopSleepWordLoop(options = {}) {
         this._sleepWordLoopRunning = false;
         this._sleepWordLoopToken = Number(this._sleepWordLoopToken || 0) + 1;
+        this._sleepWordPlayToken = '';
         if (this._sleepWordLoopTimer) {
             clearTimeout(this._sleepWordLoopTimer);
             this._sleepWordLoopTimer = null;
@@ -2348,6 +2382,90 @@ Page({
         return path;
     },
 
+    getSleepBackgroundSrc(option) {
+        if (!option) return '';
+        if (option.remoteSrc) return option.remoteSrc;
+        if (this._sleepAudioPathMap && this._sleepAudioPathMap[option.id]) return this._sleepAudioPathMap[option.id];
+        return option.originalSrc || option.src || '';
+    },
+
+    stopSleepBackgroundAudio(options = {}) {
+        const bg = this._sleepBackgroundAudio;
+        this._sleepBackgroundAudioId = '';
+        this._sleepBackgroundAudioSrc = '';
+        this._sleepBackgroundRestarting = false;
+        if (!bg) return;
+        try { bg.offEnded && bg.offEnded(); } catch (e) {}
+        try { bg.offError && bg.offError(); } catch (e) {}
+        try { bg.offStop && bg.offStop(); } catch (e) {}
+        if (!options.keepPlaying) {
+            this._sleepStoppingBackground = true;
+            try { bg.stop && bg.stop(); } catch (e) {}
+            this._sleepStoppingBackground = false;
+        }
+    },
+
+    startSleepBackgroundAudio(option, src, volume) {
+        if (!option || !src || !wx.getBackgroundAudioManager) return false;
+        const bg = wx.getBackgroundAudioManager();
+        this.stopSleepBackgroundAudio();
+        this._sleepBackgroundAudio = bg;
+        this._sleepBackgroundAudioId = option.id;
+        this._sleepBackgroundAudioSrc = src;
+
+        const applyMeta = () => {
+            try { bg.title = '单词助眠'; } catch (e) {}
+            try { bg.epname = getSleepSummary(this.data.sleepSelectedIds || [option.id]); } catch (e) {}
+            try { bg.singer = '韩词练习'; } catch (e) {}
+            try { bg.volume = Math.max(0, Math.min(1, Number(volume) || 0.5)); } catch (e) {}
+        };
+
+        const restart = () => {
+            if (!this.data.sleepPlaying || this._sleepBackgroundAudioId !== option.id) return;
+            this._sleepBackgroundRestarting = true;
+            try { bg.seek && bg.seek(0); } catch (e) {}
+            try {
+                bg.play && bg.play();
+            } catch (e) {
+                try {
+                    applyMeta();
+                    bg.src = src;
+                } catch (err) {}
+            }
+            setTimeout(() => {
+                this._sleepBackgroundRestarting = false;
+            }, 120);
+        };
+
+        try { bg.offEnded && bg.offEnded(); } catch (e) {}
+        try { bg.offError && bg.offError(); } catch (e) {}
+        try { bg.offStop && bg.offStop(); } catch (e) {}
+        try { bg.onEnded && bg.onEnded(restart); } catch (e) {}
+        try {
+            bg.onError && bg.onError((err) => {
+                console.warn('[sleep background] audio error:', option.id, JSON.stringify(err));
+            });
+        } catch (e) {}
+        try {
+            bg.onStop && bg.onStop(() => {
+                if (this._sleepStoppingBackground || this._sleepBackgroundRestarting) return;
+                if (this.data.sleepPlaying && this._sleepBackgroundAudioId === option.id) {
+                    this.stopSleepMixer({ silent: true });
+                }
+            });
+        } catch (e) {}
+
+        try {
+            applyMeta();
+            bg.src = src;
+            bg.play && bg.play();
+            return true;
+        } catch (e) {
+            console.warn('[sleep background] start failed:', option.id, e);
+            return false;
+        }
+    },
+
     stopSleepAudioContexts() {
         const contexts = this._sleepAudioContexts || {};
         Object.keys(contexts).forEach((id) => {
@@ -2383,25 +2501,39 @@ Page({
 
         try {
             this._sleepAudioContexts = {};
+            this.stopSleepBackgroundAudio();
+            let backgroundStarted = false;
+            const backgroundId = selectedIds[0];
             for (const id of selectedIds) {
                 const option = getSleepOptionById(id);
                 if (!option) continue;
                 const src = await this.ensureSleepAudioFile(option);
                 if (!src) continue;
+                const volume = Math.max(0, Math.min(1, (Number(volumes[id] != null ? volumes[id] : option.defaultVolume) / 100) * 0.7));
+                if (id === backgroundId) {
+                    const backgroundSrc = this.getSleepBackgroundSrc(option) || src;
+                    backgroundStarted = this.startSleepBackgroundAudio(option, backgroundSrc, volume);
+                    if (backgroundStarted) continue;
+                }
                 const ctx = wx.createInnerAudioContext();
                 ctx.loop = true;
                 ctx.autoplay = false;
                 ctx.obeyMuteSwitch = false;
-                ctx.volume = Math.max(0, Math.min(1, (Number(volumes[id] != null ? volumes[id] : option.defaultVolume) / 100) * 0.7));
+                ctx.volume = volume;
                 ctx.onError((err) => {
                     console.warn('[sleep mixer] audio error:', id, JSON.stringify(err));
+                });
+                ctx.onEnded(() => {
+                    if (!this.data.sleepPlaying || !this._sleepAudioContexts || this._sleepAudioContexts[id] !== ctx) return;
+                    try { ctx.seek && ctx.seek(0); } catch (e) {}
+                    try { ctx.play && ctx.play(); } catch (e) {}
                 });
                 ctx.src = src;
                 this._sleepAudioContexts[id] = ctx;
                 try { ctx.play(); } catch (e) {}
             }
 
-            const hasContext = Object.keys(this._sleepAudioContexts || {}).length > 0;
+            const hasContext = backgroundStarted || Object.keys(this._sleepAudioContexts || {}).length > 0;
             this.setData({
                 sleepPlaying: hasContext,
                 sleepSelectedIds: selectedIds,
@@ -2459,6 +2591,7 @@ Page({
 
     stopSleepMixer(options = {}) {
         this.clearSleepTimer();
+        this.stopSleepBackgroundAudio();
         this.stopSleepAudioContexts();
         this.setData({
             sleepPlaying: false,
@@ -4472,22 +4605,32 @@ Page({
                 console.log(logPrefix, 'onWaiting');
             };
 
-            audioCtx.onEnded(() => {
+            const onEnded = () => {
                 console.log(logPrefix, 'onEnded');
                 settle(true);
-            });
+            };
 
-            audioCtx.onError((res) => {
+            const onStop = () => {
+                console.log(logPrefix, 'onStop');
+                settle(started);
+            };
+
+            const onError = (res) => {
                 console.error(logPrefix, 'onError:', res);
                 settle(started);
-            });
+            };
+
+            audioCtx.onEnded(onEnded);
+            audioCtx.onError(onError);
 
             if (audioCtx.onCanplay) audioCtx.onCanplay(onCanplay);
             if (audioCtx.onPlay) audioCtx.onPlay(onPlay);
             if (audioCtx.onWaiting) audioCtx.onWaiting(onWaiting);
+            if (audioCtx.onStop) audioCtx.onStop(onStop);
 
             // Ensure autoplay is off to manually control playback
             audioCtx.autoplay = false;
+            try { audioCtx.loop = false; } catch (e) {}
             audioCtx.src = src;
             
             const attemptPlay = () => {
