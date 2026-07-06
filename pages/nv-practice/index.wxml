@@ -65,6 +65,31 @@
             {{sleepPlaying ? '停止' : '播放'}}
           </view>
         </view>
+        <view class="sleep-mixer-list" wx:if="{{sleepSelectedTracks.length}}">
+          <view
+            wx:for="{{sleepSelectedTracks}}"
+            wx:key="id"
+            class="sleep-mixer-row"
+          >
+            <view class="sleep-mixer-mark">{{item.mark}}</view>
+            <text class="sleep-mixer-name">{{item.name}}</text>
+            <slider
+              class="sleep-mixer-slider"
+              min="0"
+              max="100"
+              step="1"
+              value="{{item.volume}}"
+              activeColor="#17181d"
+              backgroundColor="#e8edf3"
+              block-size="13"
+              data-id="{{item.id}}"
+              catchtap="preventBubble"
+              bindchange="changeSleepVolume"
+              bindchanging="changeSleepVolume"
+            />
+            <text class="sleep-mixer-value">{{item.volumeText}}</text>
+          </view>
+        </view>
         <view class="sleep-cache-row">
           <view class="sleep-cache-meta">
             <text class="sleep-cache-label">音频缓存</text>
@@ -147,20 +172,6 @@
               {{item.selected ? '已选' : '加入'}}
             </view>
           </view>
-          <slider
-            class="sleep-volume-slider"
-            min="0"
-            max="100"
-            step="1"
-            value="{{item.volume}}"
-            activeColor="#17181d"
-            backgroundColor="#e8edf3"
-            block-size="14"
-            data-id="{{item.id}}"
-            catchtap="preventBubble"
-            bindchange="changeSleepVolume"
-            bindchanging="changeSleepVolume"
-          />
         </view>
       </view>
     </scroll-view>

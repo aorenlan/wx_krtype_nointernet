@@ -29,6 +29,8 @@ const SLEEP_SOUND_CATEGORIES = SLEEP_MOODIST_CATEGORIES;
 const SLEEP_SOUND_OPTIONS = SLEEP_MOODIST_SOUNDS;
 const SLEEP_SOUND_TOTAL_BYTES = SLEEP_MOODIST_TOTAL_BYTES;
 const SLEEP_WORD_LOOP_MAX_PLAY_MS = 4200;
+const SLEEP_MIXER_GAIN = 0.42;
+const SLEEP_PREVIEW_GAIN = 0.42;
 const SLEEP_TIMER_OPTIONS = [
     { minutes: 0, label: '不定时' },
     { minutes: 15, label: '15分' },
@@ -272,8 +274,30 @@ const buildSleepSoundCards = (selectedIds, volumes, activeCategoryId = SLEEP_DEF
     });
 };
 
+const buildSleepSelectedTracks = (selectedIds, volumes) => {
+    const volumeMap = volumes || {};
+    return (Array.isArray(selectedIds) ? selectedIds : []).slice(0, SLEEP_MAX_TRACKS).map((id) => {
+        const option = getSleepOptionById(id);
+        if (!option) return null;
+        const rawVolume = Number(volumeMap[id] != null ? volumeMap[id] : option.defaultVolume);
+        const volume = Math.max(0, Math.min(100, Number.isFinite(rawVolume) ? Math.round(rawVolume) : option.defaultVolume));
+        return {
+            id,
+            name: option.name,
+            mark: option.mark,
+            volume,
+            volumeText: `${volume}%`
+        };
+    }).filter(Boolean);
+};
+
 const getSleepOptionById = (id) => {
     return SLEEP_SOUND_OPTIONS.find(item => item.id === id) || null;
+};
+
+const getSleepOutputVolume = (value, gain = SLEEP_MIXER_GAIN) => {
+    const percent = Math.max(0, Math.min(100, Number(value) || 0));
+    return Math.max(0, Math.min(1, (percent / 100) * gain));
 };
 
 const getSleepFallbackKind = (option) => {
@@ -529,6 +553,7 @@ Page({
         sleepActiveCategoryId: SLEEP_DEFAULT_CATEGORY_ID,
         sleepSoundOptions: buildSleepSoundCards([SLEEP_DEFAULT_SOUND_ID], {}, SLEEP_DEFAULT_CATEGORY_ID, {}),
         sleepSelectedIds: [SLEEP_DEFAULT_SOUND_ID],
+        sleepSelectedTracks: buildSleepSelectedTracks([SLEEP_DEFAULT_SOUND_ID], {}),
         sleepVolumes: {},
         sleepPlaying: false,
         sleepTimerMinutes: 0,
@@ -748,6 +773,7 @@ Page({
             inputFocus: isPC, // Auto focus on PC
             sleepActiveCategoryId,
             sleepSelectedIds: sleepState.selectedIds,
+            sleepSelectedTracks: buildSleepSelectedTracks(sleepState.selectedIds, sleepState.volumes),
             sleepVolumes: sleepState.volumes,
             sleepTimerMinutes: sleepState.timerMinutes,
             sleepCacheMap,
@@ -1969,6 +1995,7 @@ Page({
         );
         this.setData({
             sleepSelectedIds: selectedIds,
+            sleepSelectedTracks: buildSleepSelectedTracks(selectedIds, this.data.sleepVolumes),
             sleepSoundOptions,
             sleepActiveSummary: getSleepSummary(selectedIds)
         }, () => {
@@ -1990,6 +2017,7 @@ Page({
         const volumes = Object.assign({}, this.data.sleepVolumes || {}, { [id]: value });
         this.setData({
             sleepVolumes: volumes,
+            sleepSelectedTracks: buildSleepSelectedTracks(this.data.sleepSelectedIds, volumes),
             sleepSoundOptions: buildSleepSoundCards(
                 this.data.sleepSelectedIds,
                 volumes,
@@ -2000,10 +2028,10 @@ Page({
 
         const ctx = this._sleepAudioContexts && this._sleepAudioContexts[id];
         if (ctx) {
-            try { ctx.volume = Math.max(0, Math.min(1, (value / 100) * 0.7)); } catch (err) {}
+            try { ctx.volume = getSleepOutputVolume(value); } catch (err) {}
         }
         if (this._sleepBackgroundAudio && this._sleepBackgroundAudioId === id) {
-            try { this._sleepBackgroundAudio.volume = Math.max(0, Math.min(1, (value / 100) * 0.7)); } catch (err) {}
+            try { this._sleepBackgroundAudio.volume = getSleepOutputVolume(value); } catch (err) {}
         }
     },
 
@@ -2044,7 +2072,10 @@ Page({
         ctx.autoplay = false;
         ctx.obeyMuteSwitch = false;
         const volumes = this.data.sleepVolumes || {};
-        ctx.volume = Math.max(0, Math.min(1, (Number(volumes[option.id] != null ? volumes[option.id] : option.defaultVolume) / 100) * 0.65));
+        ctx.volume = getSleepOutputVolume(
+            Number(volumes[option.id] != null ? volumes[option.id] : option.defaultVolume),
+            SLEEP_PREVIEW_GAIN
+        );
         ctx.onError((err) => {
             console.warn('[sleep preview] audio error:', option.id, JSON.stringify(err));
             if (this._sleepPreviewAudio === ctx) this.stopSleepPreviewAudio();
@@ -2509,7 +2540,7 @@ Page({
                 if (!option) continue;
                 const src = await this.ensureSleepAudioFile(option);
                 if (!src) continue;
-                const volume = Math.max(0, Math.min(1, (Number(volumes[id] != null ? volumes[id] : option.defaultVolume) / 100) * 0.7));
+                const volume = getSleepOutputVolume(Number(volumes[id] != null ? volumes[id] : option.defaultVolume));
                 if (id === backgroundId) {
                     const backgroundSrc = this.getSleepBackgroundSrc(option) || src;
                     backgroundStarted = this.startSleepBackgroundAudio(option, backgroundSrc, volume);
@@ -2537,6 +2568,7 @@ Page({
             this.setData({
                 sleepPlaying: hasContext,
                 sleepSelectedIds: selectedIds,
+                sleepSelectedTracks: buildSleepSelectedTracks(selectedIds, volumes),
                 sleepSoundOptions: buildSleepSoundCards(
                     selectedIds,
                     volumes,
