@@ -1,12 +1,12 @@
 <custom-nav subtitle="{{displayCategory}}" progress="{{words.length > 0 ? (currentIndex + 1) + ' / ' + words.length : ''}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
-<view class="sleep-focus-page" wx:if="{{sleepFocusOpen}}" catchtap="preventBubble" style="padding-top: {{statusBarHeight + 18}}px;">
+<view class="sleep-focus-page" wx:if="{{sleepFocusOpen}}" catchtap="stopSleepFocusMode" style="padding-top: {{statusBarHeight + 18}}px;">
   <view class="sleep-focus-top">
     <view class="sleep-focus-copy">
       <text class="sleep-focus-label">单词助眠</text>
       <text class="sleep-focus-summary">{{sleepActiveSummary}}</text>
     </view>
-    <view class="sleep-focus-exit" catchtap="stopSleepFocusMode">结束</view>
+    <button class="sleep-focus-share" open-type="share" data-share-type="sleep" catchtap="preventBubble">分享</button>
   </view>
   <view class="sleep-focus-center">
     <text class="sleep-focus-progress">{{sleepWordLoopProgressText}}</text>
@@ -15,7 +15,8 @@
     <view class="sleep-focus-line"></view>
   </view>
   <view class="sleep-focus-bottom">
-    <text>{{sleepRemainingText ? '剩余 ' + sleepRemainingText : '不定时'}}</text>
+    <text class="sleep-focus-note">息屏或退后台可能中断，建议保持当前页面播放</text>
+    <text>{{sleepRemainingText ? '点击任意处退出 · 剩余 ' + sleepRemainingText : '点击任意处退出'}}</text>
   </view>
 </view>
 
@@ -80,9 +81,17 @@
             <text class="sleep-now-title">{{sleepActiveSummary}}</text>
             <text class="sleep-now-timer" wx:if="{{sleepRemainingText}}">剩余 {{sleepRemainingText}}</text>
           </view>
-          <view class="sleep-play-btn {{sleepPlaying ? 'playing' : ''}}" catchtap="toggleSleepMixer">
-            {{sleepPlaying ? '停止' : '播放'}}
+          <view class="sleep-play-btn {{sleepPlaying ? 'playing' : ''}} {{sleepStarting ? 'starting' : ''}}" catchtap="toggleSleepMixer">
+            {{sleepStarting ? '进入中' : (sleepPlaying ? '停止' : '进入')}}
           </view>
+        </view>
+        <view class="sleep-guide-card" wx:if="{{sleepGuideVisible}}">
+          <view class="sleep-guide-mark">眠</view>
+          <view class="sleep-guide-copy">
+            <text class="sleep-guide-title">睡前这样用</text>
+            <text class="sleep-guide-desc">选 1-3 个声音，点进入后会切到深色页循环读词；点屏幕任意处退出。</text>
+          </view>
+          <view class="sleep-guide-ok" catchtap="dismissSleepGuide">知道</view>
         </view>
         <view class="sleep-mixer-list" wx:if="{{sleepSelectedTracks.length}}">
           <view
@@ -91,7 +100,10 @@
             class="sleep-mixer-row"
           >
             <view class="sleep-mixer-mark">{{item.mark}}</view>
-            <text class="sleep-mixer-name">{{item.name}}</text>
+            <view class="sleep-mixer-info">
+              <text class="sleep-mixer-name">{{item.name}}</text>
+              <text class="sleep-mixer-value">{{item.volumeText}}</text>
+            </view>
             <slider
               class="sleep-mixer-slider"
               min="0"
@@ -106,42 +118,46 @@
               bindchange="changeSleepVolume"
               bindchanging="changeSleepVolume"
             />
-            <text class="sleep-mixer-value">{{item.volumeText}}</text>
+            <view
+              class="sleep-mixer-preview {{sleepPreviewingId === item.id ? 'playing' : ''}} {{sleepPreviewLoadingId === item.id ? 'loading' : ''}}"
+              data-id="{{item.id}}"
+              catchtap="tapSleepSound"
+            >
+              {{sleepPreviewLoadingId === item.id ? '…' : (sleepPreviewingId === item.id ? '停' : '听')}}
+            </view>
+            <view class="sleep-mixer-remove" data-id="{{item.id}}" catchtap="toggleSleepSound">×</view>
           </view>
         </view>
-        <view class="sleep-cache-row">
+        <view class="sleep-cache-row" wx:if="{{!sleepCacheReady || sleepCacheDownloading}}">
           <view class="sleep-cache-meta">
             <text class="sleep-cache-label">音频缓存</text>
             <text class="sleep-cache-desc">{{sleepCacheStatusText}}</text>
           </view>
           <view class="sleep-cache-mini {{sleepCacheDownloading ? 'loading' : ''}}" catchtap="downloadAllSleepSounds">
-            <text>{{sleepCacheDownloading ? sleepCacheButtonText : (sleepCacheReady ? '已下载' : '一键下载')}}</text>
+            <text>{{sleepCacheDownloading ? sleepCacheButtonText : '一键下载'}}</text>
           </view>
         </view>
-        <view class="sleep-cache-bar" wx:if="{{sleepCacheDownloading || sleepCachePercent > 0}}">
+        <view class="sleep-cache-bar" wx:if="{{!sleepCacheReady && (sleepCacheDownloading || sleepCachePercent > 0)}}">
           <view class="sleep-cache-fill" style="width: {{sleepCachePercent}}%;"></view>
         </view>
-        <view class="sleep-timer-block">
-          <text class="sleep-timer-label">定时关闭</text>
-          <view class="sleep-timer-row">
-            <view
-              wx:for="{{sleepTimerOptions}}"
-              wx:key="minutes"
-              class="sleep-timer-chip {{sleepTimerMinutes === item.minutes ? 'active' : ''}}"
-              data-minutes="{{item.minutes}}"
-              catchtap="selectSleepTimer"
-            >
-              {{item.label}}
+        <view class="sleep-option-row">
+          <picker class="sleep-choice-picker timer" mode="selector" range="{{sleepTimerOptions}}" range-key="label" value="{{sleepTimerPickerIndex}}" bindchange="onSleepTimerPickerChange">
+            <view class="sleep-choice-pill">
+              <text class="sleep-choice-label">定时</text>
+              <text class="sleep-choice-value">{{sleepTimerLabel}}</text>
+              <text class="sleep-choice-arrow">⌄</text>
             </view>
+          </picker>
+          <view class="sleep-choice-pill read-toggle {{sleepReadMeaning ? 'active' : ''}}" catchtap="toggleSleepReadMeaning">
+            {{sleepReadMeaning ? '读中文' : '不读中文'}}
           </view>
-        </view>
-        <view class="sleep-word-loop-mini {{sleepWordLoopRunning ? 'running' : ''}}">
-          <text class="sleep-word-loop-name">单词循环</text>
-          <text class="sleep-word-loop-sub">{{sleepWordLoopRunning ? sleepWordLoopCurrent : '最多100词'}}</text>
-          <text class="sleep-word-loop-count" wx:if="{{sleepWordLoopRunning}}">{{sleepWordLoopProgressText}}</text>
-          <view class="sleep-word-loop-btn {{sleepWordLoopRunning ? 'running' : ''}}" catchtap="toggleSleepWordLoop">
-            {{sleepWordLoopRunning ? '停止' : '开始'}}
-          </view>
+          <picker class="sleep-choice-picker repeat" mode="selector" range="{{sleepKoreanRepeatPickerOptions}}" value="{{sleepKoreanRepeatPickerIndex}}" bindchange="onSleepKoreanRepeatPickerChange">
+            <view class="sleep-choice-pill">
+              <text class="sleep-choice-label">韩语</text>
+              <text class="sleep-choice-value">{{sleepKoreanRepeatLabel}}</text>
+              <text class="sleep-choice-arrow">⌄</text>
+            </view>
+          </picker>
         </view>
       </view>
 
@@ -184,7 +200,7 @@
                 <view class="sleep-preview-btn {{sleepPreviewingId === item.id ? 'playing' : ''}} {{sleepPreviewLoadingId === item.id ? 'loading' : ''}}" data-id="{{item.id}}" catchtap="tapSleepSound">
                   {{sleepPreviewLoadingId === item.id ? '加载' : (sleepPreviewingId === item.id ? '暂停' : '试听')}}
                 </view>
-                <text class="sleep-card-cache {{item.cached ? 'ready' : ''}}">{{sleepPreviewLoadingId === item.id ? '下载中' : item.cacheStatusText}}</text>
+                <text class="sleep-card-cache {{item.cached ? 'ready' : ''}}">{{sleepPreviewLoadingId === item.id ? '下载' : (item.cached ? '本地' : '在线')}}</text>
               </view>
             </view>
             <view class="sleep-card-select {{item.selected ? 'selected' : ''}}" data-id="{{item.id}}" catchtap="toggleSleepSound">
@@ -221,12 +237,18 @@
         <view class="dual-timer-pill {{dualTimerRunning ? 'running' : ''}} {{dualTimerPaused ? 'paused' : ''}}" catchtap="openDualTimerActions">
           <text>{{dualTimerText}}</text>
         </view>
-        <view class="dual-mini-btn end" catchtap="stopDualTimer">结束</view>
+        <view class="dual-mini-btn end" catchtap="handleDualEndOrReset">{{dualTimerRunning || dualTimerPaused || dualElapsedSeconds > 0 ? '结束' : '重置'}}</view>
       </view>
-      <view class="dual-hide-switch {{dualHideKorean ? 'active' : ''}}" catchtap="toggleDualHideKorean">
-        <text>隐藏韩语</text>
-        <view class="dual-switch-track">
-          <view class="dual-switch-thumb"></view>
+      <view class="dual-control-right">
+        <view class="dual-mode-switch">
+          <view class="dual-mode-option {{!dualReciteMode ? 'active' : ''}}" data-mode="spell" catchtap="toggleDualReciteMode">拼写</view>
+          <view class="dual-mode-option {{dualReciteMode ? 'active' : ''}}" data-mode="recite" catchtap="toggleDualReciteMode">背诵</view>
+        </view>
+        <view class="dual-hide-switch {{dualHideKorean ? 'active' : ''}}" catchtap="toggleDualHideKorean">
+          <text>隐藏韩语</text>
+          <view class="dual-switch-track">
+            <view class="dual-switch-thumb"></view>
+          </view>
         </view>
       </view>
     </view>
@@ -255,7 +277,7 @@
           <view class="dual-word-cell dual-word-left">
             <text class="dual-index">{{item.indexLabel}}</text>
             <view class="dual-word-main">
-              <view wx:if="{{item.active && !item.completed}}" class="dual-input-row">
+              <view wx:if="{{item.active && !item.completed && !dualReciteMode}}" class="dual-input-row">
                 <input
                   class="dual-native-input"
                   value="{{item.inputValue}}"
@@ -274,8 +296,8 @@
                   catchtap="focusDualNativeInput"
                 />
               </view>
-              <text wx:else class="dual-word-text {{item.completed ? 'completed' : 'muted'}} {{item.wordHidden ? 'hidden-word' : ''}}">{{item.displayWord}}</text>
-              <view class="dual-progress-track" wx:if="{{item.active}}">
+              <text wx:else class="dual-word-text {{dualReciteMode ? 'recite' : (item.completed ? 'completed' : 'muted')}} {{item.wordHidden ? 'hidden-word' : ''}}">{{item.displayWord}}</text>
+              <view class="dual-progress-track" wx:if="{{item.active && !dualReciteMode}}">
                 <view class="dual-progress-fill" style="width: {{item.progress}}%;"></view>
               </view>
             </view>
@@ -286,7 +308,8 @@
               <text class="dual-meaning">{{item.meaning}}</text>
               <text class="dual-phonetic" wx:if="{{item.phonetic}}">{{item.phonetic}}</text>
             </view>
-            <view wx:if="{{item.active && !item.completed}}" class="dual-status dual-status-hint {{dualRevealWord ? 'active' : ''}}" catchtap="revealDualKoreanWord">提示</view>
+            <view wx:if="{{dualReciteMode}}" class="dual-status dual-status-listen {{item.active ? 'active' : ''}}">听</view>
+            <view wx:elif="{{item.active && !item.completed}}" class="dual-status dual-status-hint {{dualRevealWord ? 'active' : ''}}" catchtap="revealDualKoreanWord">提示</view>
             <text wx:else class="dual-status">{{item.completed ? '✓' : ''}}</text>
           </view>
         </view>

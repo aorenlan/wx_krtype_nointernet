@@ -19,6 +19,7 @@ const DUAL_COLUMN_FULL_RENDER_LIMIT = 120;
 const DUAL_COLUMN_WINDOW_SIZE = 80;
 const SLEEP_STORAGE_KEY = 'kr_sleep_mixer_state_v1';
 const SLEEP_CACHE_STORAGE_KEY = 'kr_sleep_moodist_cache_v1';
+const SLEEP_GUIDE_STORAGE_KEY = 'kr_sleep_focus_guide_seen_v1';
 const SLEEP_MAX_TRACKS = 3;
 const SLEEP_DEFAULT_SOUND_ID = 'wind';
 const SLEEP_DEFAULT_CATEGORY_ID = 'nature';
@@ -28,15 +29,40 @@ const SLEEP_FALLBACK_CACHE_MARK = '_fallback_';
 const SLEEP_SOUND_CATEGORIES = SLEEP_MOODIST_CATEGORIES;
 const SLEEP_SOUND_OPTIONS = SLEEP_MOODIST_SOUNDS;
 const SLEEP_SOUND_TOTAL_BYTES = SLEEP_MOODIST_TOTAL_BYTES;
-const SLEEP_WORD_LOOP_MAX_PLAY_MS = 4200;
+const SLEEP_WORD_LOOP_MAX_PLAY_MS = 12000;
+const SLEEP_WORD_LOOP_SUCCESS_GAP_MS = 1600;
+const SLEEP_WORD_LOOP_RETRY_GAP_MS = 2200;
+const SLEEP_WORD_LOOP_FAIL_ADVANCE_LIMIT = 2;
 const SLEEP_MIXER_GAIN = 0.42;
 const SLEEP_PREVIEW_GAIN = 0.42;
+const SLEEP_KOREAN_REPEAT_OPTIONS = [1, 2, 3];
 const SLEEP_TIMER_OPTIONS = [
     { minutes: 0, label: '不定时' },
-    { minutes: 15, label: '15分' },
-    { minutes: 30, label: '30分' },
-    { minutes: 45, label: '45分' }
+    { minutes: 15, label: '15分钟' },
+    { minutes: 30, label: '30分钟' },
+    { minutes: 45, label: '45分钟' }
 ];
+const SLEEP_KOREAN_REPEAT_PICKER_OPTIONS = SLEEP_KOREAN_REPEAT_OPTIONS.map(count => `韩语读 ${count} 遍`);
+
+const getSleepTimerPickerIndex = (minutes) => {
+    const safeMinutes = Number(minutes) || 0;
+    const index = SLEEP_TIMER_OPTIONS.findIndex(item => item.minutes === safeMinutes);
+    return index >= 0 ? index : 0;
+};
+
+const getSleepTimerLabel = (minutes) => {
+    return SLEEP_TIMER_OPTIONS[getSleepTimerPickerIndex(minutes)].label;
+};
+
+const getSleepKoreanRepeatPickerIndex = (count) => {
+    const safeCount = Number(count) || 2;
+    const index = SLEEP_KOREAN_REPEAT_OPTIONS.indexOf(safeCount);
+    return index >= 0 ? index : 1;
+};
+
+const getSleepKoreanRepeatLabel = (count) => {
+    return `${SLEEP_KOREAN_REPEAT_OPTIONS[getSleepKoreanRepeatPickerIndex(count)]}遍`;
+};
 
 const DEFAULT_SETTINGS = {
     practiceMode: 'study',
@@ -328,8 +354,11 @@ const normalizeSleepState = (raw) => {
     const timerMinutes = SLEEP_TIMER_OPTIONS.some(item => item.minutes === Number(saved.timerMinutes))
         ? Number(saved.timerMinutes)
         : 0;
+    const rawRepeat = Number(saved.koreanRepeatCount);
+    const koreanRepeatCount = SLEEP_KOREAN_REPEAT_OPTIONS.indexOf(rawRepeat) >= 0 ? rawRepeat : 2;
+    const readMeaning = saved.readMeaning != null ? !!saved.readMeaning : true;
 
-    return { selectedIds, volumes, timerMinutes };
+    return { selectedIds, volumes, timerMinutes, readMeaning, koreanRepeatCount };
 };
 
 const getSleepSummary = (selectedIds) => {
@@ -342,7 +371,7 @@ const getSleepSummary = (selectedIds) => {
     return names.length ? names.join(' + ') : '未选择';
 };
 
-const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId) => {
+const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId, reciteMode = false) => {
     const list = Array.isArray(words) ? words : [];
     const total = list.length;
     if (!total) return [];
@@ -369,8 +398,9 @@ const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inp
 
     return list.slice(start, end).map((word, offset) => {
         const index = start + offset;
-        const active = index === safeIndex;
         const completedKey = getDualCompletedKey(word, index);
+        const reciteActive = !!reciteMode && completedKey === exampleRowId;
+        const active = reciteActive || index === safeIndex;
         const inputValue = inputMap && inputMap[completedKey] ? inputMap[completedKey] : '';
         const rawWord = String((word && word.word) || '');
         const targetLength = rawWord.trim().length;
@@ -395,7 +425,7 @@ const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inp
             active,
             completed,
             justCompleted: completed && completedKey === exampleRowId,
-            showExample: completed && completedKey === exampleRowId && !!(exampleSentence || exampleTranslation),
+            showExample: (completed || reciteMode) && completedKey === exampleRowId && !!(exampleSentence || exampleTranslation),
             exampleSentence,
             exampleTranslation,
             progress: active ? (inputValue ? nativeProgress : activeProgress) : 0,
@@ -540,6 +570,7 @@ Page({
         dualCompletedIds: {},
         dualNativeInputs: {},
         dualNativeInputFocus: false,
+        dualReciteMode: false,
         dualHideKorean: false,
         dualRevealWord: false,
         dualExampleRowId: '',
@@ -550,6 +581,8 @@ Page({
         dualTimerPaused: false,
         sleepPanelOpen: false,
         sleepFocusOpen: false,
+        sleepStarting: false,
+        sleepGuideVisible: false,
         sleepCategories: SLEEP_SOUND_CATEGORIES,
         sleepActiveCategoryId: SLEEP_DEFAULT_CATEGORY_ID,
         sleepSoundOptions: buildSleepSoundCards([SLEEP_DEFAULT_SOUND_ID], {}, SLEEP_DEFAULT_CATEGORY_ID, {}),
@@ -559,6 +592,13 @@ Page({
         sleepPlaying: false,
         sleepTimerMinutes: 0,
         sleepTimerOptions: SLEEP_TIMER_OPTIONS,
+        sleepTimerPickerIndex: getSleepTimerPickerIndex(0),
+        sleepTimerLabel: getSleepTimerLabel(0),
+        sleepReadMeaning: true,
+        sleepKoreanRepeatCount: 2,
+        sleepKoreanRepeatPickerOptions: SLEEP_KOREAN_REPEAT_PICKER_OPTIONS,
+        sleepKoreanRepeatPickerIndex: getSleepKoreanRepeatPickerIndex(2),
+        sleepKoreanRepeatLabel: getSleepKoreanRepeatLabel(2),
         sleepRemainingText: '',
         sleepActiveSummary: getSleepSummary([SLEEP_DEFAULT_SOUND_ID]),
         sleepCacheMap: {},
@@ -778,6 +818,12 @@ Page({
             sleepSelectedTracks: buildSleepSelectedTracks(sleepState.selectedIds, sleepState.volumes),
             sleepVolumes: sleepState.volumes,
             sleepTimerMinutes: sleepState.timerMinutes,
+            sleepTimerPickerIndex: getSleepTimerPickerIndex(sleepState.timerMinutes),
+            sleepTimerLabel: getSleepTimerLabel(sleepState.timerMinutes),
+            sleepReadMeaning: sleepState.readMeaning,
+            sleepKoreanRepeatCount: sleepState.koreanRepeatCount,
+            sleepKoreanRepeatPickerIndex: getSleepKoreanRepeatPickerIndex(sleepState.koreanRepeatCount),
+            sleepKoreanRepeatLabel: getSleepKoreanRepeatLabel(sleepState.koreanRepeatCount),
             sleepCacheMap,
             sleepCacheReady: sleepCacheSummary.ready,
             sleepCacheProgress: sleepCacheSummary.cachedCount,
@@ -1099,6 +1145,7 @@ Page({
         this.stopSleepAudioContexts && this.stopSleepAudioContexts();
         this.stopSleepPreviewAudio && this.stopSleepPreviewAudio();
         this.stopSleepWordLoop && this.stopSleepWordLoop({ silent: true });
+        this.setSleepKeepScreenOn && this.setSleepKeepScreenOn(false);
         this.persistCurrentProgress();
         this.cancelAudioPreload();
         this.clearAudioFileLRU();
@@ -1918,8 +1965,12 @@ Page({
         const selectedIds = nextState.selectedIds || this.data.sleepSelectedIds || [SLEEP_DEFAULT_SOUND_ID];
         const volumes = nextState.volumes || this.data.sleepVolumes || {};
         const timerMinutes = nextState.timerMinutes != null ? nextState.timerMinutes : this.data.sleepTimerMinutes;
+        const readMeaning = nextState.readMeaning != null ? !!nextState.readMeaning : !!this.data.sleepReadMeaning;
+        const koreanRepeatCount = nextState.koreanRepeatCount != null
+            ? Number(nextState.koreanRepeatCount)
+            : Number(this.data.sleepKoreanRepeatCount || 2);
         try {
-            wx.setStorageSync(SLEEP_STORAGE_KEY, { selectedIds, volumes, timerMinutes });
+            wx.setStorageSync(SLEEP_STORAGE_KEY, { selectedIds, volumes, timerMinutes, readMeaning, koreanRepeatCount });
         } catch (e) {}
     },
 
@@ -1943,9 +1994,31 @@ Page({
         });
     },
 
+    hasSeenSleepGuide() {
+        try {
+            return !!wx.getStorageSync(SLEEP_GUIDE_STORAGE_KEY);
+        } catch (e) {
+            return false;
+        }
+    },
+
+    markSleepGuideSeen() {
+        try {
+            wx.setStorageSync(SLEEP_GUIDE_STORAGE_KEY, true);
+        } catch (e) {}
+    },
+
+    dismissSleepGuide() {
+        this.markSleepGuideSeen();
+        if (this.data.sleepGuideVisible) {
+            this.setData({ sleepGuideVisible: false });
+        }
+    },
+
     openSleepPanel() {
         this.setData({
             sleepPanelOpen: true,
+            sleepGuideVisible: !this.hasSeenSleepGuide(),
             practiceToolsOpen: false,
             showGuideBubble: false
         });
@@ -1959,7 +2032,8 @@ Page({
         }
         this.setData({
             sleepPanelOpen: false,
-            sleepPreviewLoadingId: ''
+            sleepPreviewLoadingId: '',
+            sleepGuideVisible: false
         });
     },
 
@@ -2018,7 +2092,8 @@ Page({
 
     changeSleepVolume(e) {
         const id = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id;
-        if (!getSleepOptionById(id)) return;
+        const option = getSleepOptionById(id);
+        if (!option) return;
         const value = Math.max(0, Math.min(100, Math.round(Number(e.detail && e.detail.value) || 0)));
         const volumes = Object.assign({}, this.data.sleepVolumes || {}, { [id]: value });
         this.setData({
@@ -2039,16 +2114,72 @@ Page({
         if (this._sleepBackgroundAudio && this._sleepBackgroundAudioId === id) {
             try { this._sleepBackgroundAudio.volume = getSleepOutputVolume(value); } catch (err) {}
         }
+        if (this._sleepPreviewAudio && this.data.sleepPreviewingId === id) {
+            try { this._sleepPreviewAudio.volume = getSleepOutputVolume(value, SLEEP_PREVIEW_GAIN); } catch (err) {}
+        }
+
+        const eventType = String(e.type || '');
+        if (!this.data.sleepPlaying && eventType === 'change' && this.data.sleepPreviewingId !== id && this.data.sleepPreviewLoadingId !== id) {
+            if (this._sleepVolumePreviewTimer) clearTimeout(this._sleepVolumePreviewTimer);
+            this._sleepVolumePreviewTimer = setTimeout(() => {
+                this._sleepVolumePreviewTimer = null;
+                if (this.data.sleepPlaying || this.data.sleepPreviewingId === id || this.data.sleepPreviewLoadingId) return;
+                this.tapSleepSound({ currentTarget: { dataset: { id } } });
+            }, 80);
+        }
+    },
+
+    applySleepTimer(minutes) {
+        const valid = SLEEP_TIMER_OPTIONS.some(item => item.minutes === minutes);
+        if (!valid) return;
+        this.setData({
+            sleepTimerMinutes: minutes,
+            sleepTimerPickerIndex: getSleepTimerPickerIndex(minutes),
+            sleepTimerLabel: getSleepTimerLabel(minutes)
+        }, () => {
+            this.persistSleepState({ timerMinutes: minutes });
+            if (this.data.sleepPlaying) this.scheduleSleepTimer();
+        });
     },
 
     selectSleepTimer(e) {
         const minutes = Number(e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.minutes) || 0;
-        const valid = SLEEP_TIMER_OPTIONS.some(item => item.minutes === minutes);
-        if (!valid) return;
-        this.setData({ sleepTimerMinutes: minutes }, () => {
-            this.persistSleepState({ timerMinutes: minutes });
-            if (this.data.sleepPlaying) this.scheduleSleepTimer();
+        this.applySleepTimer(minutes);
+    },
+
+    onSleepTimerPickerChange(e) {
+        const index = Number(e.detail && e.detail.value) || 0;
+        const option = SLEEP_TIMER_OPTIONS[index] || SLEEP_TIMER_OPTIONS[0];
+        this.applySleepTimer(option.minutes);
+    },
+
+    toggleSleepReadMeaning() {
+        const readMeaning = !this.data.sleepReadMeaning;
+        this.setData({ sleepReadMeaning: readMeaning }, () => {
+            this.persistSleepState({ readMeaning });
         });
+    },
+
+    applySleepKoreanRepeat(count) {
+        if (SLEEP_KOREAN_REPEAT_OPTIONS.indexOf(count) < 0) return;
+        this.setData({
+            sleepKoreanRepeatCount: count,
+            sleepKoreanRepeatPickerIndex: getSleepKoreanRepeatPickerIndex(count),
+            sleepKoreanRepeatLabel: getSleepKoreanRepeatLabel(count)
+        }, () => {
+            this.persistSleepState({ koreanRepeatCount: count });
+        });
+    },
+
+    selectSleepKoreanRepeat(e) {
+        const count = Number(e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.count) || 1;
+        this.applySleepKoreanRepeat(count);
+    },
+
+    onSleepKoreanRepeatPickerChange(e) {
+        const index = Number(e.detail && e.detail.value) || 0;
+        const count = SLEEP_KOREAN_REPEAT_OPTIONS[index] || 1;
+        this.applySleepKoreanRepeat(count);
     },
 
     toggleSleepMixer() {
@@ -2063,6 +2194,9 @@ Page({
 
     enterSleepFocusMode() {
         this._sleepPreviewToken = Number(this._sleepPreviewToken || 0) + 1;
+        this._sleepFocusOpenedAt = Date.now();
+        this.setSleepKeepScreenOn(true);
+        this.markSleepGuideSeen();
         this.stopSleepPreviewAudio();
         const current = this._currentWordRuntime || this.data.currentWord || {};
         this.setData({
@@ -2070,6 +2204,7 @@ Page({
             sleepPanelOpen: false,
             practiceToolsOpen: false,
             showGuideBubble: false,
+            sleepGuideVisible: false,
             sleepPreviewLoadingId: '',
             sleepWordLoopCurrent: this._sleepWordLoopRunning
                 ? this.data.sleepWordLoopCurrent
@@ -2086,7 +2221,16 @@ Page({
         }
     },
 
+    setSleepKeepScreenOn(keepScreenOn) {
+        try {
+            if (wx.setKeepScreenOn) {
+                wx.setKeepScreenOn({ keepScreenOn: !!keepScreenOn });
+            }
+        } catch (e) {}
+    },
+
     stopSleepFocusMode() {
+        if (Date.now() - Number(this._sleepFocusOpenedAt || 0) < 520) return;
         this.stopSleepMixer();
     },
 
@@ -2156,34 +2300,37 @@ Page({
         return this._sleepWordAudio;
     },
 
-    async playSleepWordLoopAudio(wordInfo, playToken) {
+    async playSleepWordLoopAudio(wordInfo, playToken, options = {}) {
         if (!this._sleepWordLoopRunning || !wordInfo || !wordInfo.word) return false;
         this._hasUserGesture = true;
         const ctx = this.ensureSleepWordAudioContext();
         try { ctx.loop = false; } catch (e) {}
+        const isChinese = !!options.isChinese;
         const word = String(wordInfo.word || '').trim();
-        if (!word) return false;
-        const cacheKey = this.getAudioCacheKey(word, false);
+        const audioText = isChinese ? String(wordInfo.meaning || '').trim() : word;
+        if (!word || !audioText) return false;
+        const cacheKey = this.getAudioCacheKey(word, isChinese);
+        const lang = isChinese ? 'zh-CN' : 'ko-KR';
         const stillRunning = () => !!this._sleepWordLoopRunning
             && (!playToken || this._sleepWordPlayToken === playToken);
 
-        const edgeCached = this.getCachedEdgeTtsFile(cacheKey, word, 'ko-KR');
+        const edgeCached = this.getCachedEdgeTtsFile(cacheKey, audioText, lang);
         if (edgeCached) {
             const ok = await this.playSrcOnce(ctx, edgeCached);
             if (!stillRunning()) return null;
             if (ok) return true;
-            this.removeCachedEdgeTtsFile(cacheKey, word, 'ko-KR');
+            this.removeCachedEdgeTtsFile(cacheKey, audioText, lang);
         }
 
         if (this.shouldPreferEdgeTtsAudio()) {
-            let src = await this.fetchEdgeTtsToLRU(cacheKey, word, 'ko-KR');
+            let src = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang);
             if (!stillRunning()) return null;
-            if (!src) src = await this.fetchEdgeTtsToLRU(cacheKey, word, 'ko-KR', true);
+            if (!src) src = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang, true);
             if (!stillRunning()) return null;
             return src ? this.playSrcOnce(ctx, src) : false;
         }
 
-        const urls = this.buildAudioUrls(word, false);
+        const urls = this.buildAudioUrls(word, isChinese);
         const local = cacheKey ? this.getAudioFileFromLRU(cacheKey) : '';
         if (local) {
             const ok = await this.playSrcOnce(ctx, local);
@@ -2204,9 +2351,9 @@ Page({
         if (!stillRunning()) return null;
         if (remoteOk) return true;
 
-        let edgeSrc = await this.fetchEdgeTtsToLRU(cacheKey, word, 'ko-KR');
+        let edgeSrc = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang);
         if (!stillRunning()) return null;
-        if (!edgeSrc) edgeSrc = await this.fetchEdgeTtsToLRU(cacheKey, word, 'ko-KR', true);
+        if (!edgeSrc) edgeSrc = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang, true);
         if (!stillRunning()) return null;
         return edgeSrc ? this.playSrcOnce(ctx, edgeSrc) : false;
     },
@@ -2214,21 +2361,43 @@ Page({
     playSleepWordLoopAudioWithLimit(wordInfo, token) {
         const playToken = `${token}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         this._sleepWordPlayToken = playToken;
-        let timeoutId = null;
-        const timeoutPromise = new Promise((resolve) => {
-            timeoutId = setTimeout(() => {
-                if (this._sleepWordPlayToken === playToken) {
-                    console.warn('[sleep word loop] playback timeout:', wordInfo && wordInfo.word);
-                    this.stopAudioContext(this._sleepWordAudio);
-                    resolve(false);
-                }
-            }, SLEEP_WORD_LOOP_MAX_PLAY_MS);
-        });
-        return Promise.race([
-            this.playSleepWordLoopAudio(wordInfo, playToken),
-            timeoutPromise
-        ]).finally(() => {
-            if (timeoutId) clearTimeout(timeoutId);
+        const playPart = (isChinese) => {
+            let timeoutId = null;
+            const timeoutPromise = new Promise((resolve) => {
+                timeoutId = setTimeout(() => {
+                    if (this._sleepWordPlayToken === playToken) {
+                        console.warn('[sleep word loop] playback timeout:', wordInfo && wordInfo.word);
+                        this.stopAudioContext(this._sleepWordAudio);
+                        resolve(false);
+                    }
+                }, SLEEP_WORD_LOOP_MAX_PLAY_MS);
+            });
+            return Promise.race([
+                this.playSleepWordLoopAudio(wordInfo, playToken, { isChinese }),
+                timeoutPromise
+            ]).finally(() => {
+                if (timeoutId) clearTimeout(timeoutId);
+            });
+        };
+        const runSequence = async () => {
+            let played = false;
+            if (this.data.sleepReadMeaning) {
+                const cnOk = await playPart(true);
+                if (cnOk == null) return null;
+                played = played || cnOk === true;
+            }
+            const repeatCount = SLEEP_KOREAN_REPEAT_OPTIONS.indexOf(Number(this.data.sleepKoreanRepeatCount)) >= 0
+                ? Number(this.data.sleepKoreanRepeatCount)
+                : 2;
+            for (let i = 0; i < repeatCount; i += 1) {
+                if (!this._sleepWordLoopRunning || this._sleepWordPlayToken !== playToken) return null;
+                const koOk = await playPart(false);
+                if (koOk == null) return null;
+                played = played || koOk === true;
+            }
+            return played;
+        };
+        return runSequence().finally(() => {
             if (this._sleepWordPlayToken === playToken) this._sleepWordPlayToken = '';
         });
     },
@@ -2257,11 +2426,21 @@ Page({
                 sleepWordLoopProgressText: `${cursor + 1}/${list.length}`
             });
 
-            await this.playSleepWordLoopAudioWithLimit(wordInfo, token);
+            const played = await this.playSleepWordLoopAudioWithLimit(wordInfo, token);
             if (!this._sleepWordLoopRunning || this._sleepWordLoopToken !== token) break;
 
-            this._sleepWordLoopCursor = (cursor + 1) % list.length;
-            await this.waitSleepWordLoopGap(900, token);
+            if (played === true) {
+                this._sleepWordLoopFailCount = 0;
+                this._sleepWordLoopCursor = (cursor + 1) % list.length;
+                await this.waitSleepWordLoopGap(SLEEP_WORD_LOOP_SUCCESS_GAP_MS, token);
+            } else {
+                this._sleepWordLoopFailCount = Number(this._sleepWordLoopFailCount || 0) + 1;
+                if (this._sleepWordLoopFailCount >= SLEEP_WORD_LOOP_FAIL_ADVANCE_LIMIT) {
+                    this._sleepWordLoopFailCount = 0;
+                    this._sleepWordLoopCursor = (cursor + 1) % list.length;
+                }
+                await this.waitSleepWordLoopGap(SLEEP_WORD_LOOP_RETRY_GAP_MS, token);
+            }
         }
 
         if (this._sleepWordLoopToken === token && this._sleepWordLoopRunning) {
@@ -2279,6 +2458,7 @@ Page({
         this.stopSleepPreviewAudio();
         this._sleepWordLoopList = list;
         this._sleepWordLoopCursor = 0;
+        this._sleepWordLoopFailCount = 0;
         this._sleepWordLoopRunning = true;
         this._sleepWordLoopToken = Date.now();
         this.setData({
@@ -2298,6 +2478,7 @@ Page({
         this._sleepWordLoopRunning = false;
         this._sleepWordLoopToken = Number(this._sleepWordLoopToken || 0) + 1;
         this._sleepWordPlayToken = '';
+        this._sleepWordLoopFailCount = 0;
         if (this._sleepWordLoopTimer) {
             clearTimeout(this._sleepWordLoopTimer);
             this._sleepWordLoopTimer = null;
@@ -2464,6 +2645,7 @@ Page({
         this._sleepBackgroundAudioId = '';
         this._sleepBackgroundAudioSrc = '';
         this._sleepBackgroundRestarting = false;
+        this._sleepBackgroundStartGuardUntil = 0;
         if (!bg) return;
         try { bg.offEnded && bg.offEnded(); } catch (e) {}
         try { bg.offError && bg.offError(); } catch (e) {}
@@ -2471,7 +2653,11 @@ Page({
         if (!options.keepPlaying) {
             this._sleepStoppingBackground = true;
             try { bg.stop && bg.stop(); } catch (e) {}
-            this._sleepStoppingBackground = false;
+            if (this._sleepBackgroundStopGuardTimer) clearTimeout(this._sleepBackgroundStopGuardTimer);
+            this._sleepBackgroundStopGuardTimer = setTimeout(() => {
+                this._sleepBackgroundStopGuardTimer = null;
+                this._sleepStoppingBackground = false;
+            }, 300);
         }
     },
 
@@ -2482,6 +2668,7 @@ Page({
         this._sleepBackgroundAudio = bg;
         this._sleepBackgroundAudioId = option.id;
         this._sleepBackgroundAudioSrc = src;
+        this._sleepBackgroundStartGuardUntil = Date.now() + 1400;
 
         const applyMeta = () => {
             try { bg.title = '单词助眠'; } catch (e) {}
@@ -2493,6 +2680,7 @@ Page({
         const restart = () => {
             if (!this.data.sleepPlaying || this._sleepBackgroundAudioId !== option.id) return;
             this._sleepBackgroundRestarting = true;
+            this._sleepBackgroundStartGuardUntil = Date.now() + 900;
             try { bg.seek && bg.seek(0); } catch (e) {}
             try {
                 bg.play && bg.play();
@@ -2519,6 +2707,7 @@ Page({
         try {
             bg.onStop && bg.onStop(() => {
                 if (this._sleepStoppingBackground || this._sleepBackgroundRestarting) return;
+                if (Date.now() < Number(this._sleepBackgroundStartGuardUntil || 0)) return;
                 if (this.data.sleepPlaying && this._sleepBackgroundAudioId === option.id) {
                     this.stopSleepMixer({ silent: true });
                 }
@@ -2549,16 +2738,31 @@ Page({
     async startSleepMixer(options = {}) {
         if (this._sleepStarting) return false;
         this._sleepStarting = true;
+        const startToken = Number(this._sleepStartToken || 0) + 1;
+        this._sleepStartToken = startToken;
+        this.setData({ sleepStarting: true });
         const selectedIds = (this.data.sleepSelectedIds && this.data.sleepSelectedIds.length)
             ? this.data.sleepSelectedIds.slice(0, SLEEP_MAX_TRACKS)
             : [];
         if (!selectedIds.length) {
             this._sleepStarting = false;
+            if (this._sleepStartToken === startToken) this.setData({ sleepStarting: false });
             wx.showToast({ title: '先选择音色', icon: 'none' });
             return false;
         }
         const volumes = this.data.sleepVolumes || {};
         this.stopSleepAudioContexts();
+
+        if (options.enterFocus) {
+            this.setData({
+                sleepPlaying: true,
+                sleepSelectedIds: selectedIds,
+                sleepSelectedTracks: buildSleepSelectedTracks(selectedIds, volumes),
+                sleepActiveSummary: getSleepSummary(selectedIds)
+            });
+            if (!options.keepTimer) this.scheduleSleepTimer();
+            this.enterSleepFocusMode();
+        }
 
         try {
             if (wx.setInnerAudioOption) {
@@ -2578,6 +2782,7 @@ Page({
                 const option = getSleepOptionById(id);
                 if (!option) continue;
                 const src = await this.ensureSleepAudioFile(option);
+                if (this._sleepStartToken !== startToken) return false;
                 if (!src) continue;
                 const volume = getSleepOutputVolume(Number(volumes[id] != null ? volumes[id] : option.defaultVolume));
                 if (id === backgroundId) {
@@ -2604,8 +2809,10 @@ Page({
             }
 
             const hasContext = backgroundStarted || Object.keys(this._sleepAudioContexts || {}).length > 0;
+            const hasSession = hasContext || !!options.enterFocus || !!this.data.sleepFocusOpen || !!this._sleepWordLoopRunning;
+            if (this._sleepStartToken !== startToken) return false;
             this.setData({
-                sleepPlaying: hasContext,
+                sleepPlaying: hasSession,
                 sleepSelectedIds: selectedIds,
                 sleepSelectedTracks: buildSleepSelectedTracks(selectedIds, volumes),
                 sleepSoundOptions: buildSleepSoundCards(
@@ -2616,13 +2823,16 @@ Page({
                 ),
                 sleepActiveSummary: getSleepSummary(selectedIds)
             }, () => {
-                if (!options.keepTimer) this.scheduleSleepTimer();
-                if (hasContext && options.enterFocus) this.enterSleepFocusMode();
+                if (this._sleepStartToken !== startToken) return;
+                if (!options.enterFocus && !options.keepTimer) this.scheduleSleepTimer();
             });
-            if (!hasContext) wx.showToast({ title: '音频启动失败', icon: 'none' });
-            return hasContext;
+            if (!hasContext && !options.enterFocus) wx.showToast({ title: '音频启动失败', icon: 'none' });
+            return hasSession;
         } finally {
             this._sleepStarting = false;
+            if (this._sleepStartToken === startToken) {
+                this.setData({ sleepStarting: false });
+            }
         }
     },
 
@@ -2663,14 +2873,18 @@ Page({
     },
 
     stopSleepMixer(options = {}) {
+        this._sleepStartToken = Number(this._sleepStartToken || 0) + 1;
+        this._sleepStarting = false;
         this.clearSleepTimer();
         this.stopSleepBackgroundAudio();
         this.stopSleepAudioContexts();
         if (this._sleepWordLoopRunning) {
             this.stopSleepWordLoop({ silent: true });
         }
+        this.setSleepKeepScreenOn(false);
         this.setData({
             sleepPlaying: false,
+            sleepStarting: false,
             sleepRemainingText: '',
             sleepFocusOpen: false
         });
@@ -2686,11 +2900,14 @@ Page({
         const completedMap = overrides.completedMap || this.data.dualCompletedIds || {};
         const typingState = overrides.typingState || this.data.typingState || {};
         const inputMap = overrides.inputMap || this.data.dualNativeInputs || {};
-        const shouldFocusInput = overrides.inputFocus != null ? overrides.inputFocus : this.data.dualNativeInputFocus;
+        const reciteMode = !!this.data.dualReciteMode;
+        const shouldFocusInput = reciteMode
+            ? false
+            : (overrides.inputFocus != null ? overrides.inputFocus : this.data.dualNativeInputFocus);
         const hideKorean = overrides.hideKorean != null ? overrides.hideKorean : this.data.dualHideKorean;
         const revealWord = overrides.revealWord != null ? overrides.revealWord : this.data.dualRevealWord;
         const exampleRowId = overrides.exampleRowId != null ? overrides.exampleRowId : this.data.dualExampleRowId;
-        const dualColumnRows = buildDualColumnRows(words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId);
+        const dualColumnRows = buildDualColumnRows(words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId, reciteMode);
         this.setData({ dualColumnRows });
     },
 
@@ -2773,6 +2990,106 @@ Page({
         }
     },
 
+    async playDualReciteAudio(index) {
+        const words = this.data.words || [];
+        const safeIndex = normalizeIndex(index, words.length);
+        if (!words.length || !this.data.dualReciteMode) return;
+        const word = words[safeIndex];
+        if (!word || !word.word) return;
+        const completedKey = getDualCompletedKey(word, safeIndex);
+        this.setData({
+            dualExampleRowId: completedKey,
+            dualNativeInputFocus: false,
+            dualRevealWord: false
+        }, () => {
+            this.refreshDualColumnRows({
+                force: true,
+                inputFocus: false,
+                exampleRowId: completedKey,
+                revealWord: false
+            });
+        });
+
+        this._hasUserGesture = true;
+        this.ensureAudioContexts();
+        this._hasPlayedAudioOnce = true;
+        const playSeq = this.cancelCurrentAudioPlayback();
+        const wordId = safeWordId(word) || getDualWordKey(word, safeIndex);
+        await this.playAudioPartWithFallback(this.wordAudio, word, false, playSeq, wordId, {
+            allowInDual: true,
+            wordIdOverride: wordId,
+            skipCurrentCheck: true
+        });
+    },
+
+    toggleDualReciteMode(e) {
+        const mode = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.mode;
+        const next = mode === 'recite'
+            ? true
+            : (mode === 'spell' ? false : !this.data.dualReciteMode);
+        if (next === !!this.data.dualReciteMode) return;
+        if (next && typeof wx.hideKeyboard === 'function') {
+            wx.hideKeyboard();
+        }
+        this.cancelCurrentAudioPlayback();
+        this.setData({
+            dualReciteMode: next,
+            dualNativeInputFocus: next ? false : true,
+            dualRevealWord: false,
+            isKeyboardOpen: false,
+            showGuideBubble: false
+        }, () => {
+            this.refreshDualColumnRows({
+                force: true,
+                inputFocus: !next
+            });
+        });
+    },
+
+    resetDualColumnPractice() {
+        if (this._dualAdvanceTimer) clearTimeout(this._dualAdvanceTimer);
+        this._dualAdvanceTimer = null;
+        if (this._dualHintAdvanceTimer) clearTimeout(this._dualHintAdvanceTimer);
+        this._dualHintAdvanceTimer = null;
+        this.clearDualRevealTimer();
+        this.resetDualTimer();
+        this.unlockDualColumnActions();
+
+        const words = this.data.words || [];
+        const currentIndex = normalizeIndex(this.data.currentIndex || 0, words.length);
+        this.setData({
+            dualCompletedIds: {},
+            dualNativeInputs: {},
+            dualNativeInputFocus: false,
+            dualRevealWord: false,
+            dualExampleRowId: '',
+            dualActionLocked: false,
+            isCorrect: false,
+            prevWordInfo: null,
+            dualScrollIntoView: `dual-row-${currentIndex}`
+        }, () => {
+            this.refreshDualColumnRows({
+                force: true,
+                completedMap: {},
+                inputMap: {},
+                inputFocus: false,
+                revealWord: false,
+                exampleRowId: ''
+            });
+        });
+        if (typeof wx.hideKeyboard === 'function') {
+            wx.hideKeyboard();
+        }
+    },
+
+    handleDualEndOrReset() {
+        if (this.data.dualTimerRunning || this.data.dualTimerPaused || Number(this.data.dualElapsedSeconds || 0) > 0) {
+            this.stopDualTimer();
+            return;
+        }
+        this.resetDualColumnPractice();
+    },
+
     toggleDualTimerStart() {
         if (this.data.dualTimerRunning) {
             this.pauseDualTimer();
@@ -2821,7 +3138,7 @@ Page({
             isKeyboardOpen: nextMode ? false : this.data.isKeyboardOpen,
             showGuideBubble: false,
             practiceToolsOpen: false,
-            dualNativeInputFocus: nextMode,
+            dualNativeInputFocus: nextMode && !this.data.dualReciteMode,
             dualScrollIntoView: `dual-row-${normalizeIndex(this.data.currentIndex || 0, (this.data.words || []).length)}`
         }, () => {
             if (nextMode) {
@@ -2883,6 +3200,18 @@ Page({
             if (found >= 0) nextIndex = found;
         }
         this.startWord(nextIndex, null);
+        if (this.data.dualReciteMode) {
+            this.setData({
+                isKeyboardOpen: false,
+                showGuideBubble: false,
+                dualNativeInputFocus: false
+            }, () => {
+                this.refreshDualColumnRows({ force: true, inputFocus: false });
+                this.playDualReciteAudio(nextIndex);
+            });
+            if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+            return;
+        }
         this.setData({
             isKeyboardOpen: false,
             showGuideBubble: false,
@@ -2939,6 +3268,20 @@ Page({
         const index = Number(e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.index);
         const words = this.data.words || [];
         if (!Number.isFinite(index) || index < 0 || index >= words.length) return;
+        if (this.data.dualReciteMode) {
+            this.cancelCurrentAudioPlayback();
+            this.setData({
+                isKeyboardOpen: false,
+                showGuideBubble: false,
+                dualNativeInputFocus: false,
+                dualRevealWord: false
+            }, () => {
+                this.refreshDualColumnRows({ force: true, inputFocus: false, revealWord: false });
+                this.playDualReciteAudio(index);
+            });
+            if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+            return;
+        }
         this.lockDualColumnActions(180);
         this.startWord(index, null);
         this.setData({
@@ -3457,6 +3800,11 @@ Page({
         this._shareImageTimer = null;
         if (this._audioGapTimer) clearTimeout(this._audioGapTimer);
         this._audioGapTimer = null;
+        if (this._sleepVolumePreviewTimer) clearTimeout(this._sleepVolumePreviewTimer);
+        this._sleepVolumePreviewTimer = null;
+        if (this._sleepBackgroundStopGuardTimer) clearTimeout(this._sleepBackgroundStopGuardTimer);
+        this._sleepBackgroundStopGuardTimer = null;
+        this._sleepStoppingBackground = false;
         if (this._dualAdvanceTimer) clearTimeout(this._dualAdvanceTimer);
         this._dualAdvanceTimer = null;
         if (this._dualRevealTimer) clearTimeout(this._dualRevealTimer);
@@ -4620,6 +4968,7 @@ Page({
 
             let settled = false;
             let started = false;
+            let playRequested = false;
             let retryTimer = null;
             let failTimer = null;
 
@@ -4666,10 +5015,9 @@ Page({
                 if (cacheKey && cacheUrl && this._audioUrlMemo && this._audioUrlMemo.set) {
                     this._audioUrlMemo.set(cacheKey, cacheUrl);
                 }
-                // If not started yet, try playing again when ready
-                if (!started && !settled) {
+                if (!playRequested && !started && !settled) {
                     console.log(logPrefix, 'onCanplay -> attemptPlay');
-                    attemptPlay();
+                    attemptPlay('canplay');
                 }
             };
 
@@ -4710,17 +5058,20 @@ Page({
             try { audioCtx.loop = false; } catch (e) {}
             audioCtx.src = src;
             
-            const attemptPlay = () => {
+            const attemptPlay = (reason = 'manual') => {
+                if (settled || started || playRequested) return;
                 try {
-                    console.log(logPrefix, 'Calling audioCtx.play()');
+                    playRequested = true;
+                    console.log(logPrefix, 'Calling audioCtx.play()', reason);
                     audioCtx.play();
                 } catch (e) {
+                    playRequested = false;
                     console.error(logPrefix, 'Play exception:', e);
                 }
             };
             
             // Manual play triggers loading
-            attemptPlay();
+            attemptPlay('initial');
 
             // Timeout Logic
             // If it's a local file, we expect it to be fast. If it stalls, it's likely corrupt or context issue.
@@ -4742,8 +5093,8 @@ Page({
                     console.warn(logPrefix, 'Local file timeout -> Fail immediately to trigger fallback');
                     settle(false);
                 } else {
-                    // For network, try one more time or just wait for overall timeout
-                    attemptPlay();
+                    // Do not call play() repeatedly on Android; it may enqueue duplicate playback.
+                    console.warn(logPrefix, 'Network still waiting, keep current play request');
                 }
             }, retryDelay);
 
@@ -4932,6 +5283,9 @@ Page({
 
     canPlayCurrentWordAudio(playSeq, wordId, options = {}) {
         if ((this._dualWordAudioBlocked || this.data.dualColumnMode) && !options.allowInDual) return false;
+        if (options.skipCurrentCheck) {
+            return this._audioPlaySeq === playSeq;
+        }
         return this.isAudioRequestCurrent(playSeq, wordId);
     },
 
@@ -5016,7 +5370,7 @@ Page({
 
         const wordId = safeWordId(current);
         if (!this.canPlayCurrentWordAudio(playSeq, wordId, options)) return;
-        const playMeaning = !!(this.data.settings && this.data.settings.pronounceMeaning);
+        const playMeaning = !options.skipMeaning && !!(this.data.settings && this.data.settings.pronounceMeaning);
         if (this.shouldPreferEdgeTtsAudio()) {
             this.preloadEdgeTtsWindow(Number(this.data.currentIndex || 0), playMeaning);
         }
@@ -5233,7 +5587,16 @@ Page({
             }
     },
 
-    onShareAppMessage() {
+    onShareAppMessage(res) {
+        const shareType = res && res.target && res.target.dataset && res.target.dataset.shareType;
+        if (shareType === 'sleep' || this.data.sleepFocusOpen) {
+            return {
+                title: '睡不着？来听单词助眠',
+                path: '/pages/nv-practice/index?from=sleep',
+                imageUrl: this.data.shareImagePath || ''
+            };
+        }
+
         const word = (this.data.currentWord && this.data.currentWord.word) || '韩语单词';
         const meaning = (this.data.currentWord && this.data.currentWord.meaning) || 'Korean Practice';
         const path = '/pages/nv-practice/index';
@@ -5246,6 +5609,13 @@ Page({
     },
 
     onShareTimeline() {
+        if (this.data.sleepFocusOpen) {
+            return {
+                 title: '睡不着？来听单词助眠',
+                 imageUrl: this.data.shareImagePath || ''
+            };
+        }
+
         const word = (this.data.currentWord && this.data.currentWord.word) || '韩语单词';
         return {
              title: `我在练习：${word}`,
@@ -5385,7 +5755,9 @@ Page({
         if (!added) return;
 
         try {
-            await this.playWordAudio();
+            const progress = Number(this.data.naggingRepeatProgress || 0);
+            const currentWord = this._currentWordRuntime || this.data.currentWord;
+            await this.playNaggingAudioForCurrent(currentWord, progress <= 1, loopId);
         } catch (e) {
             console.error('Nagging loop audio error', e);
             // Safety delay on error
@@ -5410,6 +5782,22 @@ Page({
             
             this.naggingAudioLoop(loopId);
         }
+    },
+
+    async playNaggingAudioForCurrent(currentWord, isChinese, loopId) {
+        if (!this.data.isNaggingMode || loopId !== this._naggingLoopId) return null;
+        if (!currentWord || !currentWord.word) return false;
+        this._hasUserGesture = true;
+        this.ensureAudioContexts();
+        this._hasPlayedAudioOnce = true;
+
+        const playSeq = this.cancelCurrentAudioPlayback();
+        const wordId = safeWordId(currentWord);
+        const ctx = isChinese ? this.cnAudio : this.wordAudio;
+        const ok = await this.playAudioPartWithFallback(ctx, currentWord, isChinese, playSeq, wordId, { allowInDual: true });
+        if (!this.data.isNaggingMode || loopId !== this._naggingLoopId) return null;
+        if (!ok) this.notifyMissingAudioOnce(wordId, !!isChinese);
+        return ok;
     },
 
     scheduleNextNaggingWord(loopId) {
