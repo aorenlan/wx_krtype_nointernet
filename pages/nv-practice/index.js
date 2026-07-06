@@ -2620,6 +2620,8 @@ Page({
                 this._dualWordAudioBlocked = false;
                 this.clearDualRevealTimer();
                 this.stopDualTimer();
+                if (this._dualHintAdvanceTimer) clearTimeout(this._dualHintAdvanceTimer);
+                this._dualHintAdvanceTimer = null;
                 this.setData({ dualColumnRows: [], dualNativeInputFocus: false, dualRevealWord: false, dualExampleRowId: '', dualScrollIntoView: 'dual-row-0' });
             }
         });
@@ -2631,6 +2633,8 @@ Page({
         this.stopDualTimer();
         if (this._dualAdvanceTimer) clearTimeout(this._dualAdvanceTimer);
         this._dualAdvanceTimer = null;
+        if (this._dualHintAdvanceTimer) clearTimeout(this._dualHintAdvanceTimer);
+        this._dualHintAdvanceTimer = null;
         this.unlockDualColumnActions();
         if (typeof wx.hideKeyboard === 'function') {
             wx.hideKeyboard();
@@ -2683,6 +2687,8 @@ Page({
 
     revealDualKoreanWord() {
         this.clearDualRevealTimer();
+        if (this._dualHintAdvanceTimer) clearTimeout(this._dualHintAdvanceTimer);
+        this._dualHintAdvanceTimer = null;
         const words = this.data.words || [];
         const index = Number(this.data.currentIndex || 0);
         const word = words[index];
@@ -2706,6 +2712,14 @@ Page({
                 inputFocus: true,
                 revealWord: true
             });
+            this._dualHintAdvanceTimer = setTimeout(() => {
+                this._dualHintAdvanceTimer = null;
+                const latestWords = this.data.words || [];
+                const latestWord = latestWords[index];
+                if (!latestWord || getDualCompletedKey(latestWord, index) !== completedKey) return;
+                if ((this.data.dualCompletedIds || {})[completedKey]) return;
+                this.completeDualNativeWord(latestWord, index, nextInputs);
+            }, 120);
         });
     },
 
@@ -2830,6 +2844,7 @@ Page({
                 dualCompletedIds: completedMap,
                 dualNativeInputs: inputMap || this.data.dualNativeInputs || {},
                 dualNativeInputFocus: false,
+                dualRevealWord: false,
                 dualExampleRowId: completedKey,
                 dualScrollIntoView: completedScrollTarget,
                 isCorrect: true
@@ -3236,6 +3251,8 @@ Page({
         this._dualAdvanceTimer = null;
         if (this._dualRevealTimer) clearTimeout(this._dualRevealTimer);
         this._dualRevealTimer = null;
+        if (this._dualHintAdvanceTimer) clearTimeout(this._dualHintAdvanceTimer);
+        this._dualHintAdvanceTimer = null;
     },
 
     startModeLogic() {
