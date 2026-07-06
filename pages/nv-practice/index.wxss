@@ -302,6 +302,135 @@
   white-space: nowrap;
 }
 
+.sleep-focus-page {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 12000;
+  padding-left: 22px;
+  padding-right: 22px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #050609 0%, #0e1118 54%, #06070a 100%);
+  color: #f7f8fb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sleep-focus-top {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.sleep-focus-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sleep-focus-label {
+  color: rgba(247, 248, 251, 0.96);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.sleep-focus-summary {
+  max-width: 220px;
+  color: rgba(207, 214, 225, 0.68);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sleep-focus-exit {
+  height: 28px;
+  min-width: 52px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 248, 251, 0.16);
+  background: rgba(247, 248, 251, 0.06);
+  color: rgba(247, 248, 251, 0.88);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 28px;
+  text-align: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.sleep-focus-exit:active {
+  transform: scale(0.97);
+}
+
+.sleep-focus-center {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-bottom: 28px;
+  box-sizing: border-box;
+}
+
+.sleep-focus-progress {
+  margin-bottom: 18px;
+  color: rgba(207, 214, 225, 0.44);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.sleep-focus-meaning {
+  max-width: 84%;
+  color: rgba(247, 248, 251, 0.96);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.sleep-focus-word {
+  max-width: 86%;
+  margin-top: 18px;
+  color: rgba(207, 214, 225, 0.58);
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.12;
+  word-break: break-word;
+}
+
+.sleep-focus-line {
+  width: 34px;
+  height: 3px;
+  margin-top: 20px;
+  border-radius: 999px;
+  background: #f5aa24;
+}
+
+.sleep-focus-bottom {
+  height: 30px;
+  color: rgba(207, 214, 225, 0.42);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
 .sleep-sheet-mask {
   position: fixed;
   left: 0;

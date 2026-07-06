@@ -1,5 +1,24 @@
 <custom-nav subtitle="{{displayCategory}}" progress="{{words.length > 0 ? (currentIndex + 1) + ' / ' + words.length : ''}}" theme="light" bind:settings="openSettings" showSettingsTooltip="{{showSettingsTooltip}}" settingsTooltipText="{{settingsTooltipText}}"></custom-nav>
 
+<view class="sleep-focus-page" wx:if="{{sleepFocusOpen}}" catchtap="preventBubble" style="padding-top: {{statusBarHeight + 18}}px;">
+  <view class="sleep-focus-top">
+    <view class="sleep-focus-copy">
+      <text class="sleep-focus-label">单词助眠</text>
+      <text class="sleep-focus-summary">{{sleepActiveSummary}}</text>
+    </view>
+    <view class="sleep-focus-exit" catchtap="stopSleepFocusMode">结束</view>
+  </view>
+  <view class="sleep-focus-center">
+    <text class="sleep-focus-progress">{{sleepWordLoopProgressText}}</text>
+    <text class="sleep-focus-meaning">{{sleepWordLoopMeaning || '准备入睡'}}</text>
+    <text class="sleep-focus-word">{{sleepWordLoopCurrent}}</text>
+    <view class="sleep-focus-line"></view>
+  </view>
+  <view class="sleep-focus-bottom">
+    <text>{{sleepRemainingText ? '剩余 ' + sleepRemainingText : '不定时'}}</text>
+  </view>
+</view>
+
 <view class="container {{isKeyboardOpen ? 'keyboard-open' : ''}} {{showSettingsModal ? 'modal-open' : ''}} {{isIPad ? 'ipad-mode' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight + 10}}px;" bindtap="focusHiddenInput">
   <input class="hidden-input" value="{{hiddenInputValue}}" focus="{{inputFocus}}" bindinput="onHiddenInput" bindblur="onHiddenInputBlur" maxlength="-1" />
 

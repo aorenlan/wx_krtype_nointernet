@@ -549,6 +549,7 @@ Page({
         dualTimerRunning: false,
         dualTimerPaused: false,
         sleepPanelOpen: false,
+        sleepFocusOpen: false,
         sleepCategories: SLEEP_SOUND_CATEGORIES,
         sleepActiveCategoryId: SLEEP_DEFAULT_CATEGORY_ID,
         sleepSoundOptions: buildSleepSoundCards([SLEEP_DEFAULT_SOUND_ID], {}, SLEEP_DEFAULT_CATEGORY_ID, {}),
@@ -573,6 +574,7 @@ Page({
         sleepPreviewLoadingId: '',
         sleepWordLoopRunning: false,
         sleepWordLoopCurrent: '从当前词开始 · 最多100词',
+        sleepWordLoopMeaning: '',
         sleepWordLoopProgressText: '0/0',
         
         // Typing State (Korean)
@@ -1933,7 +1935,11 @@ Page({
 
     tapPracticeSleepTool() {
         this.setData({ practiceToolsOpen: false }, () => {
-            this.openSleepPanel();
+            if (this.data.sleepPlaying) {
+                this.enterSleepFocusMode();
+            } else {
+                this.openSleepPanel();
+            }
         });
     },
 
@@ -2052,7 +2058,36 @@ Page({
             this.stopSleepMixer();
             return;
         }
-        this.startSleepMixer();
+        this.startSleepMixer({ enterFocus: true });
+    },
+
+    enterSleepFocusMode() {
+        this._sleepPreviewToken = Number(this._sleepPreviewToken || 0) + 1;
+        this.stopSleepPreviewAudio();
+        const current = this._currentWordRuntime || this.data.currentWord || {};
+        this.setData({
+            sleepFocusOpen: true,
+            sleepPanelOpen: false,
+            practiceToolsOpen: false,
+            showGuideBubble: false,
+            sleepPreviewLoadingId: '',
+            sleepWordLoopCurrent: this._sleepWordLoopRunning
+                ? this.data.sleepWordLoopCurrent
+                : (current.word || '准备播放'),
+            sleepWordLoopMeaning: this._sleepWordLoopRunning
+                ? this.data.sleepWordLoopMeaning
+                : (current.meaning || ''),
+            sleepWordLoopProgressText: this._sleepWordLoopRunning
+                ? this.data.sleepWordLoopProgressText
+                : '0/0'
+        });
+        if (!this._sleepWordLoopRunning) {
+            this.startSleepWordLoop({ silent: true });
+        }
+    },
+
+    stopSleepFocusMode() {
+        this.stopSleepMixer();
     },
 
     stopSleepPreviewAudio() {
@@ -2218,6 +2253,7 @@ Page({
             const displayWord = String(wordInfo.word || '').trim();
             this.setData({
                 sleepWordLoopCurrent: displayWord || '准备播放',
+                sleepWordLoopMeaning: String(wordInfo.meaning || '').trim(),
                 sleepWordLoopProgressText: `${cursor + 1}/${list.length}`
             });
 
@@ -2233,12 +2269,12 @@ Page({
         }
     },
 
-    startSleepWordLoop() {
-        if (this._sleepWordLoopRunning) return;
+    startSleepWordLoop(options = {}) {
+        if (this._sleepWordLoopRunning) return true;
         const list = this.buildSleepWordLoopList();
         if (!list.length) {
-            wx.showToast({ title: '当前没有可播放单词', icon: 'none' });
-            return;
+            if (!options.silent) wx.showToast({ title: '当前没有可播放单词', icon: 'none' });
+            return false;
         }
         this.stopSleepPreviewAudio();
         this._sleepWordLoopList = list;
@@ -2248,12 +2284,14 @@ Page({
         this.setData({
             sleepWordLoopRunning: true,
             sleepWordLoopCurrent: '准备播放',
+            sleepWordLoopMeaning: '',
             sleepWordLoopProgressText: `0/${list.length}`
         });
         this.runSleepWordLoop(this._sleepWordLoopToken).catch((err) => {
             console.warn('[sleep word loop] stopped by error:', err);
             this.stopSleepWordLoop();
         });
+        return true;
     },
 
     stopSleepWordLoop(options = {}) {
@@ -2272,6 +2310,7 @@ Page({
         this.setData({
             sleepWordLoopRunning: false,
             sleepWordLoopCurrent: '从当前词开始 · 最多100词',
+            sleepWordLoopMeaning: '',
             sleepWordLoopProgressText: this._sleepWordLoopList && this._sleepWordLoopList.length
                 ? `0/${this._sleepWordLoopList.length}`
                 : '0/0'
@@ -2508,7 +2547,7 @@ Page({
     },
 
     async startSleepMixer(options = {}) {
-        if (this._sleepStarting) return;
+        if (this._sleepStarting) return false;
         this._sleepStarting = true;
         const selectedIds = (this.data.sleepSelectedIds && this.data.sleepSelectedIds.length)
             ? this.data.sleepSelectedIds.slice(0, SLEEP_MAX_TRACKS)
@@ -2516,7 +2555,7 @@ Page({
         if (!selectedIds.length) {
             this._sleepStarting = false;
             wx.showToast({ title: '先选择音色', icon: 'none' });
-            return;
+            return false;
         }
         const volumes = this.data.sleepVolumes || {};
         this.stopSleepAudioContexts();
@@ -2578,8 +2617,10 @@ Page({
                 sleepActiveSummary: getSleepSummary(selectedIds)
             }, () => {
                 if (!options.keepTimer) this.scheduleSleepTimer();
+                if (hasContext && options.enterFocus) this.enterSleepFocusMode();
             });
             if (!hasContext) wx.showToast({ title: '音频启动失败', icon: 'none' });
+            return hasContext;
         } finally {
             this._sleepStarting = false;
         }
@@ -2625,9 +2666,13 @@ Page({
         this.clearSleepTimer();
         this.stopSleepBackgroundAudio();
         this.stopSleepAudioContexts();
+        if (this._sleepWordLoopRunning) {
+            this.stopSleepWordLoop({ silent: true });
+        }
         this.setData({
             sleepPlaying: false,
-            sleepRemainingText: ''
+            sleepRemainingText: '',
+            sleepFocusOpen: false
         });
         if (options.fromTimer) {
             wx.showToast({ title: '助眠音已关闭', icon: 'none' });
