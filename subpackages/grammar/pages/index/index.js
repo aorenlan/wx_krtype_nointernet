@@ -38,6 +38,49 @@ const parseContent = (s) => {
 };
 
 const buildKey = (x) => `${x.category}__${String(x.lesson_id)}__${String(x.global_id || x.grammar || '')}`;
+const GRAMMAR_EXAMPLE_VIEW_KEY = 'grammar_example_view_settings_v1';
+
+function loadExampleViewSettings() {
+  try {
+    const stored = wx.getStorageSync(GRAMMAR_EXAMPLE_VIEW_KEY) || {};
+    return {
+      exampleShowKor: stored.exampleShowKor !== false,
+      exampleShowTrans: stored.exampleShowTrans !== false,
+      exampleFlipMode: stored.exampleFlipMode === true
+    };
+  } catch (error) {
+    return {
+      exampleShowKor: true,
+      exampleShowTrans: true,
+      exampleFlipMode: false
+    };
+  }
+}
+
+function saveExampleViewSettings(settings) {
+  try {
+    wx.setStorageSync(GRAMMAR_EXAMPLE_VIEW_KEY, {
+      exampleShowKor: settings.exampleShowKor !== false,
+      exampleShowTrans: settings.exampleShowTrans !== false,
+      exampleFlipMode: settings.exampleFlipMode === true
+    });
+  } catch (error) {
+    // View settings are non-critical.
+  }
+}
+
+function buildExampleParts(rawExamples) {
+  return (Array.isArray(rawExamples) ? rawExamples : []).map((ex, index) => {
+    const kor = ex && (ex.kr || ex.kor) ? String(ex.kr || ex.kor) : '';
+    const trans = ex && (ex.cn || ex.trans) ? String(ex.cn || ex.trans) : '';
+    return {
+      key: `ex_${index}_${String(kor).slice(0, 12)}`,
+      kor,
+      trans,
+      revealed: false
+    };
+  });
+}
 
 Page({
   data: {
@@ -52,6 +95,9 @@ Page({
     meaningParts: [],
     usageParts: [],
     exampleParts: [],
+    exampleShowKor: true,
+    exampleShowTrans: true,
+    exampleFlipMode: false,
     sidebarCollapsed: true,
     startX: 0,
     startY: 0
@@ -113,12 +159,7 @@ Page({
     const meaningParts = parseContent(found.meaning);
     const usageParts = parseContent(found.usage_notes);
 
-    // Map structured examples to {kor, trans}
-    const rawExamples = Array.isArray(found.examples) ? found.examples : [];
-    const exampleParts = rawExamples.map(ex => ({
-      kor: ex.kr || ex.kor || '', // Handle both keys just in case
-      trans: ex.cn || ex.trans || ''
-    }));
+    const exampleParts = buildExampleParts(found.examples);
 
     this.setData({
       currentKey: key,
@@ -193,7 +234,8 @@ Page({
     const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     this.setData({
       statusBarHeight: windowInfo.statusBarHeight || 20,
-      navBarHeight: 44
+      navBarHeight: 44,
+      ...loadExampleViewSettings()
     });
 
     const book = String((query && (query.book || query.category)) || '').trim();
@@ -222,6 +264,8 @@ Page({
 
   playExampleAudio(e) {
       const text = e.currentTarget.dataset.text;
+      const key = e.currentTarget.dataset.key;
+      this.revealExampleByKey(key);
       if (!text) return;
 
       const url = this.buildAudioUrl(text);
@@ -286,11 +330,7 @@ Page({
     if (first) {
       meaningParts = parseContent(first.meaning);
       usageParts = parseContent(first.usage_notes);
-      const rawExamples = Array.isArray(first.examples) ? first.examples : [];
-      exampleParts = rawExamples.map(ex => ({
-        kor: ex.kr || ex.kor || '',
-        trans: ex.cn || ex.trans || ''
-      }));
+      exampleParts = buildExampleParts(first.examples);
     }
 
     this.setData({
@@ -305,6 +345,59 @@ Page({
       subtitle,
       sidebarCollapsed: true
     });
+  },
+
+  toggleExampleViewSetting(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    const next = {
+      exampleShowKor: this.data.exampleShowKor,
+      exampleShowTrans: this.data.exampleShowTrans,
+      exampleFlipMode: this.data.exampleFlipMode
+    };
+
+    if (
+      key === 'exampleFlipMode'
+      && !next.exampleFlipMode
+      && next.exampleShowKor
+      && next.exampleShowTrans
+    ) {
+      wx.showToast({
+        title: '请先关闭韩文或中文',
+        icon: 'none',
+        duration: 1600
+      });
+      return;
+    }
+
+    next[key] = !next[key];
+
+    const updates = { [key]: next[key] };
+    if (key === 'exampleFlipMode' && !next.exampleFlipMode) {
+      updates.exampleParts = (this.data.exampleParts || []).map((item) => ({
+        ...item,
+        revealed: false
+      }));
+    }
+
+    this.setData(updates);
+    saveExampleViewSettings(next);
+  },
+
+  revealExampleByKey(key) {
+    if (!this.data.exampleFlipMode || !key) return;
+    const exampleParts = (this.data.exampleParts || []).map((item) => (
+      item.key === key ? { ...item, revealed: true } : item
+    ));
+    this.setData({ exampleParts });
+  },
+
+  resetExampleReveals() {
+    const exampleParts = (this.data.exampleParts || []).map((item) => ({
+      ...item,
+      revealed: false
+    }));
+    this.setData({ exampleParts });
   },
 
   toggleSidebar() {

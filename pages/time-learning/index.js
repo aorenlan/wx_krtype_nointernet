@@ -773,7 +773,7 @@ Page({
 
         const onError = (res) => {
             console.error(logPrefix, 'onError', res);
-            settle(false);
+            settle(started);
         };
 
         audioCtx.onCanplay(onCanplay);

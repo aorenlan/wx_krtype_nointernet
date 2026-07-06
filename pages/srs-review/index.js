@@ -126,9 +126,14 @@ Page({
       console.log('[SRS audio] playSrc:', src);
       const ctx = wx.createInnerAudioContext();
       this._audioCtx = ctx;
-      ctx.onPlay(() => { console.log('[SRS audio] onPlay fired'); });
+      let started = false;
+      ctx.onPlay(() => {
+        started = true;
+        console.log('[SRS audio] onPlay fired');
+      });
       ctx.onError((err) => {
         console.error('[SRS audio] playError:', JSON.stringify(err));
+        if (started) return;
         // 播放失败时如果还有 fallback URL，继续尝试；否则走 edgeTts 兜底
         if (fallbackUrls && fallbackUrls.length > 0) {
           console.log('[SRS audio] trying next url');

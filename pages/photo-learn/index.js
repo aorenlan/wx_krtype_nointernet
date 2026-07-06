@@ -169,9 +169,9 @@ function getQuotaSnapshot(config) {
 function buildQuotaText(config, snapshot) {
   if (!config || config.enabled === false) return '';
   if (snapshot.remaining > 0) {
-    return `今日还可拍 ${snapshot.remaining} 次`;
+    return `使用次数 ${snapshot.remaining} 次`;
   }
-  return '今日次数已用完，去获取次数吧~';
+  return '使用次数已用完，去获取次数吧~';
 }
 
 function normalizeHistoryRecords(records) {
@@ -226,6 +226,7 @@ function buildHistoryRecordFromCard(card, imagePath, sourceType) {
     categoryKey: card.categoryKey || card.aiCategoryKey || '',
     wordCount: words.length,
     words,
+    sentenceDetails: null,
     card,
     aiTraceId: card.aiTraceId || ''
   };
@@ -311,19 +312,19 @@ function getReadableQwenError(error) {
     return '识别失败，请换一张日常图片';
   }
   if (/FUNCTION_NOT_FOUND|function not found|qwenScene/i.test(message)) {
-    return '识别云函数 qwenScene 还没有部署';
+    return '识别服务暂不可用，请稍后再试';
   }
   if (/Missing QWEN_API_KEY/i.test(message)) {
-    return '云函数缺少 QWEN_API_KEY';
+    return '识别服务配置异常，请稍后再试';
   }
   if (/wx-server-sdk is required|downloadFile|Downloaded image file/i.test(message)) {
-    return '云函数依赖未安装，请用云端安装依赖重新部署';
+    return '识别服务暂未准备好，请稍后再试';
   }
   if (/Missing QWEN_OPENAI_BASE_URL|Missing QWEN_API_HOST/i.test(message)) {
-    return '云函数缺少 Qwen 接口地址配置';
+    return '识别服务配置异常，请稍后再试';
   }
   if (/Qwen output|Invalid Qwen response|parse response/i.test(message)) {
-    return '模型返回不完整，请再试一次';
+    return '识别结果不完整，请再试一次';
   }
   if (/timeout|TIME_LIMIT|timed out/i.test(message)) {
     return '识别超时，请稍后再试';
@@ -352,6 +353,12 @@ Page({
 	    isAnalyzing: false,
 	    analysisStatus: '',
 	    speakingWordIndex: -1,
+    audioPrepVisible: false,
+    audioPrepRecordId: '',
+    audioPrepStatus: '',
+    audioPrepText: '',
+    audioPrepDone: 0,
+    audioPrepTotal: 0,
     shareImagePath: '',
     photoQuotaEnabled: DEFAULT_PHOTO_LEARN_RECOGNITION_CONFIG.enabled,
     photoQuotaRemaining: DEFAULT_PHOTO_LEARN_RECOGNITION_CONFIG.dailyFreeLimit,
@@ -399,6 +406,10 @@ Page({
     if (this._shareImageTimer) {
       clearTimeout(this._shareImageTimer);
       this._shareImageTimer = null;
+    }
+    if (this.audioPrepHideTimer) {
+      clearTimeout(this.audioPrepHideTimer);
+      this.audioPrepHideTimer = null;
     }
 	    this.stopWordAudio(true);
 	  },
@@ -770,7 +781,7 @@ Page({
       };
       photoRecognitionAdCloseResolver = (res) => {
         const completed = !res || res.isEnded;
-        finish(completed, completed ? '已增加识别次数' : '看完广告后增加次数');
+        finish(completed, completed ? '已增加使用次数' : '看完广告后增加使用次数');
       };
       photoRecognitionAdErrorResolver = () => {
         finish(false, '广告暂不可用');
@@ -866,7 +877,7 @@ Page({
       this.scheduleShareImage();
     });
     if (currentRecord) {
-      this.prefetchRecordWordAudio(currentRecord);
+      this.prefetchRecordWordAudio(currentRecord, { showStatus: false });
     }
   },
 
@@ -899,7 +910,7 @@ Page({
     }, () => {
       this.scheduleShareImage();
     });
-    this.prefetchRecordWordAudio(savedRecord);
+    this.prefetchRecordWordAudio(savedRecord, { showStatus: true });
     return savedRecord;
   },
 
@@ -913,11 +924,13 @@ Page({
       currentRecord: null,
       shareImagePath: '',
       isAnalyzing: true,
-      analysisStatus: '正在压缩图片'
-    });
-    wx.showLoading({
-      title: '识别中',
-      mask: true
+      analysisStatus: '正在压缩图片',
+      audioPrepVisible: false,
+      audioPrepRecordId: '',
+      audioPrepStatus: '',
+      audioPrepText: '',
+      audioPrepDone: 0,
+      audioPrepTotal: 0
     });
 
     try {
@@ -950,8 +963,6 @@ Page({
         icon: 'none',
         duration: 2600
       });
-    } finally {
-      wx.hideLoading();
     }
   },
 
@@ -1160,13 +1171,70 @@ Page({
 	    });
 	  },
 
-	  async prefetchRecordWordAudio(record) {
+	  setAudioPrepState(record, patch = {}) {
+	    const recordId = record && record.id ? String(record.id) : '';
+	    const currentRecord = this.data.currentRecord;
+	    if (recordId && currentRecord && currentRecord.id && String(currentRecord.id) !== recordId) {
+	      return;
+	    }
+	    if (this.audioPrepHideTimer) {
+	      clearTimeout(this.audioPrepHideTimer);
+	      this.audioPrepHideTimer = null;
+	    }
+	    this.setData({
+	      audioPrepVisible: typeof patch.visible === 'boolean' ? patch.visible : this.data.audioPrepVisible,
+	      audioPrepRecordId: recordId || this.data.audioPrepRecordId,
+	      audioPrepStatus: patch.status || this.data.audioPrepStatus,
+	      audioPrepText: patch.text || this.data.audioPrepText,
+	      audioPrepDone: typeof patch.done === 'number' ? patch.done : this.data.audioPrepDone,
+	      audioPrepTotal: typeof patch.total === 'number' ? patch.total : this.data.audioPrepTotal
+	    });
+	  },
+
+	  hideAudioPrepLater(record, delay = 1400) {
+	    const recordId = record && record.id ? String(record.id) : '';
+	    if (this.audioPrepHideTimer) {
+	      clearTimeout(this.audioPrepHideTimer);
+	    }
+	    this.audioPrepHideTimer = setTimeout(() => {
+	      this.audioPrepHideTimer = null;
+	      const currentRecord = this.data.currentRecord;
+	      if (recordId && currentRecord && currentRecord.id && String(currentRecord.id) !== recordId) {
+	        return;
+	      }
+	      if (recordId && this.data.audioPrepRecordId && String(this.data.audioPrepRecordId) !== recordId) {
+	        return;
+	      }
+	      this.setData({ audioPrepVisible: false });
+	    }, delay);
+	  },
+
+	  async prefetchRecordWordAudio(record, options = {}) {
 	    const words = getRecordKoreanWords(record);
-	    if (!words.length) return Promise.resolve(false);
+	    const showStatus = !!options.showStatus;
+	    if (!words.length) {
+	      if (showStatus) {
+	        this.setAudioPrepState(record, { visible: false, status: '', text: '', done: 0, total: 0 });
+	      }
+	      return Promise.resolve(false);
+	    }
 	    this.prepareRecordWordAudioContexts(record);
 
 	    if (!this.edgeTtsPrefetchByWord) {
 	      this.edgeTtsPrefetchByWord = {};
+	    }
+
+	    const total = words.length;
+	    const countReady = () => words.filter((word) => fileExists(this.getWordAudioFilePath(word))).length;
+	    let preparedCount = countReady();
+	    if (showStatus) {
+	      this.setAudioPrepState(record, {
+	        visible: true,
+	        status: 'preparing',
+	        text: '朗读音频正在生成中，请稍等',
+	        done: preparedCount,
+	        total
+	      });
 	    }
 
 	    const requestWords = words.filter((word) => {
@@ -1174,7 +1242,19 @@ Page({
 	      if (this.edgeTtsPending && this.edgeTtsPending[word]) return false;
 	      return !this.edgeTtsPrefetchByWord[word];
 	    });
-	    if (!requestWords.length) return Promise.resolve(true);
+	    if (!requestWords.length) {
+	      if (showStatus) {
+	        this.setAudioPrepState(record, {
+	          visible: true,
+	          status: 'ready',
+	          text: '朗读音频准备好啦',
+	          done: total,
+	          total
+	        });
+	        this.hideAudioPrepLater(record);
+	      }
+	      return Promise.resolve(true);
+	    }
 
 	    const batchPromise = (async () => {
 	      for (let start = 0; start < requestWords.length; start += EDGE_TTS_BATCH_SIZE) {
@@ -1200,12 +1280,56 @@ Page({
 	            if (fileExists(filePath)) {
 	              this.warmWordAudioContext(item.text, filePath);
 	            }
+	          }).finally(() => {
+	            if (showStatus) {
+	              preparedCount = countReady();
+	              this.setAudioPrepState(record, {
+	                visible: true,
+	                status: 'preparing',
+	                text: '朗读音频正在生成中，请稍等',
+	                done: preparedCount,
+	                total
+	              });
+	            }
 	          });
 	        }));
+	      }
+	      preparedCount = countReady();
+	      if (showStatus) {
+	        if (preparedCount >= total) {
+	          this.setAudioPrepState(record, {
+	            visible: true,
+	            status: 'ready',
+	            text: '朗读音频准备好啦',
+	            done: preparedCount,
+	            total
+	          });
+	          this.hideAudioPrepLater(record);
+	        } else {
+	          this.setAudioPrepState(record, {
+	            visible: true,
+	            status: 'partial',
+	            text: '部分朗读稍后再试',
+	            done: preparedCount,
+	            total
+	          });
+	          this.hideAudioPrepLater(record, 1800);
+	        }
 	      }
 	      return true;
 	    })().catch((error) => {
 	      console.warn('[photo-learn] batch prefetch word audio failed', error);
+	      if (showStatus) {
+	        preparedCount = countReady();
+	        this.setAudioPrepState(record, {
+	          visible: true,
+	          status: 'partial',
+	          text: '朗读还在排队，点击单词会继续准备',
+	          done: preparedCount,
+	          total
+	        });
+	        this.hideAudioPrepLater(record, 2200);
+	      }
 	      return false;
 	    });
 
@@ -1281,24 +1405,36 @@ Page({
 	      const preparedEntry = word && this.preparedWordAudioContexts
 	        ? this.preparedWordAudioContexts[this.getWordAudioCacheKey(word)]
 	        : null;
+	      if (!audio) {
+	        reject(new Error('Missing audio context'));
+	        return;
+	      }
 	      let settled = false;
+	      let started = false;
+	      const markStarted = () => {
+	        started = true;
+	      };
 	      const finish = (error) => {
 	        if (settled) return;
 	        settled = true;
 	        clearTimeout(timer);
+	        if (audio.offPlay) audio.offPlay(onPlay);
+	        if (audio.offCanplay) audio.offCanplay(onCanplay);
 	        if (audio.offEnded) audio.offEnded(onEnded);
 	        if (audio.offError) audio.offError(onError);
-	        if (error) {
+	        if (error && !started) {
 	          reject(error);
 	          return;
 	        }
 	        resolve();
 	      };
+	      const onPlay = () => markStarted();
+	      const onCanplay = () => markStarted();
 	      const onEnded = () => finish();
 	      const onError = (error) => finish(error || new Error('Audio play failed'));
 	      const timer = setTimeout(() => {
 	        finish(new Error('Audio play timeout'));
-	      }, 12000);
+	      }, 45000);
 
 	      try {
 	        this.releaseWordAudioWarm(preparedEntry);
@@ -1311,8 +1447,12 @@ Page({
 	        // Audio may be idle.
 	      }
 	      this.activeWordAudioContext = audio;
+	      if (audio.offPlay) audio.offPlay();
+	      if (audio.offCanplay) audio.offCanplay();
 	      if (audio.offEnded) audio.offEnded();
 	      if (audio.offError) audio.offError();
+	      if (audio.onPlay) audio.onPlay(onPlay);
+	      if (audio.onCanplay) audio.onCanplay(onCanplay);
 	      audio.onEnded(onEnded);
 	      audio.onError(onError);
 	      if (audio.src !== src) {

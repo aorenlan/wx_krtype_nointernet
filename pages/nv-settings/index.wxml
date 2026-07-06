@@ -263,7 +263,7 @@
           <text class="lightning-icon">⚡️</text>
         </view>
         <view class="text-group">
-            <text class="action-text">智能导入</text>
+            <text class="action-text">自动导入</text>
             <text class="action-subtext">自动识别文本</text>
         </view>
       </view>
@@ -373,7 +373,7 @@
     </view>
 
     <view class="page-title-large">
-      <text>智能导入</text>
+      <text>自动导入</text>
     </view>
 
     <view class="smart-intro">
@@ -514,7 +514,7 @@
 
         <view class="extend-help-card">
           <text class="extend-help-title">复制链接到浏览器打开</text>
-          <text class="extend-help-desc">这是网页版学习工具。打开后复制网页里的 id，回到这里填写，看完广告后给网页工具增加 1 天使用时长。</text>
+          <text class="extend-help-desc">这是网页版学习工具。打开后复制网页里的 id，回到这里填写，看完广告后给网页工具增加 3 天使用时长。</text>
           <text class="extend-help-note">功能持续迭代中，后续会继续补充更多练习能力。</text>
         </view>
 
@@ -541,7 +541,7 @@
           loading="{{extendSubmitting}}"
           disabled="{{extendSubmitting}}"
         >
-          看广告给 Web 工具加一天
+          看广告给 Web 工具加 3 天
         </button>
 
         <view class="extend-ad-wrap" wx:if="{{!adFreeActive}}">

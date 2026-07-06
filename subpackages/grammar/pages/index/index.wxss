@@ -496,6 +496,116 @@
   line-height: 1;
 }
 
+.example-view-settings {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin: -4rpx 0 18rpx;
+  padding: 8rpx;
+  border: 1rpx solid rgba(24, 25, 30, 0.045);
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 10rpx 26rpx rgba(24, 25, 30, 0.045),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.86);
+  box-sizing: border-box;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.example-settings-label {
+  flex: 0 0 auto;
+  padding: 0 8rpx 0 6rpx;
+  color: #9a9fa8;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 42rpx;
+}
+
+.example-toggle {
+  display: inline-flex;
+  min-height: 42rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 15rpx 0 12rpx;
+  border: 1rpx solid transparent;
+  border-radius: 999rpx;
+  background: transparent;
+  color: #7b818b;
+  box-shadow: none;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 1;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.example-toggle:active {
+  opacity: 0.9;
+  transform: scale(0.97);
+}
+
+.example-toggle.active {
+  border-color: rgba(24, 25, 30, 0.12);
+  background: #17181d;
+  color: #ffffff;
+  box-shadow: 0 8rpx 18rpx rgba(24, 25, 30, 0.12);
+}
+
+.example-toggle.flip.active {
+  border-color: rgba(246, 179, 90, 0.42);
+  background: #fff5dd;
+  color: #8a5b08;
+  box-shadow: 0 8rpx 18rpx rgba(246, 179, 90, 0.12);
+}
+
+.example-check {
+  position: relative;
+  width: 20rpx;
+  height: 20rpx;
+  flex: 0 0 20rpx;
+  border: 3rpx solid currentColor;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+  opacity: 0.42;
+}
+
+.example-toggle.active .example-check {
+  opacity: 1;
+}
+
+.example-toggle.active .example-check::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: currentColor;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.example-reset {
+  display: inline-flex;
+  min-height: 42rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  background: #f0f3f1;
+  color: #7b818b;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.example-reset:active {
+  opacity: 0.86;
+  transform: scale(0.97);
+}
+
 .example-list {
   display: flex;
   flex-direction: column;
@@ -512,6 +622,7 @@
   box-shadow:
     0 14rpx 34rpx rgba(24, 25, 30, 0.055),
     inset 0 1rpx 0 rgba(255, 255, 255, 0.88);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
 }
 
 .example-card::after {
@@ -530,6 +641,29 @@
   transform: scale(0.988);
 }
 
+.example-card.is-flip-mode {
+  border-color: rgba(246, 179, 90, 0.18);
+}
+
+.example-card.is-revealed {
+  background:
+    radial-gradient(circle at 94% 0%, rgba(246, 179, 90, 0.12), transparent 36%),
+    rgba(255, 255, 255, 0.96);
+}
+
+.example-card.is-audio-only {
+  padding-top: 24rpx;
+  padding-bottom: 24rpx;
+  border-style: dashed;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(23, 24, 29, 0.04), transparent 34%),
+    rgba(255, 255, 255, 0.86);
+}
+
+.example-card.is-audio-only::after {
+  background: rgba(23, 24, 29, 0.035);
+}
+
 .ex-kor-row {
   position: relative;
   z-index: 1;
@@ -537,6 +671,15 @@
   align-items: flex-start;
   gap: 14rpx;
   margin-bottom: 18rpx;
+}
+
+.example-card.is-audio-only .ex-kor-row {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.example-card.is-trans-hidden .ex-kor-row {
+  margin-bottom: 0;
 }
 
 .ex-num {
@@ -556,16 +699,35 @@
   line-height: 1.5;
 }
 
+.ex-placeholder {
+  flex: 1;
+  min-width: 0;
+  color: #8b919a;
+  font-size: 25rpx;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.example-card.is-flip-mode .ex-placeholder {
+  color: #9a6a12;
+}
+
 .audio-icon {
-  width: 56rpx;
-  height: 56rpx;
-  flex: 0 0 56rpx;
+  width: 54rpx;
+  height: 54rpx;
+  flex: 0 0 54rpx;
   margin-top: -4rpx;
   padding: 13rpx;
   border-radius: 999rpx;
   background: #17181d;
   box-sizing: border-box;
   opacity: 0.96;
+}
+
+.example-card.is-audio-only .audio-icon {
+  margin-top: 0;
+  background: #f0f3f1;
+  opacity: 0.7;
 }
 
 .example-card:active .audio-icon {

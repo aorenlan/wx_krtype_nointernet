@@ -95,6 +95,20 @@
       </scroll-view>
       <text wx:else class="current-empty">这张图没有识别出可练习单词</text>
 
+      <view wx:if="{{audioPrepVisible && currentRecord && audioPrepRecordId === currentRecord.id}}" class="audio-prep audio-prep-{{audioPrepStatus}}">
+        <view class="audio-prep-mark">
+          <view class="audio-prep-wave audio-prep-wave-one"></view>
+          <view class="audio-prep-wave audio-prep-wave-two"></view>
+        </view>
+        <view class="audio-prep-copy">
+          <text class="audio-prep-title">{{audioPrepText}}</text>
+          <view class="audio-prep-track">
+            <view class="audio-prep-bar" style="width: {{audioPrepTotal ? (audioPrepDone * 100 / audioPrepTotal) : 0}}%;"></view>
+          </view>
+        </view>
+        <text class="audio-prep-count">{{audioPrepDone}}/{{audioPrepTotal}}</text>
+      </view>
+
       <view class="current-actions">
         <button class="current-practice" bindtap="practiceCurrentRecord" hover-class="current-practice-press">
           练习
@@ -125,11 +139,51 @@
       <view class="photo-quota-mark">
         <view class="photo-quota-mark-dot"></view>
       </view>
-      <text class="photo-quota-title">今日识别次数已用完</text>
-      <text class="photo-quota-desc">看完广告可增加 {{photoQuotaRewardBonus}} 次拍照识别，继续生成韩语词卡。</text>
+      <text class="photo-quota-title">使用次数已用完</text>
+      <text class="photo-quota-desc">看完广告可增加 {{photoQuotaRewardBonus}} 次使用次数，继续生成韩语词卡。</text>
       <view class="photo-quota-actions">
         <button class="photo-quota-cancel" bindtap="closePhotoQuotaModal">稍后</button>
         <button class="photo-quota-confirm {{photoQuotaAdLoading ? 'is-loading' : ''}}" disabled="{{photoQuotaAdLoading}}" bindtap="watchPhotoQuotaAd">看广告 +{{photoQuotaRewardBonus}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{isAnalyzing}}" class="learn-wait-mask" catchtouchmove="preventTouchMove">
+    <view class="learn-wait-card" catchtap="stopTapBubble">
+      <view class="learn-wait-visual">
+        <view class="learn-wait-ring"></view>
+        <view class="learn-wait-ring wait-ring-two"></view>
+        <view class="learn-wait-core">
+          <view class="wait-camera">
+            <view class="wait-camera-bump"></view>
+            <view class="wait-camera-body">
+              <view class="wait-camera-lens"></view>
+            </view>
+          </view>
+        </view>
+        <text class="wait-token wait-token-one">사진</text>
+        <text class="wait-token wait-token-two">단어</text>
+        <text class="wait-token wait-token-three">소리</text>
+      </view>
+      <text class="learn-wait-kicker">正在生成韩语词卡</text>
+      <text class="learn-wait-title">{{analysisStatus || '正在识别场景'}}</text>
+      <text class="learn-wait-copy">先看图，再挑词。单词会先出来，朗读音频随后慢慢准备好。</text>
+      <view class="learn-wait-track">
+        <view class="learn-wait-bar"></view>
+      </view>
+      <view class="learn-wait-steps">
+        <view class="learn-wait-step">
+          <text class="learn-wait-step-ko">보기</text>
+          <text class="learn-wait-step-cn">看图</text>
+        </view>
+        <view class="learn-wait-step">
+          <text class="learn-wait-step-ko">고르기</text>
+          <text class="learn-wait-step-cn">挑词</text>
+        </view>
+        <view class="learn-wait-step">
+          <text class="learn-wait-step-ko">카드</text>
+          <text class="learn-wait-step-cn">词卡</text>
+        </view>
       </view>
     </view>
   </view>

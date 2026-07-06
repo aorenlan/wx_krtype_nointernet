@@ -118,10 +118,6 @@
                 <text>›</text>
             </view>
 
-            <!-- 喇叭开关：flash 模式下可控制自动朗读 -->
-            <view wx:if="{{settings.practiceMode === 'flash' && currentWord.word}}" class="tts-toggle-btn {{ttsEnabled ? 'tts-on' : 'tts-off'}}" catchtap="toggleTts">
-                <image src="/assets/icons/volume.svg" style="width:18px;height:18px;" mode="aspectFit" />
-            </view>
         </view>
       </view>
     </view>
@@ -407,11 +403,31 @@
 
 
   <!-- Nagging Mode Overlay -->
-  <view class="nagging-overlay" wx:if="{{isNaggingMode}}" catchtouchmove="preventScroll" bindtap="toggleSetting" data-key="naggingMode">
+  <view class="nagging-overlay" wx:if="{{isNaggingMode}}" catchtouchmove="preventScroll" bindtap="handleNaggingOverlayTap">
     
-    <!-- Toggle Style Button -->
-    <view class="nagging-style-switch" catchtap="toggleNaggingStyle">
+    <!-- Top Controls -->
+    <view class="nagging-top-actions" catchtap="preventBubble" catchtouchmove="preventBubble">
+      <view wx:if="{{isEditingNaggingRepeatCount}}" class="nagging-progress-pill is-editing">
+        <input
+          class="nagging-count-input"
+          type="number"
+          maxlength="3"
+          value="{{naggingRepeatCountPreview}}"
+          focus="{{isEditingNaggingRepeatCount}}"
+          confirm-type="done"
+          bindinput="onNaggingRepeatCountInput"
+          bindblur="commitNaggingRepeatCount"
+          bindconfirm="commitNaggingRepeatCount"
+        />
+        <text class="nagging-count-unit">次</text>
+      </view>
+      <view wx:else class="nagging-progress-pill" catchtap="startEditingNaggingRepeatCount">
+        <text class="nagging-progress-current">{{naggingRepeatProgress}}</text>
+        <text class="nagging-progress-total">/{{settings.naggingRepeatCount}}</text>
+      </view>
+      <view class="nagging-style-switch" catchtap="toggleNaggingStyle">
         <text>{{naggingStyle === 'scatter' ? '切换:文章模式' : '切换:散落模式'}}</text>
+      </view>
     </view>
 
     <!-- SCATTER MODE -->

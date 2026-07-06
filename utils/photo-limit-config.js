@@ -5,8 +5,8 @@ const CONFIG_REQUEST_TIMEOUT_MS = 3000;
 
 const DEFAULT_PHOTO_LEARN_RECOGNITION_CONFIG = {
   enabled: true,
-  dailyFreeLimit: 1,
-  rewardBonus: 2,
+  dailyFreeLimit: 5,
+  rewardBonus: 3,
   adUnitId: 'adunit-17974771ea617fa3'
 };
 

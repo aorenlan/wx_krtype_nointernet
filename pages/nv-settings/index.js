@@ -144,6 +144,11 @@ const DEFAULT_REMOTE_BASE_CONFIG = {
   }
 };
 
+const createExtendRequestId = (userid) => {
+  const safeUserId = String(userid || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32) || 'user';
+  return `web_extend_${safeUserId}_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+};
+
 const normalizeRemoteBaseConfig = (raw) => {
   const safe = raw && typeof raw === 'object' ? raw : {};
   const extendModal = safe.extendModal && typeof safe.extendModal === 'object' ? safe.extendModal : {};
@@ -416,13 +421,12 @@ Page({
   },
 
   createExtendVideoAd: function() {
-    if (shouldSkipAd('settings-extend')) return;
     if (this.extendVideoAd || !wx.createRewardedVideoAd) return;
     this.extendVideoAd = wx.createRewardedVideoAd({
       adUnitId: EXTEND_ONE_DAY_AD_UNIT_ID
     });
     this.extendVideoAd.onError((err) => {
-      console.error('加一天激励视频广告加载失败', err);
+      console.error('Web 工具续期激励视频广告加载失败', err);
       if (this.extendAdResolver) {
         const resolve = this.extendAdResolver;
         this.extendAdResolver = null;
@@ -707,10 +711,6 @@ Page({
   },
 
   showExtendRewardedAd: async function () {
-    if (shouldSkipAd('settings-extend')) {
-      return true;
-    }
-
     this.createExtendVideoAd();
     if (!this.extendVideoAd) {
       wx.showToast({ title: '当前环境不支持广告', icon: 'none' });
@@ -725,10 +725,10 @@ Page({
     return new Promise((resolve) => {
       this.extendAdResolver = resolve;
       this.extendVideoAd.show().catch(() => {
-        this.extendVideoAd.load()
+          this.extendVideoAd.load()
           .then(() => this.extendVideoAd.show())
           .catch((err) => {
-            console.error('加一天激励视频广告显示失败', err);
+            console.error('Web 工具续期激励视频广告显示失败', err);
             if (this.extendAdResolver) {
               const fallbackResolve = this.extendAdResolver;
               this.extendAdResolver = null;
@@ -799,8 +799,15 @@ Page({
   },
 
   submitExtendDay: async function () {
+    if (this.data.extendSubmitting) return;
     const userid = String(this.data.extendUserId || '').trim();
     let loadingShown = false;
+    const hideExtendLoading = () => {
+      if (loadingShown) {
+        wx.hideLoading();
+        loadingShown = false;
+      }
+    };
     if (!userid) {
       wx.showToast({ title: '请输入网页 id', icon: 'none' });
       return;
@@ -813,7 +820,7 @@ Page({
     try {
       wx.setStorageSync(EXTEND_USER_ID_STORAGE_KEY, userid);
     } catch (err) {
-      console.error('保存加一天ID失败', err);
+      console.error('保存 Web 工具 ID 失败', err);
     }
 
     this.setData({ extendSubmitting: true });
@@ -821,7 +828,7 @@ Page({
     try {
       const watched = await this.showExtendRewardedAd();
       if (!watched) {
-        wx.showToast({ title: '看完广告后给网页加一天', icon: 'none' });
+        wx.showToast({ title: '看完广告后给网页加 3 天', icon: 'none' });
         return;
       }
 
@@ -833,16 +840,22 @@ Page({
 
       const res = await wx.cloud.callFunction({
         name: 'extendUserOneDay',
-        data: { userid }
+        timeout: 30000,
+        data: {
+          userid,
+          requestId: createExtendRequestId(userid)
+        }
       });
 
-      const result = res && res.result ? res.result : {};
-      if (result.success === false) {
-        throw new Error(result.error || '网页工具加一天失败');
+      const result = res && res.result ? res.result : null;
+      console.log('网页工具加 3 天结果:', result);
+      if (!result || result.success !== true) {
+        throw new Error((result && result.error) || '网页工具加 3 天失败');
       }
 
+      hideExtendLoading();
       wx.showToast({
-        title: result.message || '网页工具已加一天',
+        title: result.message || '网页工具已加 3 天',
         icon: 'success'
       });
       this.setData({
@@ -851,15 +864,14 @@ Page({
         this.syncSettingsTabBar();
       });
     } catch (err) {
-      console.error('网页工具加一天失败', err);
+      console.error('网页工具加 3 天失败', err);
+      hideExtendLoading();
       wx.showToast({
-        title: (err && err.message) || '网页工具加一天失败',
+        title: (err && err.message) || '网页工具加 3 天失败',
         icon: 'none'
       });
     } finally {
-      if (loadingShown) {
-        wx.hideLoading();
-      }
+      hideExtendLoading();
       this.setData({ extendSubmitting: false });
     }
   },
@@ -1678,7 +1690,7 @@ Page({
   },
 
   startSmartRecognition: async function () {
-    wx.showToast({ title: '暂不支持智能导入', icon: 'none' });
+    wx.showToast({ title: '暂不支持自动导入', icon: 'none' });
   },
 
   // 扫码导入：仅支持「韩文 中文」每行一对的格式，扫到的内容直接合并进「单词收藏」

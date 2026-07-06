@@ -252,7 +252,7 @@ function drawPhotoIllustration(ctx, x, y, width, height) {
   ctx.font = 'bold 10px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('AI 识别', x + width / 2, y + height - 38);
+  ctx.fillText('拍照识别', x + width / 2, y + height - 38);
   ctx.restore();
 }
 

@@ -466,7 +466,7 @@ Page({
       
       const onError = (res) => {
         console.error('onError', res);
-        settle(false);
+        settle(started);
       };
       
       const onPlay = () => {

@@ -562,7 +562,7 @@ button::after {
 .current-result {
   display: flex;
   width: 100%;
-  max-height: 552rpx;
+  max-height: 628rpx;
   flex-direction: column;
   margin-top: 28rpx;
   margin-bottom: 28rpx;
@@ -731,6 +731,123 @@ button::after {
   font-weight: 800;
   line-height: 1.35;
   text-align: center;
+}
+
+.audio-prep {
+  display: flex;
+  min-height: 62rpx;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 14rpx;
+  padding: 12rpx 16rpx;
+  border: 1rpx solid rgba(24, 25, 30, 0.05);
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.85);
+  box-sizing: border-box;
+}
+
+.audio-prep-mark {
+  position: relative;
+  width: 34rpx;
+  height: 34rpx;
+  flex: 0 0 34rpx;
+  border-radius: 999rpx;
+  background: #17181d;
+  box-shadow: 0 8rpx 16rpx rgba(24, 25, 30, 0.14);
+}
+
+.audio-prep-mark::after {
+  position: absolute;
+  right: 4rpx;
+  bottom: 4rpx;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: #f5a623;
+  content: "";
+}
+
+.audio-prep-wave {
+  position: absolute;
+  inset: -8rpx;
+  border: 2rpx solid rgba(245, 166, 35, 0.28);
+  border-radius: 999rpx;
+  opacity: 0;
+  animation: audio-wave 1.4s ease-out infinite;
+}
+
+.audio-prep-wave-two {
+  animation-delay: 0.44s;
+}
+
+.audio-prep-ready .audio-prep-wave,
+.audio-prep-partial .audio-prep-wave {
+  display: none;
+}
+
+.audio-prep-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.audio-prep-title {
+  overflow: hidden;
+  color: #4d535f;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-prep-track {
+  overflow: hidden;
+  width: 100%;
+  height: 6rpx;
+  border-radius: 999rpx;
+  background: #edf0f1;
+}
+
+.audio-prep-bar {
+  height: 100%;
+  min-width: 8rpx;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f5a623, #ffd47a);
+  transition: width 0.24s ease;
+}
+
+.audio-prep-count {
+  flex: 0 0 auto;
+  min-width: 58rpx;
+  padding: 9rpx 12rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #777985;
+  font-size: 18rpx;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.audio-prep-ready {
+  background: rgba(247, 252, 249, 0.92);
+}
+
+.audio-prep-ready .audio-prep-mark::after {
+  background: #14b86a;
+}
+
+.audio-prep-ready .audio-prep-bar {
+  background: linear-gradient(90deg, #14b86a, #89e0b4);
+}
+
+.audio-prep-partial {
+  background: rgba(255, 250, 240, 0.92);
 }
 
 .current-actions {
@@ -1030,6 +1147,241 @@ button::after {
   content: "";
 }
 
+.learn-wait-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  background: rgba(248, 248, 249, 0.72);
+  backdrop-filter: blur(22rpx);
+  box-sizing: border-box;
+  animation: wait-mask-in 180ms ease-out both;
+}
+
+.learn-wait-card {
+  width: 100%;
+  max-width: 640rpx;
+  padding: 38rpx 34rpx 32rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.78);
+  border-radius: 38rpx;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 240, 0.95));
+  box-shadow:
+    0 34rpx 92rpx rgba(24, 25, 30, 0.18),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.92);
+  box-sizing: border-box;
+  animation: wait-card-in 220ms ease-out both;
+}
+
+.learn-wait-visual {
+  position: relative;
+  width: 250rpx;
+  height: 198rpx;
+  margin: 0 auto 18rpx;
+}
+
+.learn-wait-ring {
+  position: absolute;
+  top: 24rpx;
+  left: 50%;
+  width: 178rpx;
+  height: 132rpx;
+  margin-left: -89rpx;
+  border: 2rpx solid rgba(24, 25, 30, 0.08);
+  border-top-color: rgba(245, 170, 36, 0.8);
+  border-radius: 50%;
+  transform: rotate(-12deg);
+  animation: wait-ring-spin 4.8s linear infinite;
+}
+
+.wait-ring-two {
+  top: 38rpx;
+  width: 212rpx;
+  height: 104rpx;
+  margin-left: -106rpx;
+  border-top-color: rgba(29, 78, 216, 0.42);
+  transform: rotate(18deg);
+  animation-duration: 6.4s;
+  animation-direction: reverse;
+}
+
+.learn-wait-core {
+  position: absolute;
+  top: 48rpx;
+  left: 50%;
+  display: flex;
+  width: 102rpx;
+  height: 102rpx;
+  align-items: center;
+  justify-content: center;
+  margin-left: -51rpx;
+  border-radius: 32rpx;
+  background: #17181d;
+  box-shadow: 0 20rpx 44rpx rgba(24, 25, 30, 0.18);
+}
+
+.wait-camera {
+  position: relative;
+  width: 48rpx;
+  height: 38rpx;
+}
+
+.wait-camera-bump {
+  position: absolute;
+  top: 0;
+  left: 15rpx;
+  width: 18rpx;
+  height: 8rpx;
+  border: 4rpx solid #ffffff;
+  border-bottom: 0;
+  border-radius: 7rpx 7rpx 0 0;
+  box-sizing: border-box;
+}
+
+.wait-camera-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 48rpx;
+  height: 31rpx;
+  align-items: center;
+  justify-content: center;
+  border: 4rpx solid #ffffff;
+  border-radius: 10rpx;
+  box-sizing: border-box;
+}
+
+.wait-camera-lens {
+  width: 15rpx;
+  height: 15rpx;
+  border: 4rpx solid #ffffff;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
+.wait-token {
+  position: absolute;
+  display: flex;
+  height: 44rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18rpx;
+  border: 1rpx solid rgba(24, 25, 30, 0.06);
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.92);
+  color: #68707a;
+  font-size: 22rpx;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 12rpx 28rpx rgba(24, 25, 30, 0.06);
+  animation: wait-token-float 2.6s ease-in-out infinite;
+}
+
+.wait-token-one {
+  top: 10rpx;
+  left: 6rpx;
+}
+
+.wait-token-two {
+  top: 20rpx;
+  right: 0;
+  animation-delay: 0.35s;
+}
+
+.wait-token-three {
+  bottom: 4rpx;
+  left: 76rpx;
+  animation-delay: 0.68s;
+}
+
+.learn-wait-kicker,
+.learn-wait-title,
+.learn-wait-copy {
+  display: block;
+  text-align: center;
+}
+
+.learn-wait-kicker {
+  color: #d48310;
+  font-size: 22rpx;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.learn-wait-title {
+  margin-top: 16rpx;
+  color: #202126;
+  font-size: 36rpx;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.learn-wait-copy {
+  max-width: 500rpx;
+  margin: 16rpx auto 0;
+  color: #737a82;
+  font-size: 24rpx;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.learn-wait-track {
+  position: relative;
+  height: 9rpx;
+  overflow: hidden;
+  margin-top: 28rpx;
+  border-radius: 999rpx;
+  background: rgba(24, 25, 30, 0.08);
+}
+
+.learn-wait-bar {
+  position: absolute;
+  top: 0;
+  left: -42%;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f5aa24, #1d4ed8);
+  animation: wait-bar-run 1.72s ease-in-out infinite;
+}
+
+.learn-wait-steps {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.learn-wait-step {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7rpx;
+  padding: 15rpx 8rpx;
+  border-radius: 20rpx;
+  background: rgba(247, 248, 249, 0.92);
+}
+
+.learn-wait-step-ko {
+  color: #202126;
+  font-size: 22rpx;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.learn-wait-step-cn {
+  color: #8b9099;
+  font-size: 18rpx;
+  font-weight: 850;
+  line-height: 1;
+}
+
 @keyframes breathe {
   0%,
   100% {
@@ -1043,6 +1395,63 @@ button::after {
   }
 }
 
+@keyframes wait-mask-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wait-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wait-ring-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wait-token-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8rpx);
+  }
+}
+
+@keyframes wait-bar-run {
+  0% {
+    left: -42%;
+  }
+
+  52% {
+    left: 38%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
 @keyframes status-pulse {
   0%,
   100% {
@@ -1053,6 +1462,18 @@ button::after {
   50% {
     opacity: 1;
     transform: scale(1.12);
+  }
+}
+
+@keyframes audio-wave {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.72);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
   }
 }
 

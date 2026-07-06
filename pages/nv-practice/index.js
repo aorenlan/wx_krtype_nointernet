@@ -11,6 +11,9 @@ const AUDIO_BASE_PATH = '/kr_word';
 const EDGE_TTS_CACHE_NAMESPACE = 'edge_tts_v1';
 const EDGE_TTS_PRELOAD_AHEAD = 2;
 const EDGE_TTS_BATCH_SIZE = 12;
+const NAGGING_REPEAT_MIN = 10;
+const NAGGING_REPEAT_MAX = 100;
+const NAGGING_REPEAT_DEFAULT = 50;
 
 const DEFAULT_SETTINGS = {
     practiceMode: 'study',
@@ -32,6 +35,7 @@ const DEFAULT_SETTINGS = {
     yonseiLessonName: '',
     topikLevel: '1',
     topikSession: '',
+    naggingRepeatCount: NAGGING_REPEAT_DEFAULT,
     naggingMode: false
 };
 
@@ -156,6 +160,11 @@ const sanitizeSettings = (raw) => {
     if (!Number.isFinite(repeatCount)) repeatCount = DEFAULT_SETTINGS.repeatCount;
     repeatCount = Math.max(1, Math.min(10, Math.round(repeatCount)));
     merged.repeatCount = repeatCount;
+    let naggingRepeatCount = Number(merged.naggingRepeatCount);
+    if (!Number.isFinite(naggingRepeatCount)) naggingRepeatCount = DEFAULT_SETTINGS.naggingRepeatCount;
+    naggingRepeatCount = Math.round(naggingRepeatCount);
+    naggingRepeatCount = Math.max(NAGGING_REPEAT_MIN, Math.min(NAGGING_REPEAT_MAX, naggingRepeatCount));
+    merged.naggingRepeatCount = naggingRepeatCount;
     return merged;
 };
 
@@ -220,11 +229,13 @@ Page({
         dailySentenceEntrySource: '',
         srsCount: 0,
         showDevBtn: false,
-        ttsEnabled: true,
         showGuideBubble: false,
         showSettingsTooltip: false,
         settingsTooltipText: '可调整显示模式',
         showWordTooltip: false,
+        naggingRepeatCountPreview: NAGGING_REPEAT_DEFAULT,
+        naggingRepeatProgress: 0,
+        isEditingNaggingRepeatCount: false,
 
         // PC Support
         isPC: false,
@@ -361,6 +372,7 @@ Page({
             navBarHeight: 44, 
             isIPad,
             settings: mergedSettings,
+            naggingRepeatCountPreview: mergedSettings.naggingRepeatCount,
             isKeyboardOpen: false,
             timeLeft: mergedSettings.timerDuration || DEFAULT_SETTINGS.timerDuration,
             isPC,
@@ -987,7 +999,11 @@ Page({
         const nextCategory = mergedSettings.category || DEFAULT_SETTINGS.category;
         const categoryIndex = Math.max(0, liveCategories.indexOf(nextCategory));
 
-        this.setData({ settings: mergedSettings, categoryPickerIndex: categoryIndex });
+        this.setData({
+            settings: mergedSettings,
+            categoryPickerIndex: categoryIndex,
+            naggingRepeatCountPreview: mergedSettings.naggingRepeatCount
+        });
         const finalSettings = await this.loadSubcategories(mergedSettings);
 	        this.updateDisplayCategory();
 
@@ -1333,7 +1349,7 @@ Page({
         if (s.wordLengthFilter) filters.minLength = s.wordLengthFilter;
         if (s.wordStartFilter) filters.firstLetter = s.wordStartFilter;
         
-        const res = await getWords(category, 2000, 0, filters); 
+        const res = await getWords(category, 2000, 0, filters);
         
         if (res && res.words) {
             const savedIndex = Number(getProgress(category, subKey) || 0);
@@ -1604,7 +1620,10 @@ Page({
         const newSettings = Object.assign({}, this.data.settings || {});
         newSettings[key] = val;
         const next = sanitizeSettings(newSettings);
-        this.setData({ settings: next });
+        this.setData({
+            settings: next,
+            naggingRepeatCountPreview: next.naggingRepeatCount
+        });
         wx.setStorageSync('settings', next);
 
         if (key === 'practiceMode' || key === 'flashDuration') {
@@ -1626,6 +1645,114 @@ Page({
             this.setData({ timeLeft: Number(val) || DEFAULT_SETTINGS.timerDuration });
             if (this.data.hasInteracted) this.startQuizTimer();
         }
+
+        if (key === 'naggingRepeatCount' && this.data.isNaggingMode) {
+            this.startNaggingLoop();
+        }
+    },
+
+    onNaggingRepeatCountInput(e) {
+        const raw = e && e.detail ? String(e.detail.value || '') : '';
+        const value = raw.replace(/\D/g, '').slice(0, 3);
+        this.setData({ naggingRepeatCountPreview: value });
+    },
+
+    startEditingNaggingRepeatCount() {
+        this.pauseNaggingLoopForEdit();
+        this.setData({
+            isEditingNaggingRepeatCount: true,
+            naggingRepeatCountPreview: this.getNaggingRepeatLimit()
+        });
+    },
+
+    pauseNaggingLoopForEdit() {
+        this._naggingLoopId = (this._naggingLoopId || 0) + 1;
+        if (this.naggingTimer) clearTimeout(this.naggingTimer);
+        this.naggingTimer = null;
+        this.cancelCurrentAudioPlayback();
+    },
+
+    resumeNaggingLoopAfterEdit() {
+        if (!this.data.isNaggingMode) return;
+        const currentWord = this._currentWordRuntime || this.data.currentWord;
+        if (!currentWord) return;
+        this._naggingLoopId = (this._naggingLoopId || 0) + 1;
+        const progress = Number(this.data.naggingRepeatProgress || 0);
+        if (progress >= this.getNaggingRepeatLimit()) {
+            this.scheduleNextNaggingWord(this._naggingLoopId);
+            return;
+        }
+        this.naggingAudioLoop(this._naggingLoopId);
+    },
+
+    suppressNextNaggingOverlayExit() {
+        this._suppressNextNaggingOverlayExit = true;
+        if (this._suppressNaggingOverlayExitTimer) {
+            clearTimeout(this._suppressNaggingOverlayExitTimer);
+        }
+        this._suppressNaggingOverlayExitTimer = setTimeout(() => {
+            this._suppressNextNaggingOverlayExit = false;
+            this._suppressNaggingOverlayExitTimer = null;
+        }, 350);
+    },
+
+    clearNaggingOverlayExitSuppress() {
+        this._suppressNextNaggingOverlayExit = false;
+        if (this._suppressNaggingOverlayExitTimer) {
+            clearTimeout(this._suppressNaggingOverlayExitTimer);
+            this._suppressNaggingOverlayExitTimer = null;
+        }
+    },
+
+    commitNaggingRepeatCount(e) {
+        const wasEditing = !!this.data.isEditingNaggingRepeatCount;
+        if (!wasEditing) return;
+        const raw = e && e.detail && e.detail.value !== undefined
+            ? e.detail.value
+            : this.data.naggingRepeatCountPreview;
+        const next = sanitizeSettings(Object.assign({}, this.data.settings || {}, {
+            naggingRepeatCount: raw
+        }));
+        if (wasEditing) {
+            this.suppressNextNaggingOverlayExit();
+        }
+        this.setData({
+            settings: next,
+            naggingRepeatCountPreview: next.naggingRepeatCount,
+            isEditingNaggingRepeatCount: false
+        });
+        wx.setStorageSync('settings', next);
+        if (wasEditing) {
+            this.resumeNaggingLoopAfterEdit();
+        }
+    },
+
+    handleNaggingOverlayTap() {
+        if (this.data.isEditingNaggingRepeatCount) {
+            this.suppressNextNaggingOverlayExit();
+            if (typeof wx.hideKeyboard === 'function') {
+                wx.hideKeyboard();
+            }
+            if (this._naggingEditFallbackCommitTimer) {
+                clearTimeout(this._naggingEditFallbackCommitTimer);
+            }
+            this._naggingEditFallbackCommitTimer = setTimeout(() => {
+                this._naggingEditFallbackCommitTimer = null;
+                if (this.data.isEditingNaggingRepeatCount) {
+                    this.commitNaggingRepeatCount();
+                }
+            }, 120);
+            return;
+        }
+        if (this._suppressNextNaggingOverlayExit) {
+            this.clearNaggingOverlayExitSuppress();
+            return;
+        }
+        this.toggleSetting({
+            currentTarget: {
+                dataset: { key: 'naggingMode' }
+            }
+        });
     },
 
     toggleSetting(e) {
@@ -2642,7 +2769,7 @@ Page({
 
             audioCtx.onError((res) => {
                 console.error(logPrefix, 'onError:', res);
-                settle(false);
+                settle(started);
             });
 
             if (audioCtx.onCanplay) audioCtx.onCanplay(onCanplay);
@@ -2960,12 +3087,6 @@ Page({
         this.preloadNextWordAudio();
     },
 
-    toggleTts() {
-        const next = !this.data.ttsEnabled;
-        this.setData({ ttsEnabled: next });
-        wx.showToast({ title: next ? '朗读已开启' : '朗读已关闭', icon: 'none', duration: 1200 });
-    },
-
     tryAutoPronounce() {
         const s = this.data.settings || DEFAULT_SETTINGS;
         if (!s.autoPronounce) return;
@@ -2988,14 +3109,8 @@ Page({
              this.dismissWordTooltip();
         }
 
-        const { currentWord, settings, ttsEnabled } = this.data;
+        const { currentWord } = this.data;
         if (!currentWord) return;
-
-        // flash 模式下：用户开了朗读开关时，点击单词只朗读不开弹窗。
-        if (settings && settings.practiceMode === 'flash' && ttsEnabled && currentWord.word) {
-            this.playWordAudio();
-            return;
-        }
 
         this.setData({ showDetailModal: true });
         
@@ -3269,13 +3384,22 @@ Page({
         }
     },
 
+    getNaggingRepeatLimit() {
+        const raw = Number((this.data.settings && this.data.settings.naggingRepeatCount) || DEFAULT_SETTINGS.naggingRepeatCount);
+        if (!Number.isFinite(raw)) return DEFAULT_SETTINGS.naggingRepeatCount;
+        return Math.max(NAGGING_REPEAT_MIN, Math.min(NAGGING_REPEAT_MAX, Math.round(raw)));
+    },
+
     startNaggingLoop() {
         this.stopNaggingLoop(); // Clear previous state
         
-        const currentWord = this.data.currentWord;
+        const currentWord = this._currentWordRuntime || this.data.currentWord;
         if (!currentWord) return;
 
-        this.setData({ naggingItems: [] });
+        this.setData({
+            naggingItems: [],
+            naggingRepeatProgress: 0
+        });
         
         // Start Loop
         this._naggingLoopId = (this._naggingLoopId || 0) + 1;
@@ -3288,7 +3412,10 @@ Page({
         
         if (this.naggingTimer) clearTimeout(this.naggingTimer);
         this.naggingTimer = null;
-        this.setData({ naggingItems: [] });
+        this.setData({
+            naggingItems: [],
+            naggingRepeatProgress: 0
+        });
         this.cancelCurrentAudioPlayback();
     },
 
@@ -3311,6 +3438,13 @@ Page({
         // Check if loop is still valid after await
         if (loopId !== this._naggingLoopId) return;
 
+        const progress = Number(this.data.naggingRepeatProgress || 0);
+        const repeatLimit = this.getNaggingRepeatLimit();
+        if (progress >= repeatLimit) {
+            this.scheduleNextNaggingWord(loopId);
+            return;
+        }
+
         if (this.data.isNaggingMode) {
             // Yield to UI thread to prevent blocking (Allow taps/exits)
             await new Promise(r => setTimeout(r, 50));
@@ -3321,11 +3455,28 @@ Page({
         }
     },
 
+    scheduleNextNaggingWord(loopId) {
+        if (!this.data.isNaggingMode || loopId !== this._naggingLoopId) return;
+        if (this.naggingTimer) clearTimeout(this.naggingTimer);
+        this.naggingTimer = setTimeout(() => {
+            this.naggingTimer = null;
+            if (!this.data.isNaggingMode || loopId !== this._naggingLoopId) return;
+            this.nextWord();
+            setTimeout(() => {
+                if (this.data.isNaggingMode && loopId === this._naggingLoopId) {
+                    this.startNaggingLoop();
+                }
+            }, 120);
+        }, 260);
+    },
+
     addNaggingItem() {
         const items = this.data.naggingItems || [];
-        if (items.length >= 100) return false;
+        const repeatLimit = this.getNaggingRepeatLimit();
+        if (items.length >= repeatLimit) return false;
 
-        const currentWord = this.data.currentWord;
+        const currentWord = this._currentWordRuntime || this.data.currentWord;
+        if (!currentWord) return false;
         const style = this.data.naggingStyle;
         
         const newItem = {
@@ -3343,7 +3494,10 @@ Page({
         // Flow mode doesn't need extra props, CSS handles it
         
         items.push(newItem);
-        this.setData({ naggingItems: items });
+        this.setData({
+            naggingItems: items,
+            naggingRepeatProgress: items.length
+        });
         return true;
     }
 

@@ -1661,13 +1661,13 @@ Page({
       ctx.onStop(() => finish(false));
       ctx.onError((err) => {
         console.warn('[picword audio] play error:', JSON.stringify(err), 'src=', src);
-        if (this._isTokenAlive(token)) {
+        if (!started && this._isTokenAlive(token)) {
           this.setData({ dbg: '✗ 播放出错: ' + text });
         }
-        finish(false);
+        finish(started);
       });
 
-      timer = setTimeout(() => finish(false), maxMs);
+      timer = setTimeout(() => finish(started), maxMs);
       ctx.autoplay = false;
       ctx.src = src;
       attempt();

@@ -1076,30 +1076,6 @@
   font-size: 40px;
 }
 
-/* 喇叭 TTS 开关 */
-.tts-toggle-btn {
-  position: absolute;
-  right: 12px;
-  bottom: 14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.tts-toggle-btn.tts-on {
-  background: rgba(34,197,94,0.12);
-  border: 1.5px solid rgba(34,197,94,0.4);
-}
-.tts-toggle-btn.tts-off {
-  background: rgba(148,163,184,0.1);
-  border: 1.5px solid rgba(148,163,184,0.25);
-  opacity: 0.45;
-}
-.tts-toggle-btn:active { transform: scale(0.9); }
-
 .guide-bubble {
   position: fixed;
   bottom: calc(58px + 12px + env(safe-area-inset-bottom, 0px) + 50px);
@@ -1674,11 +1650,18 @@
   animation: softAppear 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.nagging-style-switch {
+.nagging-top-actions {
   position: absolute;
   top: 100px;
   right: 20px;
   z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.nagging-style-switch {
   background: rgba(0,0,0,0.05);
   padding: 8px 12px;
   border-radius: 20px;
@@ -1686,6 +1669,57 @@
   color: #333;
   font-weight: 600;
   pointer-events: auto;
+}
+
+.nagging-count-input {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  color: #17181d;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 34px;
+  text-align: center;
+}
+
+.nagging-count-unit {
+  margin-left: 1px;
+  color: #4b4d55;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.nagging-progress-pill {
+  display: flex;
+  height: 34px;
+  min-width: 58px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 20px;
+  background: rgba(23, 24, 29, 0.08);
+  box-sizing: border-box;
+}
+
+.nagging-progress-pill.is-editing {
+  min-width: 66px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.nagging-progress-current {
+  color: #17181d;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.nagging-progress-total {
+  color: #7c828c;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
 }
 
 .nagging-flow-scroll {

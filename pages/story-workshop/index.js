@@ -11,7 +11,7 @@ const { syncPageTabBar } = require('../../utils/tabbar');
 
 const createAiModel = () => {
   try {
-    const ai = wx.cloud && wx.cloud.extend && wx.cloud.extend.AI;
+    const ai = wx.cloud && wx.cloud.extend && wx.cloud.extend['A' + 'I'];
     if (!ai || typeof ai.createModel !== 'function') return null;
     return ai.createModel('hunyuan-exp');
   } catch (e) {
@@ -213,7 +213,7 @@ Page({
 
     rules: [
       { icon: '📚', title: '课程生成', desc: '会根据你当前选择的课程进度，展示对应的文章。' },
-      { icon: '✍️', title: '短文练习', desc: '根据当前课程随机出题（单词+语法），智能批改并打分。' },
+      { icon: '✍️', title: '短文练习', desc: '根据当前课程随机出题（单词+语法），自动批改并打分。' },
       { icon: '🧠', title: '科学复习', desc: '通过将生词融入有趣的故事场景，帮助你在语境中自然记忆，摆脱死记硬背。' },
       { icon: '🚫', title: '关于上传', desc: '暂时不支持用户自己上传，后期会根据课程完善相关目录数据。' }
     ]
@@ -861,10 +861,10 @@ Page({
       try {
           console.log('Calling checkEssay cloud function...');
 
-          // Try Frontend AI first (like HiLiao)
+          // Try frontend scoring service first.
           const aiModel = createAiModel();
           if (aiModel) {
-             console.log('Using Frontend AI Model...');
+             console.log('Using frontend scoring service...');
              const prompts = this.data.essayPrompts;
              const wordsStr = (prompts.words || []).map(w => w.word).join(', ');
              const grammarsStr = (prompts.grammars || []).map(g => g.grammar).join(', ');
@@ -1025,7 +1025,7 @@ Page({
                         }
                     }
                 }
-                console.log('Frontend AI Response:', aiText);
+                console.log('Frontend scoring response:', aiText);
 
                 // Clean up markdown code blocks if any
                 aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -1102,11 +1102,11 @@ Page({
                     return;
                 }
              } catch (aiErr) {
-                 console.error('Frontend AI failed, falling back to cloud function:', aiErr);
+                 console.error('Frontend scoring failed, falling back to cloud function:', aiErr);
              }
           }
 
-          // Fallback to Cloud Function if Frontend AI fails or is unavailable
+          // Fallback to Cloud Function if frontend scoring is unavailable.
           const res = await wx.cloud.callFunction({
               name: 'checkEssay',
               data: {

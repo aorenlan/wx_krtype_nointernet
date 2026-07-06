@@ -17,13 +17,19 @@
 
     <view wx:if="{{records.length}}" class="record-list">
       <view wx:for="{{records}}" wx:key="id" class="record-item">
-        <button
+        <view
           class="record-card {{expandedRecordId === item.id ? 'is-expanded' : ''}}"
           data-id="{{item.id}}"
           bindtap="toggleRecord"
           hover-class="record-card-press"
         >
-          <image class="record-image" src="{{item.imagePath}}" mode="aspectFill"></image>
+          <image
+            class="record-image"
+            src="{{item.imagePath}}"
+            mode="aspectFill"
+            data-image="{{item.imagePath}}"
+            catchtap="previewRecordImage"
+          ></image>
           <view class="record-copy">
             <view class="record-heading">
               <text class="record-title">{{item.title}}</text>
@@ -33,7 +39,7 @@
             <text class="record-time">{{item.timeText}}</text>
           </view>
           <text class="record-arrow {{expandedRecordId === item.id ? 'is-open' : ''}}">⌄</text>
-        </button>
+        </view>
 
         <view wx:if="{{expandedRecordId === item.id}}" class="record-expand">
           <view wx:if="{{item.words.length}}" class="expand-word-list">
@@ -52,9 +58,14 @@
             </view>
           </view>
           <text wx:else class="expand-empty">{{item.desc}}</text>
-          <button class="practice-button" data-id="{{item.id}}" catchtap="practiceRecord" hover-class="practice-button-press">
-            练习
-          </button>
+          <view class="record-actions">
+            <button class="practice-button" data-id="{{item.id}}" catchtap="practiceRecord" hover-class="practice-button-press">
+              练习
+            </button>
+            <button class="sentence-button {{sentenceLoadingRecordId === item.id ? 'is-loading' : ''}}" data-id="{{item.id}}" catchtap="openSentenceDetails" hover-class="practice-button-press" disabled="{{sentenceLoadingRecordId === item.id}}">
+              {{sentenceLoadingRecordId === item.id ? '生成中' : '例句详解'}}
+            </button>
+          </view>
         </view>
       </view>
     </view>
@@ -78,6 +89,96 @@
       <view class="modal-actions">
         <view class="modal-button secondary" catchtap="cancelPracticeConfirm">取消</view>
         <view class="modal-button primary" catchtap="confirmPracticeRecord">开始练习</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showSentenceQuotaConfirm}}" class="practice-modal-mask" catchtap="cancelSentenceQuotaConfirm" catchtouchmove="preventTouchMove">
+    <view class="practice-modal sentence-confirm-modal" catchtap="preventModalBubble">
+      <view class="modal-mark sentence-confirm-mark">
+        <view class="modal-mark-dot"></view>
+      </view>
+      <text class="modal-title">生成例句详解</text>
+      <text class="modal-copy">本次查询将使用 1 次使用次数，生成后下次可直接打开。</text>
+      <view class="sentence-confirm-check {{sentenceQuotaNoMoreTip ? 'is-checked' : ''}}" catchtap="toggleSentenceQuotaNoMoreTip">
+        <view class="sentence-confirm-box">
+          <text wx:if="{{sentenceQuotaNoMoreTip}}" class="sentence-confirm-tick">✓</text>
+        </view>
+        <text class="sentence-confirm-text">不再提示</text>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-button secondary" catchtap="cancelSentenceQuotaConfirm">取消</view>
+        <view class="modal-button primary" catchtap="confirmSentenceQuotaUse">继续生成</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showSentenceModal && sentenceDetails}}" class="sentence-modal-mask" catchtap="closeSentenceModal" catchtouchmove="preventTouchMove">
+    <view class="sentence-modal" catchtap="preventModalBubble">
+      <view class="sentence-modal-header">
+        <view class="sentence-modal-mark">
+          <view class="sentence-modal-mark-dot"></view>
+        </view>
+        <view class="sentence-modal-heading">
+          <text class="sentence-modal-title">例句详解</text>
+          <text class="sentence-modal-subtitle">{{sentenceModalRecord.title || '拍照词卡'}} · {{sentenceDetails.items.length}} 句</text>
+        </view>
+        <view class="sentence-modal-close" catchtap="closeSentenceModal">×</view>
+      </view>
+
+      <view class="sentence-summary">
+        <text>{{sentenceDetails.summary}}</text>
+      </view>
+
+      <scroll-view scroll-y class="sentence-list" show-scrollbar="{{false}}">
+        <view wx:for="{{sentenceDetails.items}}" wx:key="key" class="sentence-card">
+          <view class="sentence-card-top">
+            <text class="sentence-word">{{item.word}}</text>
+            <text class="sentence-meaning">{{item.meaning}}</text>
+            <view class="sentence-audio-btn {{speakingSentenceKey === item.key ? 'is-playing' : ''}}" catchtap="playSentenceAudio" data-text="{{item.sentence}}" data-key="{{item.key}}">
+              <image class="sentence-audio-icon" src="/assets/icons/volume.svg" mode="aspectFit"></image>
+            </view>
+          </view>
+          <text class="sentence-ko">{{item.sentence}}</text>
+          <text class="sentence-cn">{{item.translation}}</text>
+          <text wx:if="{{item.detail}}" class="sentence-note">{{item.detail}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view class="photo-quota-mask {{showPhotoQuotaModal ? 'is-visible' : ''}}" catchtap="closePhotoQuotaModal" catchtouchmove="preventTouchMove">
+    <view class="photo-quota-dialog" catchtap="preventModalBubble">
+      <view class="photo-quota-mark">
+        <view class="photo-quota-mark-dot"></view>
+      </view>
+      <text class="photo-quota-title">使用次数已用完</text>
+      <text class="photo-quota-desc">看完广告可增加 {{photoQuotaRewardBonus}} 次使用次数，继续生成例句详解。</text>
+      <view class="photo-quota-actions">
+        <button class="photo-quota-cancel" catchtap="closePhotoQuotaModal">稍后</button>
+        <button class="photo-quota-confirm {{photoQuotaAdLoading ? 'is-loading' : ''}}" disabled="{{photoQuotaAdLoading}}" catchtap="watchPhotoQuotaAd">看广告 +{{photoQuotaRewardBonus}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{sentenceLoadingRecordId}}" class="sentence-wait-mask" catchtouchmove="preventTouchMove">
+    <view class="sentence-wait-card" catchtap="preventModalBubble">
+      <view class="sentence-wait-mark">
+        <view class="sentence-wait-page page-one"></view>
+        <view class="sentence-wait-page page-two"></view>
+        <view class="sentence-wait-dot"></view>
+      </view>
+      <text class="sentence-wait-kicker">例句详解</text>
+      <text class="sentence-wait-title">正在把单词放进句子里</text>
+      <text class="sentence-wait-copy">会整理韩语例句、中文翻译和用法说明，朗读音频也会一起准备。</text>
+      <view class="sentence-wait-rail">
+        <view class="sentence-wait-rail-fill"></view>
+      </view>
+      <view class="sentence-wait-chips">
+        <text>단어</text>
+        <text>문장</text>
+        <text>번역</text>
+        <text>소리</text>
       </view>
     </view>
   </view>
