@@ -230,15 +230,6 @@
     </view>
 
     <view class="dual-control-panel">
-      <view class="dual-control-left">
-        <view class="dual-mini-btn timer-start {{dualTimerRunning ? 'running' : ''}} {{dualActionLocked ? 'disabled' : ''}}" catchtap="toggleDualTimerStart">
-          {{dualTimerRunning ? '暂停' : (dualTimerPaused ? '继续' : '开始')}}
-        </view>
-        <view class="dual-timer-pill {{dualTimerRunning ? 'running' : ''}} {{dualTimerPaused ? 'paused' : ''}}" catchtap="openDualTimerActions">
-          <text>{{dualTimerText}}</text>
-        </view>
-        <view class="dual-mini-btn end" catchtap="handleDualEndOrReset">{{dualTimerRunning || dualTimerPaused || dualElapsedSeconds > 0 ? '结束' : '重置'}}</view>
-      </view>
       <view class="dual-control-right">
         <view class="dual-mode-switch">
           <view class="dual-mode-option {{!dualReciteMode ? 'active' : ''}}" data-mode="spell" catchtap="toggleDualReciteMode">拼写</view>
@@ -345,11 +336,11 @@
             </view>
             <view class="card-actions">
                 <view class="action-icon shuffle-action-icon {{isShuffled ? 'shuffle-on' : ''}}" catchtap="toggleShuffle" hover-class="none">
-                    <image src="/assets/icons/shuffle.svg" style="width: 17px; height: 17px;" mode="aspectFit" />
+                    <image src="/assets/icons/shuffle.svg" style="width: 15px; height: 15px;" mode="aspectFit" />
                     <view class="shuffle-guide {{showShuffleGuide ? 'show' : ''}}">打乱单词</view>
                 </view>
                 <view class="action-icon" bindtap="playWordAudio" hover-class="none">
-                    <image src="/assets/icons/volume.svg" style="width: 24px; height: 24px;" mode="aspectFit" />
+                    <image src="/assets/icons/volume.svg" style="width: 21px; height: 21px;" mode="aspectFit" />
                 </view>
                 <view class="action-icon" bindtap="removeCurrentFromMistakes" wx:if="{{settings.category === 'Mistakes (错题本)'}}">
                     <text style="font-size: 12px; color: #ef4444;">移出</text>

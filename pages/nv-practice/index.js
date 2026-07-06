@@ -33,6 +33,8 @@ const SLEEP_WORD_LOOP_MAX_PLAY_MS = 12000;
 const SLEEP_WORD_LOOP_SUCCESS_GAP_MS = 1600;
 const SLEEP_WORD_LOOP_RETRY_GAP_MS = 2200;
 const SLEEP_WORD_LOOP_FAIL_ADVANCE_LIMIT = 2;
+const SLEEP_WORD_PRELOAD_INITIAL = 6;
+const SLEEP_WORD_PRELOAD_AHEAD = 4;
 const SLEEP_MIXER_GAIN = 0.42;
 const SLEEP_PREVIEW_GAIN = 0.42;
 const SLEEP_KOREAN_REPEAT_OPTIONS = [1, 2, 3];
@@ -2300,6 +2302,37 @@ Page({
         return this._sleepWordAudio;
     },
 
+    preloadSleepWordLoopWindow(cursor = 0, count = SLEEP_WORD_PRELOAD_AHEAD) {
+        const list = this._sleepWordLoopList || [];
+        if (!Array.isArray(list) || !list.length) return;
+        const safeCount = Math.max(1, Math.min(Number(count) || SLEEP_WORD_PRELOAD_AHEAD, list.length));
+        const start = Math.max(0, Number(cursor) || 0);
+        const includeMeaning = !!this.data.sleepReadMeaning;
+        const preferEdgeTts = this.shouldPreferEdgeTtsAudio();
+        const seen = new Set();
+        const edgeRequests = [];
+
+        for (let offset = 0; offset < safeCount; offset += 1) {
+            const index = normalizeIndex(start + offset, list.length);
+            if (seen.has(index)) continue;
+            seen.add(index);
+            const wordInfo = list[index];
+            const word = String((wordInfo && wordInfo.word) || '').trim();
+            if (!word) continue;
+
+            if (preferEdgeTts) {
+                edgeRequests.push(...this.buildEdgeTtsPreloadItems(wordInfo, includeMeaning));
+            } else {
+                this._preloadSingleAudio(word, false);
+                if (includeMeaning) this._preloadSingleAudio(word, true);
+            }
+        }
+
+        if (edgeRequests.length) {
+            this.preloadEdgeTtsRequests(edgeRequests);
+        }
+    },
+
     async playSleepWordLoopAudio(wordInfo, playToken, options = {}) {
         if (!this._sleepWordLoopRunning || !wordInfo || !wordInfo.word) return false;
         this._hasUserGesture = true;
@@ -2425,6 +2458,7 @@ Page({
                 sleepWordLoopMeaning: String(wordInfo.meaning || '').trim(),
                 sleepWordLoopProgressText: `${cursor + 1}/${list.length}`
             });
+            this.preloadSleepWordLoopWindow(cursor, SLEEP_WORD_PRELOAD_AHEAD);
 
             const played = await this.playSleepWordLoopAudioWithLimit(wordInfo, token);
             if (!this._sleepWordLoopRunning || this._sleepWordLoopToken !== token) break;
@@ -2467,6 +2501,7 @@ Page({
             sleepWordLoopMeaning: '',
             sleepWordLoopProgressText: `0/${list.length}`
         });
+        this.preloadSleepWordLoopWindow(0, SLEEP_WORD_PRELOAD_INITIAL);
         this.runSleepWordLoop(this._sleepWordLoopToken).catch((err) => {
             console.warn('[sleep word loop] stopped by error:', err);
             this.stopSleepWordLoop();
