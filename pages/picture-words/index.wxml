@@ -16,13 +16,23 @@
       <text>看图想韩语</text>
     </view>
     <view class="top-actions">
-      <button wx:if="{{!contentLoading && word && !categoryPanelVisible && !showCategoryAdConfirm && !showResumeChoice && (groupDone || autoPaused || (phase === 'asking' && !autoContinuePending))}}" class="share-pill" open-type="share" hover-class="share-pill-press">
-        <view class="share-glow"></view>
-        <image class="share-icon" src="/assets/icons/share.svg" mode="aspectFit"></image>
-        <text class="share-label">分享</text>
-      </button>
       <view class="count-pill">{{total ? (current + 1 < 10 ? '0' + (current + 1) : (current + 1)) : '00'}} / {{total < 10 ? '0' + total : total}}</view>
     </view>
+  </view>
+
+  <view wx:if="{{!contentLoading && word && !categoryPanelVisible && !showCategoryAdConfirm && !showResumeChoice}}" class="share-corner-row">
+    <view class="tap-scene-card-entry" catchtap="openTapScene">
+      <view class="tap-scene-card-mark">点</view>
+      <view class="tap-scene-card-copy">
+        <text class="tap-scene-card-title">点读场景</text>
+        <text class="tap-scene-card-sub">场景词句</text>
+      </view>
+    </view>
+    <button wx:if="{{groupDone || autoPaused || (phase === 'asking' && !autoContinuePending)}}" class="share-pill" open-type="share" hover-class="share-pill-press">
+      <view class="share-glow"></view>
+      <image class="share-icon" src="/assets/icons/share.svg" mode="aspectFit"></image>
+      <text class="share-label">分享</text>
+    </button>
   </view>
 
   <!-- 模式切换 -->
@@ -59,11 +69,13 @@
 
         <!-- 底部提问气泡（reveal 前显示） -->
         <view wx:if="{{showAskBubble}}" class="ask-bubble">{{questionText}}</view>
+
       </view>
 
       <!-- 单词卡片：常驻固定高度，只更新文字内容 -->
       <view class="{{answerPanelClass}}">
         <view class="read-tip {{readTipText && !readDone && !groupDone ? '' : 'is-placeholder'}}">{{readTipText || '朗读提示'}}</view>
+        <view wx:if="{{word && word.isExtension}}" class="extension-chip">扩展词</view>
         <view class="answer-ko {{cardKoreanClass}}">{{cardKoreanText}}</view>
         <view class="answer-meta {{cardMetaClass}}">{{cardMetaText}}</view>
 
@@ -128,16 +140,40 @@
         </view>
       </view>
 
-      <view class="category-order-card">
-        <view class="category-order-main">
-          <view class="category-order-title">播放顺序</view>
-          <view class="category-order-sub">{{shuffleEnabled ? '随机播放，会记住本轮打乱后的顺序' : '按上传顺序播放'}}</view>
+      <view class="category-order-card {{wordJumpPanelVisible ? 'expanded' : ''}}">
+        <view class="category-order-row">
+          <view class="category-order-main">
+            <view class="category-order-title">播放顺序</view>
+            <view class="category-order-sub">{{shuffleEnabled ? '随机播放，会记住本轮打乱后的顺序' : '按上传顺序播放'}}</view>
+          </view>
+          <view class="word-jump-toggle {{wordJumpPanelVisible ? 'active' : ''}}" catchtap="toggleWordJumpPanel">
+            <text>跳词</text>
+            <text class="word-jump-toggle-count">{{total ? current + 1 : 0}}/{{total}}</text>
+          </view>
+          <view class="order-segment">
+            <view class="order-segment-item {{!shuffleEnabled ? 'active' : ''}}" data-shuffle="0" catchtap="setShuffleMode">顺序</view>
+            <view class="order-segment-item {{shuffleEnabled ? 'active' : ''}}" data-shuffle="1" catchtap="setShuffleMode">随机</view>
+          </view>
+          <view wx:if="{{shuffleEnabled}}" class="reshuffle-btn" catchtap="reshuffleCurrentGroup">重排</view>
         </view>
-        <view class="order-segment">
-          <view class="order-segment-item {{!shuffleEnabled ? 'active' : ''}}" data-shuffle="0" catchtap="setShuffleMode">顺序</view>
-          <view class="order-segment-item {{shuffleEnabled ? 'active' : ''}}" data-shuffle="1" catchtap="setShuffleMode">随机</view>
+
+        <view wx:if="{{wordJumpPanelVisible}}" class="word-jump-panel">
+          <view class="word-jump-head">
+            <text>当前分类单词</text>
+            <text>{{total}} 词</text>
+          </view>
+          <scroll-view class="word-jump-scroll" scroll-y="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view wx:if="{{!wordJumpList.length}}" class="word-jump-empty">暂无单词</view>
+            <view wx:for="{{wordJumpList}}" wx:key="index" class="word-jump-item {{item.active ? 'active' : ''}}" data-index="{{item.index}}" catchtap="jumpToWord">
+              <view class="word-jump-no">{{item.no}}</view>
+              <view class="word-jump-copy">
+                <view class="word-jump-ko">{{item.korean}}</view>
+                <view class="word-jump-meta">{{item.cn}}</view>
+              </view>
+              <view wx:if="{{item.active}}" class="word-jump-current">当前</view>
+            </view>
+          </scroll-view>
         </view>
-        <view wx:if="{{shuffleEnabled}}" class="reshuffle-btn" catchtap="reshuffleCurrentGroup">重新打乱</view>
       </view>
 
       <view class="category-search">
@@ -146,7 +182,7 @@
         <view wx:if="{{categorySearchText}}" class="category-search-clear" catchtap="clearCategorySearch">清空</view>
       </view>
 
-      <scroll-view class="category-scroll" scroll-y="true" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
+      <scroll-view class="category-scroll {{wordJumpPanelVisible ? 'is-compact' : ''}}" scroll-y="true" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
         <view wx:if="{{!categoryList.length}}" class="category-empty">没有匹配的分类</view>
         <view wx:for="{{categoryList}}" wx:key="id" class="category-item {{item.active ? 'active' : ''}}" data-group-id="{{item.id}}" catchtap="selectCategory">
           <view class="category-item-main">

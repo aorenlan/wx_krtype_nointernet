@@ -12,6 +12,9 @@ const AUDIO_BASE_PATH = '/kr_word';
 const EDGE_TTS_CACHE_NAMESPACE = 'edge_tts_v1';
 const EDGE_TTS_PRELOAD_AHEAD = 2;
 const EDGE_TTS_BATCH_SIZE = 12;
+const AUDIO_PRELOAD_DELAY_MS = 280;
+const AUDIO_PRELOAD_QUEUE_GAP_MS = 220;
+const AUDIO_PRELOAD_AHEAD = 2;
 const NAGGING_REPEAT_MIN = 10;
 const NAGGING_REPEAT_MAX = 100;
 const NAGGING_REPEAT_DEFAULT = 50;
@@ -45,6 +48,9 @@ const SLEEP_TIMER_OPTIONS = [
     { minutes: 45, label: '45分钟' }
 ];
 const SLEEP_KOREAN_REPEAT_PICKER_OPTIONS = SLEEP_KOREAN_REPEAT_OPTIONS.map(count => `韩语读 ${count} 遍`);
+const TAP_SCENE_GUIDE_STORAGE_KEY = 'kr_tap_scene_intro_seen_v1';
+const TAP_SCENE_AUTO_OPEN_KEY = 'kr_picture_words_open_tap_scene_v1';
+const TAP_SCENE_GUIDE_IMAGE = 'https://enoss.aorenlan.fun/kr_picturebook/point_read/mraibn8j/scene_mrajn319.png';
 
 const getSleepTimerPickerIndex = (minutes) => {
     const safeMinutes = Number(minutes) || 0;
@@ -618,6 +624,8 @@ Page({
         sleepWordLoopCurrent: '从当前词开始 · 最多100词',
         sleepWordLoopMeaning: '',
         sleepWordLoopProgressText: '0/0',
+        sentenceAudioState: '',
+        sentenceAudioIndex: -1,
         
         // Typing State (Korean)
         typingState: {
@@ -658,6 +666,8 @@ Page({
         showSettingsTooltip: false,
         settingsTooltipText: '可调整显示模式',
         showWordTooltip: false,
+        showTapSceneGuide: false,
+        tapSceneGuideImage: TAP_SCENE_GUIDE_IMAGE,
         naggingRepeatCountPreview: NAGGING_REPEAT_DEFAULT,
         naggingRepeatProgress: 0,
         isEditingNaggingRepeatCount: false,
@@ -727,6 +737,11 @@ Page({
         const sleepCacheSummary = getSleepCacheSummary(sleepCacheMap);
         const firstSleepOption = getSleepOptionById(sleepState.selectedIds && sleepState.selectedIds[0]);
         const sleepActiveCategoryId = normalizeSleepCategoryId(firstSleepOption ? firstSleepOption.categoryId : SLEEP_DEFAULT_CATEGORY_ID);
+        let shouldShowTapSceneGuide = false;
+        try {
+            shouldShowTapSceneGuide = !wx.getStorageSync(TAP_SCENE_GUIDE_STORAGE_KEY);
+            if (shouldShowTapSceneGuide) wx.setStorageSync(TAP_SCENE_GUIDE_STORAGE_KEY, true);
+        } catch (e) {}
 
 
         // --- Onboarding Guide Queue ---
@@ -762,7 +777,7 @@ Page({
         ];
 
         // Filter to only unseen guides, mark them all as seen upfront
-        const pending = GUIDE_QUEUE.filter(g => !wx.getStorageSync(g.key));
+        const pending = shouldShowTapSceneGuide ? [] : GUIDE_QUEUE.filter(g => !wx.getStorageSync(g.key));
         pending.forEach(g => wx.setStorageSync(g.key, true));
 
         if (pending.length > 0) {
@@ -792,6 +807,10 @@ Page({
         this._audioFileLRU = new Map();
         this._audioFileLRUCapacity = 50;
         this._audioFileInFlight = new Map();
+        this._audioPreloadQueue = [];
+        this._audioPreloadQueueKeys = new Set();
+        this._audioPreloadQueueRunning = false;
+        this._audioPreloadQueueTimer = null;
         this._edgeTtsInFlight = new Map();
         this._preloadTask = null;
         this._preloadNextKey = null;
@@ -836,7 +855,8 @@ Page({
                 : `点音色下载试听 · 全量约 ${formatSleepBytes(SLEEP_SOUND_TOTAL_BYTES)}`,
             sleepCacheButtonText: sleepCacheSummary.ready ? '已下载' : '一键下载',
             sleepSoundOptions: buildSleepSoundCards(sleepState.selectedIds, sleepState.volumes, sleepActiveCategoryId, sleepCacheMap),
-            sleepActiveSummary: getSleepSummary(sleepState.selectedIds)
+            sleepActiveSummary: getSleepSummary(sleepState.selectedIds),
+            showTapSceneGuide: shouldShowTapSceneGuide
         });
 
         try {
@@ -941,6 +961,21 @@ Page({
                     title: '跳转失败',
                     icon: 'none'
                 });
+            }
+        });
+    },
+
+    closeTapSceneGuide() {
+        this.setData({ showTapSceneGuide: false });
+    },
+
+    goTapSceneFromGuide() {
+        this.setData({ showTapSceneGuide: false });
+        try { wx.setStorageSync(TAP_SCENE_AUTO_OPEN_KEY, Date.now()); } catch (e) {}
+        wx.switchTab({
+            url: '/pages/picture-words/index',
+            fail: () => {
+                wx.navigateTo({ url: '/pages/tap-scene/index' });
             }
         });
     },
@@ -1126,6 +1161,8 @@ Page({
 
         // Destroy ALL audio contexts to prevent background resurrection
         this.destroyAudioContexts();
+        this._sentenceAudioToken = '';
+        this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
         if (this._sentenceAudioCtx) {
             try { 
                 this._sentenceAudioCtx.stop();
@@ -1157,6 +1194,8 @@ Page({
             this.videoAd.offClose(this._boundAdClose);
         }
         this.destroyAudioContexts();
+        this._sentenceAudioToken = '';
+        this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
         if (this._sentenceAudioCtx) {
             try { this._sentenceAudioCtx.destroy(); } catch (e) {}
             this._sentenceAudioCtx = null;
@@ -1171,6 +1210,20 @@ Page({
         } catch (e) {}
         this._preloadTask = null;
         this._preloadNextKey = null;
+        this.clearAudioPreloadQueue();
+    },
+
+    clearAudioPreloadQueue() {
+        if (this._audioPreloadQueueTimer) {
+            try { clearTimeout(this._audioPreloadQueueTimer); } catch (e) {}
+            this._audioPreloadQueueTimer = null;
+        }
+        this._audioPreloadQueue = [];
+        if (this._audioPreloadQueueKeys && this._audioPreloadQueueKeys.clear) {
+            try { this._audioPreloadQueueKeys.clear(); } catch (e) {}
+        } else {
+            this._audioPreloadQueueKeys = new Set();
+        }
     },
 
     clearAudioFileLRU() {
@@ -1185,6 +1238,7 @@ Page({
         } catch (e) {}
         this._audioFileLRU = new Map();
         this._audioFileInFlight = new Map();
+        this.clearAudioPreloadQueue();
         this._edgeTtsInFlight = new Map();
     },
 
@@ -1343,6 +1397,62 @@ Page({
         return task;
     },
 
+    enqueueAudioPreload(cacheKey, urls) {
+        const key = cacheKey ? String(cacheKey) : '';
+        const candidates = Array.isArray(urls) ? urls.filter(Boolean) : [];
+        if (!key || !candidates.length) return;
+        if (this.getAudioFileFromLRU(key)) return;
+        if (this._audioFileInFlight && this._audioFileInFlight.has(key)) return;
+        if (!this._audioPreloadQueue) this._audioPreloadQueue = [];
+        if (!this._audioPreloadQueueKeys) this._audioPreloadQueueKeys = new Set();
+        if (this._audioPreloadQueueKeys.has(key)) return;
+
+        this._audioPreloadQueue.push({ cacheKey: key, urls: candidates });
+        this._audioPreloadQueueKeys.add(key);
+        while (this._audioPreloadQueue.length > 8) {
+            const dropped = this._audioPreloadQueue.pop();
+            if (dropped && dropped.cacheKey) {
+                try { this._audioPreloadQueueKeys.delete(dropped.cacheKey); } catch (e) {}
+            }
+        }
+        this.processAudioPreloadQueue();
+    },
+
+    processAudioPreloadQueue() {
+        if (this._audioPreloadQueueRunning) return;
+        const queue = Array.isArray(this._audioPreloadQueue) ? this._audioPreloadQueue : [];
+        if (!queue.length) return;
+
+        const item = queue.shift();
+        if (item && item.cacheKey && this._audioPreloadQueueKeys) {
+            try { this._audioPreloadQueueKeys.delete(item.cacheKey); } catch (e) {}
+        }
+        if (!item || !item.cacheKey || !Array.isArray(item.urls) || !item.urls.length) {
+            this.processAudioPreloadQueue();
+            return;
+        }
+        if (this.getAudioFileFromLRU(item.cacheKey) || (this._audioFileInFlight && this._audioFileInFlight.has(item.cacheKey))) {
+            this.processAudioPreloadQueue();
+            return;
+        }
+
+        this._audioPreloadQueueRunning = true;
+        if (!this._attemptedPreloadKeys) this._attemptedPreloadKeys = new Set();
+        this._attemptedPreloadKeys.add(item.cacheKey);
+        this.downloadAudioToLRU(item.cacheKey, item.urls)
+            .catch(() => '')
+            .then(() => {
+                this._audioPreloadQueueRunning = false;
+                if (this._audioPreloadQueue && this._audioPreloadQueue.length) {
+                    if (this._audioPreloadQueueTimer) clearTimeout(this._audioPreloadQueueTimer);
+                    this._audioPreloadQueueTimer = setTimeout(() => {
+                        this._audioPreloadQueueTimer = null;
+                        this.processAudioPreloadQueue();
+                    }, AUDIO_PRELOAD_QUEUE_GAP_MS);
+                }
+            });
+    },
+
     getProgressSubKey(settings) {
         const s = settings || DEFAULT_SETTINGS;
         const category = s.category || DEFAULT_SETTINGS.category;
@@ -1483,6 +1593,8 @@ Page({
 	        const forceReload = !!forceReloadInfo && (!forceReloadInfo.category || forceReloadInfo.category === nextCategory);
 	        if (forceReload || prevKey !== nextKey || !Array.isArray(this.data.words) || this.data.words.length === 0) {
 	            this.stopNaggingLoop();
+	            this._sentenceAudioToken = '';
+	            this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
 	            if (this._sentenceAudioCtx) {
                 try {
                     this._sentenceAudioCtx.stop();
@@ -3478,7 +3590,7 @@ Page({
             wx.showToast({ title: '暂无例句', icon: 'none' });
             return;
         }
-        this.playSentenceAudioForWord(word);
+        this.playSentenceAudioForWord(word, { index });
     },
 
     async loadWords(settingsOverride) {
@@ -4153,7 +4265,11 @@ Page({
 	        this.updateShiftState(initialState);
 
 		        if (this._preloadTimer) clearTimeout(this._preloadTimer);
-		        this._preloadTimer = setTimeout(() => this.preloadNextWordAudio(), 60);
+		        this.clearAudioPreloadQueue();
+		        this._preloadTimer = setTimeout(() => {
+		            this._preloadTimer = null;
+		            this.preloadNextWordAudio();
+		        }, AUDIO_PRELOAD_DELAY_MS);
 	        if (this._shareImageTimer) clearTimeout(this._shareImageTimer);
 	        this._shareImageTimer = setTimeout(() => {
 	            this._shareImageTimer = null;
@@ -5189,10 +5305,7 @@ Page({
 
         if (words.length <= 1) return;
 
-        const PRELOAD_COUNT = 5;
-        
-        // Optimization: limit loop if words count is small
-        const loopCount = Math.min(PRELOAD_COUNT, words.length - 1);
+        const loopCount = Math.min(AUDIO_PRELOAD_AHEAD, words.length - 1);
 
         for (let i = 1; i <= loopCount; i++) {
             const nextIndex = normalizeIndex(currentIndex + i, words.length);
@@ -5302,14 +5415,10 @@ Page({
         // Check if already in flight
         if (this._audioFileInFlight && this._audioFileInFlight.has(cacheKey)) return;
 
-        // Mark as attempted
-        this._attemptedPreloadKeys.add(cacheKey);
-
         const memo = cacheKey && this._audioUrlMemo && this._audioUrlMemo.get ? this._audioUrlMemo.get(cacheKey) : '';
         const candidates = memo ? [memo] : this.buildAudioUrls(word, isChinese);
         
-        // Fire and forget download
-        this.downloadAudioToLRU(cacheKey, candidates).catch(() => {});
+        this.enqueueAudioPreload(cacheKey, candidates);
     },
 
     isAudioRequestCurrent(playSeq, wordId) {
@@ -5465,6 +5574,8 @@ Page({
 
     closeDetailModal() {
         this.setData({ showDetailModal: false });
+        this._sentenceAudioToken = '';
+        this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
         if (this._sentenceAudioCtx) {
             try {
                 this._sentenceAudioCtx.stop();
@@ -5475,11 +5586,11 @@ Page({
     },
     
     playSentenceAudio() {
-        this.playSentenceAudioForWord(this.data.currentWord);
+        this.playSentenceAudioForWord(this.data.currentWord, { index: this.data.currentIndex });
     },
 
-    playSentenceAudioForWord(currentWord) {
-        // Cleanup previous
+    stopSentenceAudioContext(options = {}) {
+        const keepToken = !!options.keepToken;
         if (this._sentenceAudioCtx) {
             try {
                 this._sentenceAudioCtx.stop();
@@ -5487,9 +5598,137 @@ Page({
             } catch (e) {}
             this._sentenceAudioCtx = null;
         }
+        if (!keepToken) {
+            this._sentenceAudioToken = '';
+            this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
+        }
+    },
 
+    playSentenceSrcOnce(src, sentenceToken) {
+        const playId = Math.random().toString(36).substring(7);
+        const logPrefix = `[SentenceSrc:${playId}]`;
+        const thisRef = this;
+        console.log(logPrefix, 'Start request:', src);
+
+        return new Promise((resolve) => {
+            if (!src || this._sentenceAudioToken !== sentenceToken) {
+                resolve(false);
+                return;
+            }
+
+            this.stopSentenceAudioContext({ keepToken: true });
+
+            const audioCtx = wx.createInnerAudioContext();
+            audioCtx.autoplay = false;
+            audioCtx.obeyMuteSwitch = false;
+            try { audioCtx.loop = false; } catch (e) {}
+            this._sentenceAudioCtx = audioCtx;
+
+            let settled = false;
+            let started = false;
+            let playRequested = false;
+            let playTimer = null;
+            let failTimer = null;
+
+            const isCurrent = () => this._sentenceAudioToken === sentenceToken && this._sentenceAudioCtx === audioCtx;
+
+            const cleanup = () => {
+                try { audioCtx.offCanplay && audioCtx.offCanplay(onCanplay); } catch (e) {}
+                try { audioCtx.offPlay && audioCtx.offPlay(onPlay); } catch (e) {}
+                try { audioCtx.offEnded && audioCtx.offEnded(onEnded); } catch (e) {}
+                try { audioCtx.offError && audioCtx.offError(onError); } catch (e) {}
+                try { audioCtx.offStop && audioCtx.offStop(onStop); } catch (e) {}
+                if (playTimer) clearTimeout(playTimer);
+                if (failTimer) clearTimeout(failTimer);
+                playTimer = null;
+                failTimer = null;
+            };
+
+            const settle = (ok) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                console.log(logPrefix, 'Settled:', ok ? 'Success' : 'Failed');
+                if (this._sentenceAudioCtx === audioCtx) {
+                    try { audioCtx.destroy(); } catch (e) {}
+                    this._sentenceAudioCtx = null;
+                }
+                resolve(!!ok);
+            };
+
+            const attemptPlay = (reason) => {
+                if (settled || started || playRequested || !isCurrent()) return;
+                playRequested = true;
+                try {
+                    console.log(logPrefix, 'Calling audioCtx.play()', reason);
+                    audioCtx.play();
+                } catch (e) {
+                    console.warn(logPrefix, 'Play exception:', e);
+                    playRequested = false;
+                    settle(false);
+                }
+            };
+
+            function onCanplay() {
+                attemptPlay('canplay');
+            }
+
+            function onPlay() {
+                started = true;
+                if (thisRef._sentenceAudioToken === sentenceToken) {
+                    thisRef.setData({ sentenceAudioState: 'playing' });
+                }
+            }
+
+            function onEnded() {
+                settle(true);
+            }
+
+            function onStop() {
+                settle(started);
+            }
+
+            function onError(res) {
+                console.warn(logPrefix, 'onError:', res);
+                settle(started);
+            }
+
+            if (audioCtx.onCanplay) audioCtx.onCanplay(onCanplay);
+            if (audioCtx.onPlay) audioCtx.onPlay(onPlay);
+            audioCtx.onEnded(onEnded);
+            audioCtx.onError(onError);
+            if (audioCtx.onStop) audioCtx.onStop(onStop);
+
+            try {
+                audioCtx.src = src;
+            } catch (e) {
+                console.warn(logPrefix, 'Set src failed:', e);
+                settle(false);
+                return;
+            }
+
+            // On iOS true devices, immediate play after creating the context can fail with audioInstance is not set.
+            playTimer = setTimeout(() => attemptPlay('delayed'), 120);
+            failTimer = setTimeout(() => {
+                if (!started) settle(false);
+            }, 6000);
+        });
+    },
+
+    async playSentenceAudioForWord(currentWord, options = {}) {
+        this.stopSentenceAudioContext();
         const sentence = getDualExampleSentence(currentWord);
-        if (!currentWord || !sentence) return;
+        if (!currentWord || !sentence) {
+            wx.showToast({ title: '暂无例句音频', icon: 'none' });
+            return;
+        }
+        const sentenceToken = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        this._sentenceAudioToken = sentenceToken;
+        const sentenceIndex = Number.isFinite(Number(options.index)) ? Number(options.index) : -1;
+        this.setData({
+            sentenceAudioState: 'loading',
+            sentenceAudioIndex: sentenceIndex
+        });
         
         console.log('[SentenceAudio] Original:', sentence);
         // Replace spaces and punctuation with underscores to match OSS filename format
@@ -5582,17 +5821,54 @@ Page({
         console.log('[SentenceAudio] Candidates:', uniqueNames);
         console.log('[SentenceAudio] URLs:', urls);
 
-        const ctx = wx.createInnerAudioContext();
-        ctx.autoplay = false;
-        this._sentenceAudioCtx = ctx;
-        
-        this.playWithFallback(ctx, urls, null).then((result) => {
-            console.log('[SentenceAudio] PlayWithFallback result:', result);
-            if (this._sentenceAudioCtx === ctx) {
-                try { ctx.destroy(); } catch (e) {}
-                this._sentenceAudioCtx = null;
+        const isCurrentSentenceAudio = () => this._sentenceAudioToken === sentenceToken;
+        const sentenceHash = hashAudioCacheText(sentence);
+        const sentenceOssCacheKey = `sentence_oss__${sentenceHash}`;
+        const sentenceTtsCacheKey = `sentence_tts__${sentenceHash}`;
+
+        try {
+            let result = false;
+            if (!this._sentenceOssMissingKeys) this._sentenceOssMissingKeys = new Set();
+            const skipOss = this._sentenceOssMissingKeys.has(sentenceOssCacheKey);
+
+            if (!skipOss) {
+                const ossSrc = this.getAudioFileFromLRU(sentenceOssCacheKey)
+                    || await this.downloadAudioToLRU(sentenceOssCacheKey, urls);
+                if (!isCurrentSentenceAudio()) return;
+                if (ossSrc) {
+                    result = await this.playSentenceSrcOnce(ossSrc, sentenceToken);
+                } else {
+                    this._sentenceOssMissingKeys.add(sentenceOssCacheKey);
+                }
             }
-        });
+
+            if (!result) {
+                const hasHangul = /[\uac00-\ud7a3\u1100-\u11ff]/.test(sentence);
+                const hasCjk = /[\u3400-\u9fff]/.test(sentence);
+                const lang = hasHangul ? 'ko-KR' : (hasCjk ? 'zh-CN' : 'ko-KR');
+                let edgeSrc = this.getCachedEdgeTtsFile(sentenceTtsCacheKey, sentence, lang);
+                if (!edgeSrc) edgeSrc = await this.fetchEdgeTtsToLRU(sentenceTtsCacheKey, sentence, lang);
+                if (!isCurrentSentenceAudio()) return;
+                if (!edgeSrc) edgeSrc = await this.fetchEdgeTtsToLRU(sentenceTtsCacheKey, sentence, lang, true);
+                if (!isCurrentSentenceAudio()) return;
+                result = edgeSrc ? await this.playSentenceSrcOnce(edgeSrc, sentenceToken) : false;
+            }
+
+            if (!isCurrentSentenceAudio()) return;
+            if (!result) {
+                wx.showToast({ title: '例句音频暂不可用', icon: 'none' });
+            }
+        } catch (e) {
+            console.warn('[SentenceAudio] play failed:', e);
+            if (isCurrentSentenceAudio()) {
+                wx.showToast({ title: '例句音频暂不可用', icon: 'none' });
+            }
+        } finally {
+            if (this._sentenceAudioToken === sentenceToken && !this._sentenceAudioCtx) {
+                this._sentenceAudioToken = '';
+                this.setData({ sentenceAudioState: '', sentenceAudioIndex: -1 });
+            }
+        }
     },
 
     toggleKeyboard() {

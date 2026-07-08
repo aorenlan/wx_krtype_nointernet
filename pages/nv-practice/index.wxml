@@ -276,7 +276,8 @@
                   placeholder="输入单词"
                   placeholder-class="dual-native-placeholder"
                   confirm-type="next"
-                  adjust-position="{{true}}"
+                  adjust-position="{{false}}"
+                  cursor-spacing="0"
                   hold-keyboard="{{true}}"
                   auto-blur="{{false}}"
                   data-index="{{item.index}}"
@@ -305,7 +306,11 @@
           </view>
         </view>
 
-        <view class="dual-example-strip" wx:if="{{item.showExample}}" catchtap="playDualExampleAudio" data-index="{{item.index}}">
+        <view class="dual-example-strip {{sentenceAudioIndex == item.index && sentenceAudioState == 'loading' ? 'audio-loading' : ''}} {{sentenceAudioIndex == item.index && sentenceAudioState == 'playing' ? 'audio-playing' : ''}}" wx:if="{{item.showExample}}" catchtap="playDualExampleAudio" data-index="{{item.index}}">
+          <view class="dual-example-audio-state" wx:if="{{sentenceAudioIndex == item.index && sentenceAudioState}}">
+            <view class="dual-example-audio-dot"></view>
+            <text>{{sentenceAudioState == 'playing' ? '播放中' : '准备中'}}</text>
+          </view>
           <text class="dual-example-sentence" wx:if="{{item.exampleSentence}}">{{item.exampleSentence}}</text>
           <text class="dual-example-translation" wx:if="{{item.exampleTranslation}}">{{item.exampleTranslation}}</text>
         </view>
@@ -332,7 +337,6 @@
         <view class="card-top-bar">
             <view class="top-left-group">
                 <view class="focus-mode-btn" bindtap="toggleFocusMode">F</view>
-                <text class="mode-badge">Practice</text>
             </view>
             <view class="card-actions">
                 <view class="action-icon shuffle-action-icon {{isShuffled ? 'shuffle-on' : ''}}" catchtap="toggleShuffle" hover-class="none">
@@ -482,7 +486,7 @@
 
   <!-- Word Detail Modal -->
   <view class="detail-overlay {{showDetailModal ? 'show' : ''}} {{isKeyboardOpen ? 'keyboard-open' : ''}}" bindtap="closeDetailModal">
-    <view class="detail-card" catchtap="playSentenceAudio">
+    <view class="detail-card {{sentenceAudioState == 'loading' ? 'sentence-loading' : ''}} {{sentenceAudioState == 'playing' ? 'sentence-playing' : ''}}" catchtap="playSentenceAudio">
       <view class="detail-header">
         <text class="detail-title">例句学习</text>
         <view wx:if="{{currentWord.word}}" class="detail-play-btn" catchtap="playWordAudio">
@@ -497,6 +501,7 @@
                 <view class="detail-label-row">
                   <text class="detail-label">例句</text>
                   <image src="../../assets/icons/volume.svg" class="detail-audio-icon" />
+                  <text class="detail-audio-state" wx:if="{{sentenceAudioState}}">{{sentenceAudioState == 'playing' ? '播放中' : '准备中'}}</text>
                 </view>
                 <text class="detail-text korean">{{currentWord.example_sentence || '暂无例句'}}</text>
             </view>
@@ -751,6 +756,26 @@
     </block>
 
     <view class="nagging-tip">点击任意处退出唠叨模式</view>
+  </view>
+</view>
+
+<view wx:if="{{showTapSceneGuide}}" class="tap-scene-guide-mask" catchtap="closeTapSceneGuide" catchtouchmove="preventScroll">
+  <view class="tap-scene-guide-card" catchtap="preventBubble">
+    <view class="tap-scene-guide-art">
+      <image class="tap-scene-guide-image" src="{{tapSceneGuideImage}}" mode="aspectFill"></image>
+      <view class="tap-scene-guide-image-mask"></view>
+      <view class="tap-scene-guide-dot one"></view>
+      <view class="tap-scene-guide-dot two"></view>
+      <view class="tap-scene-guide-dot three"></view>
+      <view class="tap-scene-guide-bubble">点</view>
+    </view>
+    <view class="tap-scene-guide-kicker">NEW · 看图点读</view>
+    <view class="tap-scene-guide-title">图里的韩语，现在可以点着听</view>
+    <view class="tap-scene-guide-copy">打开第二个「看图」页，点场景里的物品，直接听单词、例句和场景句。</view>
+    <view class="tap-scene-guide-actions">
+      <view class="tap-scene-guide-btn secondary" catchtap="closeTapSceneGuide">先不看</view>
+      <view class="tap-scene-guide-btn primary" catchtap="goTapSceneFromGuide">去看看</view>
+    </view>
   </view>
 </view>
 

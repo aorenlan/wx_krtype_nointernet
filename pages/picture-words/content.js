@@ -18,6 +18,22 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function isExtensionWord(raw) {
+  if (!raw || typeof raw !== 'object') return false;
+  if (raw.isExtension === true || raw.extension === true) return true;
+  if (typeof raw.isExtension === 'string' && /^(true|1|yes|y)$/i.test(raw.isExtension.trim())) return true;
+  if (typeof raw.extension === 'string' && /^(true|1|yes|y)$/i.test(raw.extension.trim())) return true;
+
+  const kind = safeString(raw.wordType || raw.kind || raw.role, '').toLowerCase();
+  if (['extension', 'extended', 'expand', 'extra'].includes(kind)) return true;
+
+  const tags = Array.isArray(raw.tags) ? raw.tags : [];
+  return tags.some((tag) => {
+    const text = safeString(tag, '').toLowerCase();
+    return ['extension', 'extended', 'expand', 'extra', '扩展', '扩展词'].includes(text);
+  });
+}
+
 function now() {
   return Date.now ? Date.now() : new Date().getTime();
 }
@@ -73,6 +89,7 @@ function normalizeGroup(raw, index) {
   const items = Array.isArray(raw && raw.items) ? raw.items : [];
   const id = safeString(raw && raw.id, `group-${index + 1}`);
   const first = items[0] || {};
+  const extensionCount = items.filter(isExtensionWord).length;
   return {
     id,
     name: safeString(raw && (raw.name || raw.title), id),
@@ -80,6 +97,7 @@ function normalizeGroup(raw, index) {
     promptKo: safeString(raw && raw.promptKo, '이게 뭐예요?'),
     cover: safeString(raw && raw.cover, first.image || ''),
     itemCount: items.length,
+    extensionCount,
     order: Number(raw && raw.order) || index
   };
 }
@@ -87,6 +105,7 @@ function normalizeGroup(raw, index) {
 function normalizeItem(raw, group, index) {
   const baseId = safeString(raw && raw.id, `${group.id}-${index + 1}`);
   const rawAudio = raw && raw.audio;
+  const rawSceneSentence = raw && raw.sceneSentence;
   let audio = {};
   if (typeof rawAudio === 'string') {
     const audioUrl = safeString(rawAudio, '');
@@ -99,7 +118,18 @@ function normalizeItem(raw, group, index) {
     }, {});
   }
 
-  return {
+  const sceneSentence = rawSceneSentence && typeof rawSceneSentence === 'object' && !Array.isArray(rawSceneSentence)
+    ? {
+        scene: safeString(rawSceneSentence.scene, group.name || group.id || ''),
+        ko: safeString(rawSceneSentence.ko || rawSceneSentence.korean, ''),
+        cn: safeString(rawSceneSentence.cn || rawSceneSentence.chinese, '')
+      }
+    : null;
+  const exampleSentence = safeString(raw && (raw.example_sentence || raw.exampleSentence), sceneSentence && sceneSentence.ko || '');
+  const sentenceTranslation = safeString(raw && (raw.sentence_translation || raw.sentenceTranslation), sceneSentence && sceneSentence.cn || '');
+  const isExtension = isExtensionWord(raw);
+
+  const item = {
     id: baseId,
     groupId: group.id,
     korean: safeString(raw && raw.korean, ''),
@@ -110,9 +140,15 @@ function normalizeItem(raw, group, index) {
     promptKo: safeString(raw && raw.promptKo, group.promptKo || '이게 뭐예요?'),
     tags: Array.isArray(raw && raw.tags) ? raw.tags.slice() : [],
     level: safeString(raw && raw.level, group.level || ''),
+    isExtension,
+    wordType: isExtension ? 'extension' : safeString(raw && raw.wordType, ''),
     audio,
     sort: Number(raw && raw.sort) || index
   };
+  if (sceneSentence && (sceneSentence.ko || sceneSentence.cn)) item.sceneSentence = sceneSentence;
+  if (exampleSentence) item.example_sentence = exampleSentence;
+  if (sentenceTranslation) item.sentence_translation = sentenceTranslation;
+  return item;
 }
 
 function getRawGroups() {
@@ -129,7 +165,8 @@ function getGroupsSignature(rawGroups) {
       return [
         safeString(item && item.id, ''),
         safeString(item && item.korean, ''),
-        safeString(item && item.image, '')
+        safeString(item && item.image, ''),
+        isExtensionWord(item) ? 'ext' : ''
       ].join(':');
     }).join(',');
     return [

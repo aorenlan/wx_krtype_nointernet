@@ -33,6 +33,7 @@ const CATEGORY_AD_UNIT_ID = 'adunit-17974771ea617fa3';
 const CATEGORY_AD_DATE_KEY = 'picture_words_category_ad_date_v1';
 const STUDY_SESSION_STORAGE_KEY = 'picture_words_study_sessions_v1';
 const SHUFFLE_STORAGE_KEY = 'picture_words_shuffle_enabled_v1';
+const TAP_SCENE_AUTO_OPEN_KEY = 'kr_picture_words_open_tap_scene_v1';
 const STUDY_SESSION_SCHEMA = 1;
 const MAX_STUDY_SESSIONS = 80;
 
@@ -54,6 +55,8 @@ Page({
     categoryList: [],
     categoryPanelVisible: false,
     categorySearchText: '',
+    wordJumpPanelVisible: false,
+    wordJumpList: [],
     showCategoryAdConfirm: false,
     categoryAdLoading: false,
     showResumeChoice: false,
@@ -152,6 +155,7 @@ Page({
 
   onShow() {
     this._syncTabBarVisibility();
+    this._consumeTapSceneAutoOpen();
   },
 
   onUnload() {
@@ -237,6 +241,31 @@ Page({
 
   _syncTabBarVisibility() {
     this._setTabBarHidden(this._shouldHideTabBar());
+  },
+
+  openTapScene() {
+    wx.navigateTo({ url: '/pages/tap-scene/index' });
+  },
+
+  _consumeTapSceneAutoOpen() {
+    if (this._tapSceneAutoOpening) return;
+    let marker = '';
+    try { marker = wx.getStorageSync(TAP_SCENE_AUTO_OPEN_KEY); } catch (e) {}
+    if (!marker) return;
+    try { wx.removeStorageSync(TAP_SCENE_AUTO_OPEN_KEY); } catch (e) {}
+    this._tapSceneAutoOpening = true;
+    setTimeout(() => {
+      this._tapSceneAutoOpening = false;
+      if (this.data.categoryPanelVisible || this.data.showCategoryAdConfirm || this.data.showResumeChoice) {
+        this.setData({
+          categoryPanelVisible: false,
+          showCategoryAdConfirm: false,
+          showResumeChoice: false,
+          categorySearchText: ''
+        });
+      }
+      this.openTapScene();
+    }, 260);
   },
 
   _getPictureShareMeta() {
@@ -667,7 +696,9 @@ Page({
   _buildGroupOptions(groups) {
     return (Array.isArray(groups) ? groups : []).map((group) => {
       const count = group && group.itemCount ? ` · ${group.itemCount}词` : '';
-      return `${group.name || group.id}${count}`;
+      const extensionCount = Number(group && group.extensionCount || 0);
+      const extension = extensionCount ? ` · ${extensionCount}扩展` : '';
+      return `${group.name || group.id}${count}${extension}`;
     });
   },
 
@@ -683,15 +714,35 @@ Page({
       })
       .map((group) => {
         const itemCount = Number(group.itemCount || 0);
+        const extensionCount = Number(group.extensionCount || 0);
         return {
           id: group.id,
           name: group.name || group.id,
           itemCount,
-          metaText: `${itemCount}词`,
+          extensionCount,
+          metaText: `${itemCount}词${extensionCount ? ` · ${extensionCount}扩展` : ''}`,
           active: group.id === currentId,
           stateText: group.id === currentId ? '当前' : '切换'
         };
       });
+  },
+
+  _buildWordJumpList(words, currentIndex) {
+    const list = Array.isArray(words) ? words : [];
+    const current = Math.max(0, Number(currentIndex) || 0);
+    return list.map((word, index) => {
+      const korean = String(word && (word.korean || word.word) || '').trim();
+      const cn = String(word && (word.cn || word.chinese || word.meaning) || '').trim();
+      const roman = String(word && word.roman || '').trim();
+      return {
+        index,
+        no: index + 1 < 10 ? `0${index + 1}` : String(index + 1),
+        korean,
+        cn,
+        meta: roman || cn,
+        active: index === current
+      };
+    });
   },
 
   _getGroupPickerIndex(groups, groupId) {
@@ -753,6 +804,8 @@ Page({
         categoryList,
         categoryPanelVisible: false,
         categorySearchText: '',
+        wordJumpPanelVisible: false,
+        wordJumpList: [],
         groupPickerIndex,
         hasCategorySwitch: groupOptions.length > 1,
         showCategoryPicker: groupOptions.length > 0,
@@ -836,7 +889,9 @@ Page({
     this.setData({
       categoryPanelVisible: true,
       categorySearchText: '',
-      categoryList: this._buildCategoryList(groups, '', this.data.currentGroupId)
+      categoryList: this._buildCategoryList(groups, '', this.data.currentGroupId),
+      wordJumpPanelVisible: false,
+      wordJumpList: this._buildWordJumpList(this.data.words, this.data.current)
     });
     this._setTabBarHidden(true);
   },
@@ -847,6 +902,8 @@ Page({
     this.setData({
       categoryPanelVisible: false,
       categorySearchText: '',
+      wordJumpPanelVisible: false,
+      wordJumpList: [],
       showCategoryAdConfirm: false,
       categoryAdLoading: false,
       showPicturePracticeConfirm: false,
@@ -872,19 +929,98 @@ Page({
     });
   },
 
+  toggleWordJumpPanel() {
+    const nextVisible = !this.data.wordJumpPanelVisible;
+    this.setData({
+      wordJumpPanelVisible: nextVisible,
+      wordJumpList: this._buildWordJumpList(this.data.words, this.data.current)
+    });
+  },
+
+  jumpToWord(e) {
+    const index = Number(e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.index : -1);
+    if (index < 0 || index >= this.data.total) return;
+    this._jumpToWordIndex(index);
+  },
+
+  _jumpToWordIndex(index) {
+    const words = Array.isArray(this.data.words) ? this.data.words : [];
+    const targetIndex = Math.max(0, Math.min(Number(index) || 0, Math.max(words.length - 1, 0)));
+    const targetWord = words[targetIndex];
+    if (!targetWord) return;
+
+    this._clearTimers();
+    this._stopAudio();
+    this._seqToken = (this._seqToken || 0) + 1;
+
+    const questionText = this._getQuestionText(targetWord);
+    const questionState = this._getQuestionCardState(targetWord);
+    this._playSfx('pop');
+
+    this.setData({
+      current: targetIndex,
+      word: targetWord,
+      phase: 'asking',
+      countdown: COUNTDOWN_START,
+      countdownPercent: 100,
+      inputValue: '',
+      inputError: false,
+      readLabel: '',
+      readIndex: 0,
+      readTotal: 0,
+      readType: '',
+      koReadIndex: 0,
+      readDone: false,
+      groupDone: false,
+      readTipText: '看图想韩语',
+      showRetryButton: false,
+      retryStepIndex: 0,
+      ...questionState,
+      answerPanelClass: ANSWER_PANEL_HIDDEN,
+      autoPaused: false,
+      autoContinuePending: false,
+      showNextButton: false,
+      nextButtonText: (targetIndex + 1 >= this.data.total) ? '完成' : '下一个 ›',
+      showAskBadge: true,
+      showCountBadge: false,
+      showAskBubble: true,
+      categoryPanelVisible: false,
+      categorySearchText: '',
+      wordJumpPanelVisible: false,
+      wordJumpList: [],
+      popTick: (this.data.popTick + 1) % 2,
+      dbg: `已跳到第 ${targetIndex + 1} 个`
+    }, () => {
+      this._saveStudySession({ done: false });
+      this._syncTabBarVisibility();
+      this._scheduleShareImage();
+    });
+
+    this._prefetchTts(questionText, 'ko-KR');
+    this._prefetchWordAudio(targetWord);
+    this._prefetchImagesForWords(words, targetIndex);
+  },
+
   practiceCurrentGroup() {
     const group = this.data.currentGroup || {};
     const sourceWords = Array.isArray(this.data.baseWords) && this.data.baseWords.length
       ? this.data.baseWords
       : this.data.words;
     const practiceWords = (Array.isArray(sourceWords) ? sourceWords : [])
-      .map((item) => ({
-        ...item,
-        word: item && item.korean ? item.korean : item && item.word,
-        meaning: item && item.cn ? item.cn : item && item.meaning,
-        sourceGroupId: group.id || this.data.currentGroupId || '',
-        sourceGroupName: group.name || this.data.groupTitle || ''
-      }))
+      .map((item) => {
+        const sceneSentence = item && item.sceneSentence && typeof item.sceneSentence === 'object'
+          ? item.sceneSentence
+          : null;
+        return {
+          ...item,
+          word: item && item.korean ? item.korean : item && item.word,
+          meaning: item && item.cn ? item.cn : item && item.meaning,
+          sourceGroupId: group.id || this.data.currentGroupId || '',
+          sourceGroupName: group.name || this.data.groupTitle || '',
+          example_sentence: (item && item.example_sentence) || (sceneSentence && sceneSentence.ko) || '',
+          sentence_translation: (item && item.sentence_translation) || (sceneSentence && sceneSentence.cn) || ''
+        };
+      })
       .filter((item) => item && item.word);
 
     if (!practiceWords.length) {
@@ -1068,6 +1204,7 @@ Page({
       total: words.length,
       current: 0,
       word: firstWord,
+      wordJumpList: this.data.wordJumpPanelVisible ? this._buildWordJumpList(words, 0) : this.data.wordJumpList,
       phase: 'asking',
       countdown: COUNTDOWN_START,
       countdownPercent: 100,
@@ -1765,6 +1902,7 @@ Page({
     this.setData({
       current: next,
       word: nextWord,
+      wordJumpList: this.data.wordJumpPanelVisible ? this._buildWordJumpList(this.data.words, next) : this.data.wordJumpList,
       phase: 'asking',
       countdown: COUNTDOWN_START,
       countdownPercent: 100,
@@ -1814,6 +1952,7 @@ Page({
       total: words.length,
       current: 0,
       word: firstWord,
+      wordJumpList: this.data.wordJumpPanelVisible ? this._buildWordJumpList(words, 0) : this.data.wordJumpList,
       phase: 'asking',
       countdown: COUNTDOWN_START,
       countdownPercent: 100,

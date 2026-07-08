@@ -232,6 +232,33 @@
           </view>
         </view>
       </view>
+
+      <view class="setting-section" wx:if="{{currentCategory === 'Mistakes (错题本)'}}">
+        <view class="section-title">错题管理</view>
+        <view class="photo-manage-card mistake-manage-card">
+          <view class="photo-manage-copy">
+            <text class="photo-manage-title">已保存 {{mistakesCount}} 个单词</text>
+            <text class="photo-manage-desc">从练习中加入，最新错题会排在前面。</text>
+          </view>
+          <view class="photo-manage-btn" bindtap="startMistakesPractice">去练习</view>
+        </view>
+        <view class="photo-word-heading" wx:if="{{mistakesList.length}}">
+          <text>错题列表</text>
+          <text>{{mistakesList.length}} 个</text>
+        </view>
+        <view class="photo-word-list" wx:if="{{mistakesList.length}}">
+          <view wx:for="{{mistakesList}}" wx:key="id" class="photo-word-row mistake-word-row">
+            <view class="photo-word-copy">
+              <text class="photo-word-ko">{{item.word || item.korean || item.kr || '未命名单词'}}</text>
+              <text class="photo-word-meaning">{{item.meaning || item.cn || item.translation || item.chinese || '暂无释义'}}</text>
+            </view>
+            <view class="photo-word-delete" data-id="{{item.id}}" data-word="{{item.word || item.korean || item.kr}}" catchtap="removeMistake">移除</view>
+          </view>
+        </view>
+        <view class="mistake-empty-card" wx:else>
+          <text>暂无错题</text>
+        </view>
+      </view>
     </view>
   </block>
 

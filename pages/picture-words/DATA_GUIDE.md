@@ -37,6 +37,7 @@
 可选字段：
 
 - `promptKo`: 提问句。group 级默认是 `이게 뭐예요?`，item 级可以覆盖。
+- `sceneSentence`: 场景内高频句，形如 `{ scene, ko, cn }`。导入拼写练习时会映射为 `example_sentence` / `sentence_translation`。
 - `roman`: 罗马音。
 - `audio`: 预生成音频地址。通常不用手写，执行音频生成脚本后会自动补上 `audio.ko` 和 `audio.ko-KR`。
 - `level`, `tags`, `sort`: 用于分类展示、排序和后续筛选。
@@ -52,6 +53,7 @@
 OSS 热更：
 
 - 修改 `data.js` 后，执行 `node tools/generate-picture-words-config.js`。
+- 若要补齐场景内高频句，执行 `node tools/generate-picture-word-scene-sentences.js --version YYYYMMDD.NNN`。
 - 再执行 `node tools/generate-picture-word-audio.js`，它会生成韩语音频到 `oss-config/kr_picturebook/audio/ko-KR/`，并把音频 URL 写回当前 catalog。
 - 生成文件在 `oss-config/kr_picturebook/config/` 和 `oss-config/kr_picturebook/audio/ko-KR/`。
 - 上传 `picture-words.manifest.json` 和当前版本的 `picture-words.catalog.*.json` 到 OSS 的 `/kr_picturebook/config/`。
@@ -62,6 +64,7 @@ OSS 热更：
 
 ```bash
 node tools/generate-picture-words-config.js
+node tools/generate-picture-word-scene-sentences.js --version 20260707.001
 node tools/generate-picture-word-audio.js
 ```
 

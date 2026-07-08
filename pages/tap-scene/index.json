@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "看图点读",
+  "navigationBarBackgroundColor": "#f8f5ef",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f8f5ef",
+  "pageOrientation": "auto",
+  "disableScroll": true
+}

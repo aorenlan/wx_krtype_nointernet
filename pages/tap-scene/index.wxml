@@ -1,0 +1,329 @@
+<view class="tap-page {{isLandscape ? 'landscape' : 'portrait'}}" style="{{pageSafeStyle}}">
+  <view class="status-space" style="height: {{navTotalHeight}}px;"></view>
+
+  <view class="tap-topbar" style="{{topbarSafeStyle}}">
+    <view class="back-pill" catchtap="goBack">‹</view>
+    <button class="tap-share-pill" open-type="share" hover-class="tap-share-press">
+      <view class="tap-share-glow"></view>
+      <image class="tap-share-icon" src="/assets/icons/share.svg" mode="aspectFit"></image>
+      <text>分享</text>
+    </button>
+    <view class="top-copy">
+      <text class="top-title">看图点读</text>
+      <text class="top-sub">{{scene.title}} · {{scene.subtitle}}</text>
+    </view>
+    <picker wx:if="{{courseOptions.length > 1}}" class="scene-picker" mode="selector" range="{{courseOptions}}" range-key="title" value="{{courseIndex}}" bindchange="switchCourseByIndex">
+      <view class="scene-picker-pill">
+        <text>场景</text>
+        <view>{{courseOptions.length}}</view>
+      </view>
+    </picker>
+    <view class="orientation-pill" catchtap="toggleOrientation">{{isLandscape ? '竖屏' : '横屏'}}</view>
+    <view class="status-pill">点读</view>
+  </view>
+
+  <view wx:if="{{isLandscape}}" class="tap-landscape-main">
+    <view class="scene-card landscape-scene-card">
+      <view class="scene-stage landscape-stage">
+        <image wx:if="{{scene.image}}" class="scene-image" src="{{scene.image}}" mode="scaleToFill"></image>
+        <view
+          wx:for="{{hotspots}}"
+          wx:key="id"
+          class="hotspot {{item.active ? 'active' : ''}} {{item.type}} {{item.labelClass}}"
+          style="{{item.styleText}}"
+          data-id="{{item.id}}"
+          catchtap="selectHotspot"
+        >
+          <view class="hotspot-dot"></view>
+          <text>{{item.korean}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="learn-panel landscape-learn-panel">
+      <view class="detail-card">
+        <block wx:if="{{detailMode === 'phrase'}}">
+          <view class="detail-head phrase-detail-head {{playingKey === 'phrase:' + selectedPhrase.id ? 'playing' : ''}}" catchtap="speakPhrase">
+            <view class="detail-mark phrase-mark">句</view>
+            <view class="detail-main">
+              <view class="detail-title-row">
+                <text class="phrase-detail-label">场景句</text>
+                <text class="strength-tag">完整句</text>
+              </view>
+              <text class="phrase-detail-ko">{{selectedPhrase.kr}}</text>
+              <text class="phrase-detail-cn">{{selectedPhrase.zh}}</text>
+            </view>
+          </view>
+
+          <view class="phrase-full-box {{playingKey === 'phrase:' + selectedPhrase.id ? 'playing' : ''}}" catchtap="speakPhrase">
+            <text class="box-label">完整表达</text>
+            <text class="phrase-full-ko">{{selectedPhrase.kr}}</text>
+            <text class="phrase-full-roman">{{selectedPhrase.roman}}</text>
+            <text class="phrase-full-cn">{{selectedPhrase.zh}}</text>
+            <text class="phrase-full-en">{{selectedPhrase.en}}</text>
+            <text class="phrase-full-usage">{{selectedPhrase.usage}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="detail-head {{playingKey === 'word:' + selected.id ? 'playing' : ''}}" catchtap="speakWord">
+            <view class="detail-mark">{{selected.mark}}</view>
+            <view class="detail-main">
+              <view class="detail-title-row">
+                <text class="detail-ko">{{selected.korean}}</text>
+                <text class="strength-tag {{selected.isExtension ? 'extension' : ''}}">{{selected.strength}}</text>
+              </view>
+              <text class="detail-roman">{{selected.roman}} · {{selected.en}}</text>
+              <text class="detail-cn">{{selected.cn}}</text>
+            </view>
+          </view>
+
+          <view class="example-box {{playingKey === 'example:' + selected.id ? 'playing' : ''}}" catchtap="speakExample">
+            <text class="box-label">日常例句</text>
+            <text class="example-ko">{{selected.exampleKo}}</text>
+            <text class="example-cn">{{selected.exampleCn}}</text>
+          </view>
+        </block>
+      </view>
+
+      <scroll-view class="word-list" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="list-head">
+          <text>场景词</text>
+          <text>{{words.length}} 词</text>
+        </view>
+        <view
+          wx:for="{{words}}"
+          wx:key="id"
+          class="word-row {{item.active ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          catchtap="selectFromList"
+        >
+          <text class="row-index">{{item.indexLabel}}</text>
+          <view class="row-copy">
+            <text class="row-ko">{{item.korean}}</text>
+            <text class="row-cn">{{item.cn}} · {{item.en}}</text>
+          </view>
+          <text class="row-strength {{item.isExtension ? 'extension' : ''}}">{{item.strength}}</text>
+        </view>
+
+        <view wx:if="{{extensionWords.length}}" class="extension-list-head" catchtap="toggleExtensions">
+          <view>
+            <text>扩展词</text>
+            <text>补充记忆</text>
+          </view>
+          <text>{{extensionWords.length}} 个 · {{showExtensions ? '收起' : '展开'}}</text>
+        </view>
+        <block wx:if="{{showExtensions}}">
+          <view
+            wx:for="{{extensionWords}}"
+            wx:key="id"
+            class="word-row extension-row {{item.active ? 'active' : ''}}"
+            data-id="{{item.id}}"
+            catchtap="selectFromList"
+          >
+            <text class="row-index">{{item.indexLabel}}</text>
+            <view class="row-copy">
+              <text class="row-ko">{{item.korean}}</text>
+              <text class="row-cn">{{item.cn}} · {{item.en}}</text>
+            </view>
+            <text class="row-strength extension">{{item.strength}}</text>
+          </view>
+        </block>
+      </scroll-view>
+    </view>
+  </view>
+
+  <scroll-view wx:else class="tap-scroll" style="height: calc(100vh - {{navTotalHeight}}px - 88rpx);" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+    <view class="tap-content">
+      <view class="scene-card">
+        <view class="scene-head">
+          <view>
+            <text class="scene-title">{{scene.title}}</text>
+            <text class="scene-sub">{{scene.prompt}}</text>
+          </view>
+          <view class="scene-count">{{hotspots.length}} 点 · {{words.length}} 词</view>
+        </view>
+
+        <view class="scene-stage">
+          <image wx:if="{{scene.image}}" class="scene-image" src="{{scene.image}}" mode="scaleToFill"></image>
+          <view wx:else class="coffee-art">
+            <view class="art-window"></view>
+            <view class="art-board"></view>
+            <view class="art-shelf one"></view>
+            <view class="art-shelf two"></view>
+            <view class="art-counter"></view>
+            <view class="art-barista">
+              <view class="person-head"></view>
+              <view class="person-body"></view>
+            </view>
+            <view class="art-customer">
+              <view class="person-head"></view>
+              <view class="person-body"></view>
+            </view>
+            <view class="art-machine"></view>
+            <view class="art-grinder"></view>
+            <view class="art-cup"></view>
+            <view class="art-jar"></view>
+            <view class="art-milk"></view>
+            <view class="art-syrup"></view>
+            <view class="art-croissant"></view>
+            <view class="art-straw"></view>
+            <view class="art-sleeve"></view>
+            <view class="art-tray"></view>
+            <view class="art-receipt"></view>
+            <view class="art-napkin"></view>
+          </view>
+
+          <view
+            wx:for="{{hotspots}}"
+            wx:key="id"
+            class="hotspot {{item.active ? 'active' : ''}} {{item.type}} {{item.labelClass}}"
+            style="{{item.styleText}}"
+            data-id="{{item.id}}"
+            catchtap="selectHotspot"
+          >
+            <view class="hotspot-dot"></view>
+            <text>{{item.korean}}</text>
+          </view>
+        </view>
+
+        <view wx:if="{{!isLandscape}}" class="phrase-mini">
+          <view class="phrase-mini-head">
+            <text>场景句</text>
+            <text>{{phrases.length}} 句</text>
+          </view>
+          <scroll-view class="phrase-mini-scroll" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view class="phrase-mini-inner">
+              <view
+                wx:for="{{phrases}}"
+                wx:key="id"
+                class="phrase-chip {{item.active ? 'active' : ''}}"
+                data-id="{{item.id}}"
+                catchtap="speakPhrase"
+              >
+                <text>{{item.kr}}</text>
+                <view>{{item.zh}}</view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view wx:if="{{!isLandscape}}" class="word-strip-head">
+          <text>场景词</text>
+          <text>{{words.length}} 词</text>
+        </view>
+        <scroll-view wx:if="{{!isLandscape}}" class="hotspot-strip" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="strip-inner">
+            <view
+              wx:for="{{words}}"
+              wx:key="id"
+              class="strip-chip {{item.active ? 'active' : ''}} {{item.isExtension ? 'extension' : ''}}"
+              data-id="{{item.id}}"
+              catchtap="selectFromList"
+            >
+              <text>{{item.label}}</text>
+              <view>{{item.cn}}</view>
+            </view>
+          </view>
+        </scroll-view>
+
+        <view wx:if="{{extensionWords.length}}" class="extension-toggle" catchtap="toggleExtensions">
+          <view>
+            <text>扩展词</text>
+            <text>核心词背熟后再看</text>
+          </view>
+          <text>{{extensionWords.length}} 个 · {{showExtensions ? '收起' : '展开'}}</text>
+        </view>
+        <scroll-view wx:if="{{showExtensions}}" class="extension-strip" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="strip-inner">
+            <view
+              wx:for="{{extensionWords}}"
+              wx:key="id"
+              class="strip-chip extension {{item.active ? 'active' : ''}}"
+              data-id="{{item.id}}"
+              catchtap="selectFromList"
+            >
+              <text>{{item.label}}</text>
+              <view>{{item.cn}}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view class="learn-panel">
+        <view class="detail-card">
+          <block wx:if="{{detailMode === 'phrase'}}">
+            <view class="detail-head phrase-detail-head {{playingKey === 'phrase:' + selectedPhrase.id ? 'playing' : ''}}" catchtap="speakPhrase">
+              <view class="detail-mark phrase-mark">句</view>
+              <view class="detail-main">
+                <view class="detail-title-row">
+                  <text class="phrase-detail-label">场景句</text>
+                  <text class="strength-tag">完整句</text>
+                </view>
+                <text class="phrase-detail-ko">{{selectedPhrase.kr}}</text>
+                <text class="phrase-detail-cn">{{selectedPhrase.zh}}</text>
+              </view>
+            </view>
+
+            <view class="phrase-full-box {{playingKey === 'phrase:' + selectedPhrase.id ? 'playing' : ''}}" catchtap="speakPhrase">
+              <text class="box-label">完整表达</text>
+              <text class="phrase-full-ko">{{selectedPhrase.kr}}</text>
+              <text class="phrase-full-roman">{{selectedPhrase.roman}}</text>
+              <text class="phrase-full-cn">{{selectedPhrase.zh}}</text>
+              <text class="phrase-full-en">{{selectedPhrase.en}}</text>
+              <text class="phrase-full-usage">{{selectedPhrase.usage}}</text>
+            </view>
+          </block>
+          <block wx:else>
+            <view class="detail-head {{playingKey === 'word:' + selected.id ? 'playing' : ''}}" catchtap="speakWord">
+              <view class="detail-mark">{{selected.mark}}</view>
+              <view class="detail-main">
+                <view class="detail-title-row">
+                  <text class="detail-ko">{{selected.korean}}</text>
+                  <text class="strength-tag {{selected.isExtension ? 'extension' : ''}}">{{selected.strength}}</text>
+                </view>
+                <text class="detail-roman">{{selected.roman}} · {{selected.en}}</text>
+                <text class="detail-cn">{{selected.cn}}</text>
+              </view>
+            </view>
+
+            <view class="example-box {{playingKey === 'example:' + selected.id ? 'playing' : ''}}" catchtap="speakExample">
+              <text class="box-label">日常例句</text>
+              <text class="example-ko">{{selected.exampleKo}}</text>
+              <text class="example-cn">{{selected.exampleCn}}</text>
+            </view>
+
+            <view class="note-box">
+              <text class="box-label">解析</text>
+              <text class="note-text">{{selected.note}}</text>
+            </view>
+
+            <view class="related-row">
+              <view wx:for="{{selected.related}}" wx:key="*this" class="related-chip">{{item}}</view>
+            </view>
+          </block>
+        </view>
+
+        <scroll-view wx:if="{{isLandscape}}" class="word-list" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="list-head">
+            <text>场景词</text>
+            <text>{{words.length}} 词</text>
+          </view>
+          <view
+            wx:for="{{words}}"
+            wx:key="id"
+            class="word-row {{item.active ? 'active' : ''}}"
+            data-id="{{item.id}}"
+            catchtap="selectFromList"
+          >
+            <text class="row-index">{{item.indexLabel}}</text>
+            <view class="row-copy">
+              <text class="row-ko">{{item.korean}}</text>
+              <text class="row-cn">{{item.cn}} · {{item.en}}</text>
+            </view>
+            <text class="row-strength {{item.isExtension ? 'extension' : ''}}">{{item.strength}}</text>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

@@ -73,7 +73,12 @@ export const removeMistake = (wordId) => {
         const targetId = wordId != null ? String(wordId) : '';
         if (!targetId) return { success: false, message: 'Invalid wordId' };
         const mistakes = getMistakes();
-        const newMistakes = mistakes.filter(w => !(w && w.id != null && String(w.id) === targetId));
+        const newMistakes = mistakes.filter(w => {
+            if (!w) return true;
+            const id = w.id != null ? String(w.id) : '';
+            const word = w.word != null ? String(w.word).trim() : '';
+            return !((id && id === targetId) || (word && word === targetId));
+        });
         wx.setStorageSync(MISTAKES_KEY, newMistakes);
         return { success: true };
     } catch (e) {
@@ -331,6 +336,17 @@ const normalizePictureWordsPracticeWord = (item, index = 0, now = Date.now()) =>
   const sourceGroupId = item.sourceGroupId != null ? String(item.sourceGroupId).trim() : String(item.groupId || '').trim();
   const sourceGroupName = item.sourceGroupName != null ? String(item.sourceGroupName).trim() : String(item.groupName || '').trim();
   const sourceId = item.sourceId != null ? String(item.sourceId).trim() : String(item.id || '').trim();
+  const rawSceneSentence = item.sceneSentence && typeof item.sceneSentence === 'object' && !Array.isArray(item.sceneSentence)
+    ? item.sceneSentence
+    : null;
+  const sceneSentenceKo = rawSceneSentence ? String(rawSceneSentence.ko || rawSceneSentence.korean || '').trim() : '';
+  const sceneSentenceCn = rawSceneSentence ? String(rawSceneSentence.cn || rawSceneSentence.chinese || '').trim() : '';
+  const exampleSentence = item.example_sentence != null
+    ? String(item.example_sentence).trim()
+    : String(item.exampleSentence || sceneSentenceKo || '').trim();
+  const sentenceTranslation = item.sentence_translation != null
+    ? String(item.sentence_translation).trim()
+    : String(item.sentenceTranslation || sceneSentenceCn || '').trim();
   const createdAt = Number(item.createdAt) || now;
   return {
     id: item.id != null && String(item.id).indexOf('picword_') === 0 ? String(item.id) : `picword_${now}_${index}`,
@@ -341,6 +357,15 @@ const normalizePictureWordsPracticeWord = (item, index = 0, now = Date.now()) =>
     ...(sourceGroupId ? { sourceGroupId } : {}),
     ...(sourceGroupName ? { sourceGroupName } : {}),
     ...(sourceId ? { sourceId } : {}),
+    ...(sceneSentenceKo || sceneSentenceCn ? {
+      sceneSentence: {
+        scene: sourceGroupName,
+        ko: sceneSentenceKo,
+        cn: sceneSentenceCn
+      }
+    } : {}),
+    ...(exampleSentence ? { example_sentence: exampleSentence } : {}),
+    ...(sentenceTranslation ? { sentence_translation: sentenceTranslation } : {}),
     createdAt
   };
 };

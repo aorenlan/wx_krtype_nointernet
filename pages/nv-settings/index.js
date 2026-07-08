@@ -1315,14 +1315,32 @@ Page({
     this.setData({ view: 'categories' });
   },
 
+  startMistakesPractice: function () {
+    const nextSettings = sanitizeSettings({
+      ...this.data.settings,
+      category: 'Mistakes (错题本)'
+    });
+    wx.setStorageSync('settings', nextSettings);
+    this.setData({ settings: nextSettings, currentCategory: 'Mistakes (错题本)' }, () => {
+      wx.switchTab({ url: '/pages/nv-practice/index' });
+    });
+  },
+
   removeMistake: function (e) {
-    const id = e.currentTarget.dataset.id;
+    const dataset = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset : {};
+    const id = dataset.id || dataset.word;
     const res = removeMistake(id);
     if (!res.success) {
       wx.showToast({ title: '移除失败', icon: 'none' });
       return;
     }
-    const nextList = (Array.isArray(this.data.mistakesList) ? this.data.mistakesList : []).filter(w => String(w.id) !== String(id));
+    const target = String(id || '');
+    const nextList = (Array.isArray(this.data.mistakesList) ? this.data.mistakesList : []).filter((w) => {
+      if (!w) return true;
+      const itemId = w.id != null ? String(w.id) : '';
+      const itemWord = w.word != null ? String(w.word).trim() : '';
+      return !((itemId && itemId === target) || (itemWord && itemWord === target));
+    });
     const counts = { ...(this.data.categoryCounts || {}) };
     counts['Mistakes (错题本)'] = nextList.length;
     this.setData({
