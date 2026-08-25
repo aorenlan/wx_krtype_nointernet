@@ -42,7 +42,6 @@
     <view class="directory-entry-mark">☷</view>
     <view class="directory-entry-copy">
       <text class="directory-entry-title">目录</text>
-      <text class="directory-entry-sub">{{displayCategory || settings.category}} · {{currentIndex + 1}} / {{words.length}}</text>
     </view>
     <text class="directory-entry-arrow">›</text>
   </view>
