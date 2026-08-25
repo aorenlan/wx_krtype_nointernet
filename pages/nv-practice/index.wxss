@@ -139,6 +139,75 @@
   transform: scale(0.99);
 }
 
+.directory-entry {
+  margin: 0 16px 12px;
+  padding: 11px 14px;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: rgba(255,255,255,.82);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.055);
+  animation: directoryEntryIn .28s ease-out;
+}
+.directory-entry:active { transform: scale(.99); }
+.directory-entry-mark {
+  width: 32px; height: 32px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  background: #17181d; color: #fff; font-size: 19px; font-weight: 800;
+}
+.directory-entry-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.directory-entry-title { color: #17181d; font-size: 14px; font-weight: 850; }
+.directory-entry-sub { color: #8b929d; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.directory-entry-arrow { color: #b6bdc6; font-size: 25px; line-height: 1; }
+
+.directory-mask {
+  position: fixed; inset: 0; z-index: 180;
+  background: rgba(18,22,29,.22); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  animation: directoryMaskIn .22s ease-out;
+}
+.directory-drawer {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 181;
+  width: min(82vw, 330px); padding: calc(env(safe-area-inset-top, 0px) + 28px) 18px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  box-sizing: border-box; background: #fbfbfa; box-shadow: 18px 0 40px rgba(15,23,42,.12);
+  display: flex; flex-direction: column; animation: directoryDrawerIn .28s cubic-bezier(.22,1,.36,1);
+}
+.directory-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.directory-drawer-kicker { display: block; color: #a4aab2; font-size: 9px; letter-spacing: .16em; font-weight: 800; }
+.directory-drawer-title { display: block; margin-top: 4px; color: #17181d; font-size: 25px; font-weight: 900; letter-spacing: -.04em; }
+.directory-close { width: 32px; height: 32px; border-radius: 50%; background: #eef0f2; color: #656d78; display: flex; align-items: center; justify-content: center; font-size: 23px; line-height: 1; }
+.directory-current-card { position: relative; display: flex; gap: 10px; padding: 13px; margin-bottom: 22px; border-radius: 17px; background: #17181d; color: #fff; overflow: hidden; }
+.directory-current-icon { width: 32px; height: 38px; border-radius: 9px; background: #f3b43c; color: #17181d; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 900; }
+.directory-current-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.directory-current-label { color: #aeb4bd; font-size: 9px; font-weight: 700; }
+.directory-current-title { color: #fff; font-size: 14px; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 215px; }
+.directory-current-progress { color: #c5cad1; font-size: 10px; }
+.directory-current-bar { position: absolute; left: 13px; right: 13px; bottom: 0; height: 3px; background: rgba(255,255,255,.15); }
+.directory-current-bar view { height: 100%; background: #f3b43c; transition: width .25s ease; }
+.directory-body { flex: 1; min-height: 0; }
+.directory-section-label { display: block; margin: 0 2px 9px; color: #a2a8b0; font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+.directory-book { display: flex; align-items: center; gap: 10px; padding: 11px 9px; margin-bottom: 6px; border-radius: 13px; }
+.directory-book.active { background: #eef0f2; }
+.directory-book:active, .directory-course:active { background: #e8ebee; }
+.directory-book-icon { width: 30px; height: 34px; border-radius: 7px 9px 9px 7px; background: #dce5f0; color: #40516a; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; }
+.directory-book:nth-of-type(3n) .directory-book-icon { background: #f5dfbd; color: #7c5520; }
+.directory-book-copy, .directory-course-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.directory-book-title { color: #22252b; font-size: 13px; font-weight: 850; }
+.directory-book-sub, .directory-course-sub { color: #9299a2; font-size: 10px; }
+.directory-book-arrow, .directory-course-mark { color: #a4abb4; font-size: 18px; }
+.course-label { margin-top: 19px; }
+.directory-course { display: flex; align-items: center; gap: 10px; padding: 10px 9px; margin-bottom: 4px; border-radius: 12px; }
+.directory-course.active { background: #fff3da; }
+.directory-course-dot { width: 7px; height: 7px; border-radius: 50%; background: #d8dde2; flex: 0 0 auto; }
+.directory-course-dot.learning { background: #f3b43c; box-shadow: 0 0 0 4px rgba(243,180,60,.14); }
+.directory-course-title { color: #30343a; font-size: 12px; font-weight: 800; }
+.directory-course.active .directory-course-title { color: #7b551e; }
+@keyframes directoryDrawerIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes directoryMaskIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes directoryEntryIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
 .practice-top-tools {
   height: 42px;
   margin: 2px 16px 10px;

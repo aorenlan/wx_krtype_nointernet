@@ -37,6 +37,59 @@
     </view>
   </view>
 
+  <!-- 目录入口：键盘收起时显示，模拟书籍阅读器的目录抽屉 -->
+  <view class="directory-entry" wx:if="{{!isKeyboardOpen && !loading && !dualColumnMode}}" bindtap="openDirectory">
+    <view class="directory-entry-mark">☷</view>
+    <view class="directory-entry-copy">
+      <text class="directory-entry-title">目录</text>
+      <text class="directory-entry-sub">{{displayCategory || settings.category}} · {{currentIndex + 1}} / {{words.length}}</text>
+    </view>
+    <text class="directory-entry-arrow">›</text>
+  </view>
+
+  <view class="directory-mask {{directoryOpen ? 'show' : ''}}" wx:if="{{directoryOpen}}" catchtap="closeDirectory"></view>
+  <view class="directory-drawer {{directoryOpen ? 'show' : ''}}" wx:if="{{directoryOpen}}" catchtap="preventBubble">
+    <view class="directory-drawer-head">
+      <view>
+        <text class="directory-drawer-kicker">LEARNING SHELF</text>
+        <text class="directory-drawer-title">学习目录</text>
+      </view>
+      <view class="directory-close" catchtap="closeDirectory">×</view>
+    </view>
+    <view class="directory-current-card">
+      <view class="directory-current-icon">▦</view>
+      <view class="directory-current-copy">
+        <text class="directory-current-label">正在学习</text>
+        <text class="directory-current-title">{{displayCategory || settings.category}}</text>
+        <text class="directory-current-progress">第 {{currentIndex + 1}} / {{words.length}} 个词</text>
+      </view>
+      <view class="directory-current-bar"><view style="width: {{words.length > 0 ? ((currentIndex + 1) / words.length * 100) : 0}}%;"></view></view>
+    </view>
+    <scroll-view class="directory-body" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+      <text class="directory-section-label">我的书籍</text>
+      <view wx:for="{{directoryBooks}}" wx:key="key" class="directory-book {{directoryActiveBook === item.key ? 'active' : ''}}" data-key="{{item.key}}" catchtap="selectDirectoryBook">
+        <view class="directory-book-icon">{{item.icon}}</view>
+        <view class="directory-book-copy">
+          <text class="directory-book-title">{{item.title}}</text>
+          <text class="directory-book-sub">{{item.subtitle}}</text>
+        </view>
+        <text class="directory-book-arrow">{{directoryActiveBook === item.key ? '⌄' : '›'}}</text>
+      </view>
+
+      <view class="directory-course-list" wx:if="{{directoryActiveBook}}">
+        <text class="directory-section-label course-label">课程</text>
+        <view wx:for="{{directoryCourses}}" wx:key="key" class="directory-course {{item.active ? 'active' : ''}}" data-key="{{item.key}}" data-category="{{item.category}}" data-lesson-id="{{item.lessonId}}" data-lesson-name="{{item.lessonName}}" data-level="{{item.level}}" data-session="{{item.session}}" catchtap="selectDirectoryCourse">
+          <view class="directory-course-dot {{item.status}}"></view>
+          <view class="directory-course-copy">
+            <text class="directory-course-title">{{item.title}}</text>
+            <text class="directory-course-sub">{{item.progressText}}</text>
+          </view>
+          <text class="directory-course-mark">{{item.active ? '✓' : '›'}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
   <view class="practice-top-tools {{practiceToolsOpen ? 'tools-open' : ''}}" wx:if="{{words.length > 0 && currentWord && !loading && !isKeyboardOpen}}">
     <view class="practice-new-btn {{practiceToolsOpen ? 'active' : ''}}" catchtap="togglePracticeTools" hover-class="none">
       <text>NEW!</text>

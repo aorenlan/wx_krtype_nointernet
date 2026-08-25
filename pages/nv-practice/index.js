@@ -662,6 +662,10 @@ Page({
         hasInteracted: false,
         isKeyboardOpen: false, 
         showSettingsModal: false,
+        directoryOpen: false,
+        directoryActiveBook: 'yonsei',
+        directoryBooks: [],
+        directoryCourses: [],
         keyboardOffsetBottom: 280, 
         
         statusBarHeight: 20,
@@ -1529,6 +1533,81 @@ Page({
         const current = (this.data.settings && this.data.settings.category) || DEFAULT_SETTINGS.category;
         const idx = Math.max(0, categories.indexOf(current));
         this.setData({ categories, categoryPickerIndex: idx });
+        this.refreshDirectoryBooks(categories);
+    },
+
+    refreshDirectoryBooks(categories) {
+        const list = Array.isArray(categories) ? categories : [];
+        const books = [
+            { key: 'yonsei', icon: '延', title: '延世韩国语', subtitle: '教材词汇 · 1—6册' },
+            { key: 'topik', icon: 'T', title: 'TOPIK 词汇', subtitle: '等级词汇 · 分级学习' },
+            { key: 'mine', icon: '我', title: '我的词库', subtitle: '收藏、错题与拍照学习' }
+        ];
+        const active = this.data.directoryActiveBook || 'yonsei';
+        this.setData({ directoryBooks: books }, () => this.refreshDirectoryCourses(active, list));
+    },
+
+    async refreshDirectoryCourses(bookKey, categories) {
+        const list = Array.isArray(categories) ? categories : (this.data.categories || []);
+        let courses = [];
+        if (bookKey === 'yonsei') {
+            const books = list.filter(item => /^Yonsei\s+\d$/.test(item));
+            const currentCategory = this.data.settings && this.data.settings.category;
+            const category = /^Yonsei\s+\d$/.test(currentCategory) ? currentCategory : (books[0] || 'Yonsei 1');
+            const lessons = category === currentCategory && Array.isArray(this.data.yonseiLessons) && this.data.yonseiLessons.length
+                ? this.data.yonseiLessons
+                : await getYonseiLessons(category);
+            courses = (lessons || []).map(lesson => {
+                const active = currentCategory === category && String(this.data.settings.yonseiLessonId || '') === String(lesson.id);
+                return { key: `yonsei_${category}_${lesson.id}`, category, lessonId: String(lesson.id), lessonName: String(lesson.original || lesson.name || ''), title: `第 ${lesson.id} 课`, progressText: active ? `学习中 · ${this.data.currentIndex + 1} / ${this.data.words.length}` : '未开始', status: active ? 'learning' : 'idle', active };
+            });
+            if (books.length > 1) courses.unshift({ key: `book_${category}`, category, title: category, progressText: '选择教材课本', status: 'book', active: false });
+        } else if (bookKey === 'topik') {
+            const levels = await getTopikLevels();
+            const current = this.data.settings || {};
+            courses = (levels || []).map(level => {
+                const active = current.category === 'TOPIK Vocabulary' && String(current.topikLevel) === String(level);
+                return { key: `topik_${level}`, category: 'TOPIK Vocabulary', level: String(level), session: active ? String(current.topikSession || '') : '', title: `TOPIK ${level}`, progressText: active ? `Session ${current.topikSession || '—'} · ${this.data.currentIndex + 1} / ${this.data.words.length}` : '选择等级后开始', status: active ? 'learning' : 'idle', active };
+            });
+        } else {
+            const special = [FAVORITES_LIST_NAME, 'Mistakes (错题本)', PHOTO_RECOGNITION_CATEGORY, PICTURE_WORDS_PRACTICE_CATEGORY];
+            courses = list.filter(item => special.includes(item)).map(item => ({ key: `mine_${item}`, category: item, title: item, progressText: item === FAVORITES_LIST_NAME ? `${getFavorites().length} 个单词` : '打开查看', status: 'idle', active: this.data.settings.category === item }));
+        }
+        this.setData({ directoryCourses: courses, directoryActiveBook: bookKey });
+    },
+
+    openDirectory() {
+        if (this.data.isKeyboardOpen) return;
+        this.setData({ directoryOpen: true }, () => this.refreshDirectoryCourses(this.data.directoryActiveBook || 'yonsei'));
+    },
+
+    closeDirectory() { this.setData({ directoryOpen: false }); },
+
+    selectDirectoryBook(e) {
+        const key = e.currentTarget.dataset.key;
+        if (!key) return;
+        this.refreshDirectoryCourses(key);
+    },
+
+    selectDirectoryCourse(e) {
+        const d = e.currentTarget.dataset || {};
+        if (!d.category) return;
+        this.closeDirectory();
+        if (d.category === 'TOPIK Vocabulary') {
+            const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, topikLevel: String(d.level || '1'), topikSession: String(d.session || '') }));
+            wx.setStorageSync('settings', next);
+            this.setData({ settings: next });
+            this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            return;
+        }
+        if (/^Yonsei\s+\d$/.test(d.category) && d.lessonId) {
+            const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, yonseiLessonId: String(d.lessonId), yonseiLessonName: String(d.lessonName || '') }));
+            wx.setStorageSync('settings', next);
+            this.setData({ settings: next });
+            this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            return;
+        }
+        this.applyCategorySelection(d.category, Math.max(0, (this.data.categories || []).indexOf(d.category)));
     },
 
 	    onShow: async function() {
