@@ -8,7 +8,7 @@ const {
 const { sha256 } = require('../../utils/sha256');
 const { drawLearningShareCard, safeText } = require('../../utils/share-card');
 const { syncPageTabBar } = require('../../utils/tabbar');
-const { shouldSkipAd } = require('../../utils/ad-free');
+const { getAdFreeExpire, setAdFreeExpire, shouldSkipAd } = require('../../utils/ad-free');
 
 // 朗读脚本：韩文跟读 3 遍 + 英文 1 遍
 // type 用于界面提示文案；lang 决定 edgeTts 语音
@@ -31,6 +31,8 @@ const ANSWER_PANEL_HIDDEN = 'answer-panel is-hidden';
 const ANSWER_PANEL_VISIBLE = 'answer-panel is-visible';
 const CATEGORY_AD_UNIT_ID = 'adunit-17974771ea617fa3';
 const CATEGORY_AD_DATE_KEY = 'picture_words_category_ad_date_v1';
+const CATEGORY_AD_FAILURE_COMPENSATION_KEY = 'picture_words_ad_failure_compensation_v1';
+const CATEGORY_AD_SHOW_TIMEOUT_MS = 12000;
 const STUDY_SESSION_STORAGE_KEY = 'picture_words_study_sessions_v1';
 const SHUFFLE_STORAGE_KEY = 'picture_words_shuffle_enabled_v1';
 const TAP_SCENE_AUTO_OPEN_KEY = 'kr_picture_words_open_tap_scene_v1';
@@ -384,6 +386,43 @@ Page({
     } catch (e) {}
   },
 
+  _getTodayEndTimestamp() {
+    const now = new Date();
+    return new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23, 59, 59, 999
+    ).getTime();
+  },
+
+  _grantCategoryAdFailureCompensation(reason, error) {
+    const expireAt = this._getTodayEndTimestamp();
+    const currentExpire = Number(getAdFreeExpire()) || 0;
+    // Always use today's natural-day boundary. Repeated failures today never
+    // add another 24 hours or extend an existing longer entitlement.
+    if (currentExpire < expireAt) {
+      setAdFreeExpire(expireAt);
+    }
+    this._markCategoryAdShownToday();
+    try {
+      wx.setStorageSync(CATEGORY_AD_FAILURE_COMPENSATION_KEY, {
+        dayKey: this._getTodayKey(),
+        expireAt,
+        reason: String(reason || 'rewarded_ad_failed'),
+        errCode: error && error.errCode != null ? error.errCode : '',
+        errMsg: error && error.errMsg ? String(error.errMsg) : '',
+        createdAt: Date.now()
+      });
+    } catch (e) {}
+    console.warn('[picture-words] rewarded ad failure compensated', {
+      reason,
+      expireAt,
+      error
+    });
+    return expireAt;
+  },
+
   _showCategoryAdOnceToday() {
     if (shouldSkipAd('picture-words')) return Promise.resolve(true);
     if (this._hasShownCategoryAdToday()) return Promise.resolve(true);
@@ -447,23 +486,40 @@ Page({
     if (!videoAd) this._initCategoryAd();
 
     if (!videoAd) {
-      wx.showToast({ title: '广告暂不可用', icon: 'none', duration: 1200 });
-      return Promise.resolve(false);
+      this._grantCategoryAdFailureCompensation('api_unavailable');
+      wx.showToast({ title: '广告未调起，今日已免广告', icon: 'none', duration: 1800 });
+      return Promise.resolve(true);
     }
 
     return new Promise((resolve) => {
+      const adInstance = videoAd;
       let settled = false;
-      const finish = (ok, toastText) => {
+      let showTimer = null;
+      const finish = (ok, toastText, options = {}) => {
         if (settled) return;
         settled = true;
+        if (showTimer) {
+          clearTimeout(showTimer);
+          showTimer = null;
+        }
+        if (options.compensate) {
+          this._grantCategoryAdFailureCompensation(options.reason, options.error);
+        }
         if (ok) {
-          this._markCategoryAdShownToday();
-          wx.showToast({ title: '今日已解锁', icon: 'none', duration: 1000 });
+          if (!options.compensate) this._markCategoryAdShownToday();
+          wx.showToast({
+            title: options.compensate ? '广告未调起，今日已免广告' : '今日已解锁',
+            icon: 'none',
+            duration: options.compensate ? 1800 : 1000
+          });
         } else if (toastText) {
           wx.showToast({ title: toastText, icon: 'none', duration: 1400 });
         }
-        if (videoAd.offClose) {
-          try { videoAd.offClose(onClose); } catch (e) {}
+        if (adInstance.offClose) {
+          try { adInstance.offClose(onClose); } catch (e) {}
+        }
+        if (adInstance.offError) {
+          try { adInstance.offError(onRequestError); } catch (e) {}
         }
         resolve(Boolean(ok));
       };
@@ -471,13 +527,39 @@ Page({
         const completed = !res || res.isEnded;
         finish(completed, completed ? '' : '看完广告后才能切换');
       };
+      const onRequestError = (err) => {
+        console.error('激励视频广告运行失败', err);
+        videoAd = null;
+        finish(true, '', {
+          compensate: true,
+          reason: 'ad_runtime_error',
+          error: err
+        });
+      };
 
-      videoAd.onClose(onClose);
-      videoAd.show().catch(() => {
-        return videoAd.load().then(() => videoAd.show());
+      adInstance.onClose(onClose);
+      if (adInstance.onError) adInstance.onError(onRequestError);
+      showTimer = setTimeout(() => {
+        finish(true, '', {
+          compensate: true,
+          reason: 'show_timeout'
+        });
+      }, CATEGORY_AD_SHOW_TIMEOUT_MS);
+      adInstance.show().catch(() => {
+        return adInstance.load().then(() => adInstance.show());
+      }).then(() => {
+        if (showTimer) {
+          clearTimeout(showTimer);
+          showTimer = null;
+        }
       }).catch((err) => {
         console.error('激励视频广告显示失败', err);
-        finish(false, '广告暂不可用');
+        videoAd = null;
+        finish(true, '', {
+          compensate: true,
+          reason: 'load_or_show_failed',
+          error: err
+        });
       });
     });
   },

@@ -85,12 +85,21 @@ function getImageExtension(imageMime, filePath) {
 
 function getFileInfo(filePath) {
   return new Promise((resolve) => {
-    if (!wx.getFileInfo) {
+    if (isVirtualDevToolsPath(filePath)) {
       resolve({ size: 0 });
       return;
     }
 
-    wx.getFileInfo({
+    const fileSystemManager = wx.getFileSystemManager && wx.getFileSystemManager();
+    const getFileInfoApi = fileSystemManager && fileSystemManager.getFileInfo
+      ? fileSystemManager.getFileInfo.bind(fileSystemManager)
+      : wx.getFileInfo;
+    if (!getFileInfoApi) {
+      resolve({ size: 0 });
+      return;
+    }
+
+    getFileInfoApi({
       filePath,
       success(res) {
         resolve({ size: res.size || 0 });
@@ -114,6 +123,7 @@ function getImageInfo(filePath) {
       src: filePath,
       success(res) {
         resolve({
+          path: res.path || filePath,
           width: res.width || 0,
           height: res.height || 0,
           type: res.type || ''
@@ -121,24 +131,24 @@ function getImageInfo(filePath) {
       },
       fail(error) {
         warnQwen('get image info failed', error);
-        resolve({ width: 0, height: 0, type: '' });
+        resolve({ path: filePath, width: 0, height: 0, type: '' });
       }
     });
   });
 }
 
-function getImageMeta(filePath) {
-  return Promise.all([
-    getFileInfo(filePath),
-    getImageInfo(filePath)
-  ]).then(([fileInfo, imageInfo]) => ({
-    filePath,
+async function getImageMeta(filePath) {
+  const imageInfo = await getImageInfo(filePath);
+  const readablePath = imageInfo.path || filePath;
+  const fileInfo = await getFileInfo(readablePath);
+  return {
+    filePath: readablePath,
     size: fileInfo.size,
     sizeLabel: formatBytes(fileInfo.size),
     width: imageInfo.width,
     height: imageInfo.height,
     type: imageInfo.type
-  }));
+  };
 }
 
 function compressAtQuality(filePath, quality) {
@@ -164,6 +174,7 @@ function compressAtQuality(filePath, quality) {
 
 async function compressImageForAI(filePath, traceId) {
   const originalMeta = await getImageMeta(filePath);
+  filePath = originalMeta.filePath;
   logQwen('image original', {
     traceId,
     size: originalMeta.sizeLabel,
@@ -263,6 +274,10 @@ function readImageBase64(filePath) {
   });
 }
 
+function isVirtualDevToolsPath(filePath) {
+  return /^(?:https?:\/\/)?(?:tmp|usr)\//i.test(String(filePath || ''));
+}
+
 function uploadImageForCloud(filePath, imageMime, traceId) {
   return new Promise((resolve, reject) => {
     if (!wx.cloud || !wx.cloud.uploadFile) {
@@ -357,8 +372,22 @@ function callQwenScene({ imagePath, source, languageKey }) {
     .then(() => compressImageForAI(imagePath, traceId))
     .then(async (compressResult) => {
       const imageMime = inferMimeType(compressResult.imagePath);
-      const imageBase64 = await readImageBase64(compressResult.imagePath);
-      if (imageBase64.length <= DIRECT_BASE64_MAX_CHARS) {
+      let imageBase64 = '';
+      try {
+        // DevTools can return http://tmp/... paths that readFile cannot open.
+        imageBase64 = await readImageBase64(compressResult.imagePath);
+      } catch (error) {
+        warnQwen('read image base64 failed, fallback to cloud upload', {
+          traceId,
+          imagePath: compressResult.imagePath,
+          virtualPath: isVirtualDevToolsPath(compressResult.imagePath),
+          message: error && (error.errMsg || error.message)
+            ? (error.errMsg || error.message)
+            : String(error)
+        });
+      }
+
+      if (imageBase64 && imageBase64.length <= DIRECT_BASE64_MAX_CHARS) {
         return {
           imageMime,
           compressResult,
@@ -389,6 +418,10 @@ function callQwenScene({ imagePath, source, languageKey }) {
             languageKey: requestedLanguage
           }
         };
+      }
+
+      if (!imageBase64) {
+        throw new Error(`[${traceId}] 图片无法读取，且当前环境不能上传云存储。`);
       }
 
       throw new Error(`[${traceId}] 图片仍然过大，且当前环境不能上传云存储。请检查 wx.cloud.uploadFile。`);

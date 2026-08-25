@@ -46,44 +46,85 @@
             <image src="/assets/icons/volume.svg" class="audio-icon" mode="aspectFit" />
           </view>
         </view>
-        <view class="kr-wrap">
+        <view class="kr-wrap {{displayNextCard.korean.length > 42 ? 'is-very-long' : (displayNextCard.korean.length > 26 ? 'is-long' : '')}}">
           <text class="kr-text">{{displayNextCard.korean}}</text>
         </view>
-        <text class="romaji">{{displayNextCard.romaji}}</text>
       </view>
 
-      <view class="card current {{currentAnimClass}}">
+      <view class="card current {{currentAnimClass}} {{audioPlaying ? 'is-playing' : ''}}">
         <view class="card-top">
-          <view class="tone-pill">{{displayCurrentCard.tone}}</view>
+          <view class="card-labels">
+            <view class="tone-pill">{{displayCurrentCard.tone}}</view>
+            <text class="card-count">{{currentIndex + 1}} / {{translations.length}}</text>
+          </view>
           <view class="audio-btn" bindtap="playCurrentAudio">
             <image src="/assets/icons/volume.svg" class="audio-icon" mode="aspectFit" />
           </view>
         </view>
-        <view class="kr-wrap">
+        <view class="kr-wrap kr-tappable {{displayCurrentCard.korean.length > 42 ? 'is-very-long' : (displayCurrentCard.korean.length > 26 ? 'is-long' : '')}}" bindtap="playCurrentAudio">
           <text class="kr-text">{{displayCurrentCard.korean}}</text>
+          <text class="kr-tap-hint">轻触朗读</text>
         </view>
-        <text class="romaji">{{displayCurrentCard.romaji}}</text>
 
         <scroll-view scroll-y class="card-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
-          <view class="desc">
-            <text class="desc-title">适用语境</text>
+          <view class="translation-line" wx:if="{{displayCurrentCard.context}}">
+            <view class="translation-mark"></view>
             <text class="desc-text">{{displayCurrentCard.context}}</text>
           </view>
-          <view class="desc">
-            <text class="desc-title">讲解</text>
-            <text class="desc-text">{{displayCurrentCard.explanation}}</text>
+          <view class="translation-empty" wx:else>这条表达暂时没有中文释义</view>
+
+          <view class="vocab-section" wx:if="{{displayCurrentCard.vocabularyItems.length}}">
+            <text class="section-eyebrow">重点词汇</text>
+            <view class="vocab-grid">
+              <view class="vocab-item" wx:for="{{displayCurrentCard.vocabularyItems}}" wx:key="index">
+                <text class="vocab-word">{{item.word}}</text>
+                <text class="vocab-meaning" wx:if="{{item.meaning}}">{{item.meaning}}</text>
+              </view>
+            </view>
           </view>
-          <view class="desc" wx:if="{{displayCurrentCard.vocabulary}}">
-            <text class="desc-title">词汇</text>
-            <text class="desc-text">{{displayCurrentCard.vocabulary}}</text>
+
+          <view class="detail-disclosure" wx:if="{{displayCurrentCard.explanation}}" bindtap="toggleCardDetail">
+            <view class="detail-heading">
+              <text class="section-eyebrow">表达讲解</text>
+              <text class="detail-toggle" wx:if="{{displayCurrentCard.explanationExpandable}}">{{detailExpanded ? '收起' : '展开'}} {{detailExpanded ? '⌃' : '⌄'}}</text>
+            </view>
+            <text class="detail-preview" wx:if="{{displayCurrentCard.explanationExpandable && !detailExpanded}}">{{displayCurrentCard.explanation}}</text>
+            <text class="detail-content" wx:else>{{displayCurrentCard.explanation}}</text>
           </view>
         </scroll-view>
       </view>
     </view>
 
     <view class="floating-controls">
-      <view class="next-fab" bindtap="nextCard">下一句</view>
+      <view class="next-fab" bindtap="nextCard">
+        <text>{{hasNext ? '下一个表达' : '进入下一句'}}</text>
+        <text class="next-fab-arrow">↑</text>
+      </view>
+    </view>
+    <view wx:if="{{showSwipeGuide}}" class="swipe-guide">
+      <view class="swipe-guide-arrows">
+        <text>↑</text><text>↓</text><text>←</text><text>→</text>
+      </view>
+      <text class="swipe-guide-title">滑动切换内容</text>
+      <text class="swipe-guide-copy">上下或左右滑动都可以</text>
     </view>
   </view>
 
+</view>
+
+<view wx:if="{{showNextSentenceTip}}" class="next-sentence-mask" catchtouchmove="preventMove" bindtap="stayOnCurrentSentence">
+  <view class="next-sentence-sheet" catchtap="preventMove">
+    <view class="next-sheet-handle"></view>
+    <text class="next-sheet-eyebrow">学习进度</text>
+    <text class="next-sheet-title">本句已经学完</text>
+    <text class="next-sheet-copy">继续向上滑，可以学习下一句。</text>
+    <view class="next-tip-choice" bindtap="toggleNextSentenceTipChoice">
+      <view class="next-tip-checkbox {{dontShowNextSentenceTip ? 'is-checked' : ''}}">
+        <text wx:if="{{dontShowNextSentenceTip}}">✓</text>
+      </view>
+      <text>不再提示</text>
+    </view>
+    <button class="next-sheet-primary" loading="{{loadingNextSentence}}" bindtap="continueToNextSentence">继续学习下一句</button>
+    <button class="next-sheet-secondary" bindtap="stayOnCurrentSentence">留在本句</button>
+  </view>
 </view>

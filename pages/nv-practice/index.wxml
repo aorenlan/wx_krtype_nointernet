@@ -235,10 +235,14 @@
           <view class="dual-mode-option {{!dualReciteMode ? 'active' : ''}}" data-mode="spell" catchtap="toggleDualReciteMode">拼写</view>
           <view class="dual-mode-option {{dualReciteMode ? 'active' : ''}}" data-mode="recite" catchtap="toggleDualReciteMode">背诵</view>
         </view>
-        <view class="dual-hide-switch {{dualHideKorean ? 'active' : ''}}" catchtap="toggleDualHideKorean">
-          <text>隐藏韩语</text>
-          <view class="dual-switch-track">
-            <view class="dual-switch-thumb"></view>
+        <view class="dual-visibility-cycle mode-{{dualVisibilityMode}}" catchtap="cycleDualVisibility">
+          <view class="dual-visibility-copy">
+            <text class="dual-visibility-key">显示</text>
+            <text class="dual-visibility-value">{{dualVisibilityLabel}}</text>
+          </view>
+          <view class="dual-visibility-action">
+            <text>切换</text>
+            <text class="dual-visibility-cycle-icon">↻</text>
           </view>
         </view>
       </view>
@@ -297,7 +301,7 @@
 
           <view class="dual-word-cell dual-word-right">
             <view class="dual-meaning-wrap">
-              <text class="dual-meaning">{{item.meaning}}</text>
+              <text class="dual-meaning {{item.meaningHidden ? 'hidden-meaning' : ''}}">{{item.displayMeaning}}</text>
               <text class="dual-phonetic" wx:if="{{item.phonetic}}">{{item.phonetic}}</text>
             </view>
             <view wx:if="{{dualReciteMode}}" class="dual-status dual-status-listen {{item.active ? 'active' : ''}}">听</view>

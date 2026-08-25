@@ -7,7 +7,8 @@ const {
 const HISTORY_KEY = 'photoLearnHistoryRecords';
 const SENTENCE_QUOTA_TIP_DISABLED_KEY = 'photoSentenceQuotaTipDisabled';
 const EDGE_TTS_LANGUAGE = 'ko-KR';
-const EDGE_TTS_BATCH_SIZE = 12;
+const EDGE_TTS_BATCH_SIZE = 4;
+const PREFETCH_CLICK_WAIT_MS = 450;
 const PHOTO_RECOGNITION_QUOTA_KEY = 'photo_learn_recognition_quota_v1';
 const SENTENCE_WORD_LIMIT = 10;
 
@@ -355,14 +356,28 @@ Page({
   },
 
   onUnload() {
+    if (this._initialAudioPrefetchTimer) {
+      clearTimeout(this._initialAudioPrefetchTimer);
+      this._initialAudioPrefetchTimer = null;
+    }
     this.stopWordAudio(true);
     detachPhotoRecognitionAdHandlers(photoRecognitionAd);
   },
 
   loadRecords() {
-    this.setData({
-      records: normalizeRecords(wx.getStorageSync(HISTORY_KEY))
-    });
+    const records = normalizeRecords(wx.getStorageSync(HISTORY_KEY));
+    this.setData({ records });
+    const firstRecord = records[0];
+    const firstRecordId = firstRecord && firstRecord.id ? String(firstRecord.id) : '';
+    if (firstRecordId && this._historyPrefetchRecordId !== firstRecordId) {
+      this._historyPrefetchRecordId = firstRecordId;
+      this._initialAudioPrefetchTimer = setTimeout(() => {
+        this._initialAudioPrefetchTimer = null;
+        this.prefetchRecordWordAudio(firstRecord).catch((error) => {
+          console.warn('[photo-learn-history] initial word audio prefetch failed', error);
+        });
+      }, 80);
+    }
   },
 
   async loadPhotoRecognitionLimitConfig(options = {}) {
@@ -685,34 +700,18 @@ Page({
     const entry = this.preparedWordAudioContexts[this.getWordAudioCacheKey(word)];
     if (!entry || entry.warmed || entry.warming) return;
 
-    entry.warming = true;
-    const finishWarm = (markWarmed) => {
-      this.releaseWordAudioWarm(entry);
-      entry.warmed = !!markWarmed;
-      try {
-        audio.pause();
-        if (audio.seek) audio.seek(0);
-      } catch (error) {
-        // Warmup cleanup is best-effort.
-      }
-      audio.volume = 1;
-    };
-    const onCanplay = () => finishWarm(true);
-    const onEnded = () => finishWarm(true);
-    const onError = () => finishWarm(false);
-
-    entry.warmHandlers = { onCanplay, onEnded, onError };
-    if (audio.onCanplay) audio.onCanplay(onCanplay);
-    audio.onEnded(onEnded);
-    audio.onError(onError);
-    entry.warmTimer = setTimeout(() => finishWarm(true), 260);
-
+    // Assigning a cached local src is enough to let InnerAudioContext prepare it.
+    // Do not silently play every word: pause may be delayed on some devices and
+    // those warmups can later become audible, producing repeated Korean speech.
     try {
-      audio.volume = 0;
       if (audio.src !== src) audio.src = src;
-      audio.play();
+      audio.autoplay = false;
+      audio.loop = false;
+      entry.warmed = true;
+      entry.warming = false;
     } catch (error) {
-      finishWarm(false);
+      entry.warmed = false;
+      entry.warming = false;
     }
   },
 
@@ -891,7 +890,10 @@ Page({
 
     const prefetchPromise = this.edgeTtsPrefetchByWord && this.edgeTtsPrefetchByWord[word];
     if (prefetchPromise) {
-      const prefetchedPath = await prefetchPromise;
+      const prefetchedPath = await Promise.race([
+        prefetchPromise,
+        new Promise((resolve) => setTimeout(() => resolve(''), PREFETCH_CLICK_WAIT_MS))
+      ]);
       if (prefetchedPath && fileExists(prefetchedPath)) {
         return prefetchedPath;
       }

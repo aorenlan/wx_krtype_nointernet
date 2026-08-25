@@ -76,7 +76,11 @@
       </view>
 
       <scroll-view wx:if="{{currentRecord.words.length}}" class="current-words" scroll-y="{{true}}" show-scrollbar="{{false}}">
-        <view class="current-word-grid">
+        <view class="current-word-table">
+          <view class="current-word-table-head">
+            <text class="current-word-head-ko">单词</text>
+            <text class="current-word-head-meaning">释义</text>
+          </view>
           <view
             wx:for="{{currentRecord.words}}"
             wx:for-item="word"
@@ -88,8 +92,14 @@
             data-index="{{wordIndex}}"
             hover-class="current-word-press"
           >
-            <text class="current-word-ko">{{word.text}}</text>
-            <text wx:if="{{word.meaning}}" class="current-word-meaning">{{word.meaning}}</text>
+            <view class="current-word-ko-cell">
+              <text class="current-word-index"><text wx:if="{{wordIndex < 9}}">0</text>{{wordIndex + 1}}</text>
+              <text class="current-word-ko">{{word.text}}</text>
+            </view>
+            <view class="current-word-meaning-cell">
+              <text class="current-word-meaning">{{word.meaning || '暂无释义'}}</text>
+              <view class="current-word-listen">{{speakingWordIndex === wordIndex ? '播放中' : '听'}}</view>
+            </view>
           </view>
         </view>
       </scroll-view>
@@ -184,6 +194,14 @@
           <text class="learn-wait-step-ko">카드</text>
           <text class="learn-wait-step-cn">词卡</text>
         </view>
+      </view>
+      <view wx:if="{{analysisAdVisible}}" class="learn-wait-ad {{analysisAdLoaded ? 'is-loaded' : ''}}">
+        <ad-custom
+          unit-id="adunit-f322d5955abab34b"
+          bindload="adLoad"
+          binderror="adError"
+          bindclose="adClose"
+        ></ad-custom>
       </view>
     </view>
   </view>

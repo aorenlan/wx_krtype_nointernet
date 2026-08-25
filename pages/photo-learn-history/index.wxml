@@ -43,9 +43,14 @@
 
         <view wx:if="{{expandedRecordId === item.id}}" class="record-expand">
           <view wx:if="{{item.words.length}}" class="expand-word-list">
+            <view class="expand-word-table-head">
+              <text class="expand-word-head-ko">单词</text>
+              <text class="expand-word-head-meaning">释义</text>
+            </view>
             <view
               wx:for="{{item.words}}"
               wx:for-item="word"
+              wx:for-index="wordIndex"
               wx:key="id"
               class="expand-word {{speakingWordId === word.text ? 'is-speaking' : ''}}"
               data-word="{{word.text}}"
@@ -53,8 +58,14 @@
               bindtap="playHistoryWord"
               hover-class="expand-word-press"
             >
-              <text class="expand-word-ko">{{word.text}}</text>
-              <text wx:if="{{word.meaning}}" class="expand-word-meaning">{{word.meaning}}</text>
+              <view class="expand-word-ko-cell">
+                <text class="expand-word-index"><text wx:if="{{wordIndex < 9}}">0</text>{{wordIndex + 1}}</text>
+                <text class="expand-word-ko">{{word.text}}</text>
+              </view>
+              <view class="expand-word-meaning-cell">
+                <text class="expand-word-meaning">{{word.meaning || '暂无释义'}}</text>
+                <view class="expand-word-listen">{{speakingWordId === word.text ? '播放中' : '听'}}</view>
+              </view>
             </view>
           </view>
           <text wx:else class="expand-empty">{{item.desc}}</text>

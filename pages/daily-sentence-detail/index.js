@@ -401,9 +401,13 @@ Page({
     hasNext: false,
     autoPlay: false,
     loading: false,
+    loadingNextSentence: false,
     animating: false,
     currentAnimClass: '',
-    nextAnimClass: ''
+    nextAnimClass: '',
+    showSwipeGuide: false,
+    showNextSentenceTip: false,
+    dontShowNextSentenceTip: false
   },
 
   ensureAudio() {
@@ -461,7 +465,9 @@ Page({
     this._swipeStartX = 0;
     this._swipeStartY = 0;
     this._swipeStartTime = 0;
+    this._nextTipShownThisSession = false;
     const autoPlay = !!wx.getStorageSync('kr_daily_sentence_autoplay');
+    const showSwipeGuide = !wx.getStorageSync('kr_daily_sentence_swipe_guide_shown');
     const hasShownAutoTip = !!wx.getStorageSync('kr_daily_sentence_autoplay_tip_shown');
 
     const ts = options && options.ts != null ? options.ts : null;
@@ -473,6 +479,7 @@ Page({
       navBarHeight,
       windowHeight,
       autoPlay,
+      showSwipeGuide,
       loading: true
     });
 
@@ -648,9 +655,10 @@ Page({
     }
     const idx = Math.max(0, Math.min(len - 1, Number(this.data.currentIndex) || 0));
     const currentCard = list[idx] || emptyCard();
-    const hasNext = len > 1;
-    const nextCard = hasNext ? (list[(idx + 1) % len] || emptyCard()) : emptyCard();
+    const hasNext = idx < len - 1;
+    const nextCard = hasNext ? (list[idx + 1] || emptyCard()) : emptyCard();
     this.setData({ currentIndex: idx, currentCard, nextCard, hasNext, displayCurrentCard: currentCard, displayNextCard: nextCard }, () => {
+      this.preloadCurrentAudio();
       if (this.data.autoPlay) {
         setTimeout(() => this.playCurrentAudio(true), 60);
       }
@@ -675,12 +683,15 @@ Page({
     if (this.data.animating) return false;
     const list = Array.isArray(this.data.translations) ? this.data.translations : [];
     const len = list.length;
-    if (len <= 1) return false;
+    if (len <= 0) return false;
 
     const idx = Number(this.data.currentIndex) || 0;
-    const nextIndex = direction === 'prev'
-      ? (idx - 1 + len) % len
-      : (idx + 1) % len;
+    if (direction === 'next' && idx >= len - 1) {
+      this.requestNextSentence();
+      return true;
+    }
+    if (direction === 'prev' && idx <= 0) return false;
+    const nextIndex = direction === 'prev' ? idx - 1 : idx + 1;
 
     if (this._transitionTimer) {
       clearTimeout(this._transitionTimer);
@@ -689,7 +700,7 @@ Page({
 
     const isPrev = direction === 'prev';
     const nextCurrentCard = list[nextIndex] || emptyCard();
-    const nextNextCard = list[(nextIndex + 1) % len] || emptyCard();
+    const nextNextCard = list[nextIndex + 1] || emptyCard();
     this.setData({
       animating: true,
       currentAnimClass: isPrev ? 'anim-out-prev' : 'anim-out-next',
@@ -709,8 +720,9 @@ Page({
         nextCard: nextNextCard,
         displayCurrentCard: nextCurrentCard,
         displayNextCard: nextNextCard,
-        hasNext: len > 1
+        hasNext: nextIndex < len - 1
       }, () => {
+        this.preloadCurrentAudio();
         if (this.data.autoPlay) setTimeout(() => this.playCurrentAudio(true), 60);
       });
     }, 240);
@@ -724,6 +736,84 @@ Page({
 
   prevCard() {
     this.startTransition('prev');
+  },
+
+  requestNextSentence() {
+    if (this.data.loadingNextSentence || this.data.showNextSentenceTip) return;
+    const tipDisabled = !!wx.getStorageSync('kr_daily_sentence_next_tip_disabled');
+    if (!tipDisabled && !this._nextTipShownThisSession) {
+      this._nextTipShownThisSession = true;
+      this.setData({ showNextSentenceTip: true, dontShowNextSentenceTip: false });
+      return;
+    }
+    this.loadNextSentence();
+  },
+
+  toggleNextSentenceTipChoice() {
+    this.setData({ dontShowNextSentenceTip: !this.data.dontShowNextSentenceTip });
+  },
+
+  stayOnCurrentSentence() {
+    this.setData({ showNextSentenceTip: false, dontShowNextSentenceTip: false });
+  },
+
+  continueToNextSentence() {
+    if (this.data.dontShowNextSentenceTip) {
+      try { wx.setStorageSync('kr_daily_sentence_next_tip_disabled', true); } catch (e) {}
+    }
+    this.setData({ showNextSentenceTip: false, dontShowNextSentenceTip: false });
+    this.loadNextSentence();
+  },
+
+  async loadNextSentence() {
+    if (this.data.loadingNextSentence) return;
+    this.setData({ loadingNextSentence: true });
+    try {
+      const callRes = await callDailySentence({
+        page: 1,
+        pageSize: 100,
+        orderField: 'batchDate',
+        orderDirection: 'desc',
+        noCache: true
+      });
+      const result = callRes && callRes.result ? callRes.result : null;
+      const list = result && Array.isArray(result.data) ? result.data : [];
+      const currentKey = toDateKey(this.data.sentence, this.data.ts);
+      const currentId = this.data.sentence && this.data.sentence._id ? String(this.data.sentence._id) : '';
+      const currentPos = list.findIndex((item) => {
+        const itemId = item && item._id ? String(item._id) : '';
+        return (currentId && itemId === currentId) || toDateKey(item, resolveTs(item, null)) === currentKey;
+      });
+      const nextSentence = currentPos >= 0 ? list[currentPos + 1] : null;
+      if (!nextSentence) {
+        wx.showToast({ title: '已经是最后一句了', icon: 'none' });
+        return;
+      }
+
+      const normalized = normalizeSentence(nextSentence, resolveTs(nextSentence, null));
+      this.stopCurrentAudio();
+      addDailySentenceHistoryEntry({ ...normalized.sentence, timestamp: normalized.resolvedTs });
+      this.setData({
+        ts: normalized.resolvedTs,
+        sentence: normalized.sentence,
+        translations: normalized.translations,
+        currentIndex: 0,
+        currentAnimClass: '',
+        nextAnimClass: ''
+      });
+      this.refreshCards();
+      maybeShowInterstitial({ dayKey: getTodayKey(), contentKey: toDateKey(normalized.sentence, normalized.resolvedTs) });
+    } catch (error) {
+      console.error('[daily-sentence] load next sentence failed', error);
+      wx.showToast({ title: '下一句加载失败', icon: 'none' });
+    } finally {
+      this.setData({ loadingNextSentence: false });
+    }
+  },
+
+  stopCurrentAudio() {
+    if (!this._audio) return;
+    try { this._audio.stop(); } catch (e) {}
   },
 
   onSwipeStart(e) {
@@ -744,10 +834,18 @@ Page({
     const dy = endY - (Number(this._swipeStartY) || 0);
     const dt = Date.now() - (Number(this._swipeStartTime) || 0);
     if (dt > 650) return;
-    if (Math.abs(dx) < 44) return;
-    if (Math.abs(dy) > Math.abs(dx) * 1.1) return;
-    if (dx < 0) this.nextCard();
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const distance = horizontal ? Math.abs(dx) : Math.abs(dy);
+    if (distance < 44) return;
+    this.dismissSwipeGuide();
+    if ((horizontal && dx < 0) || (!horizontal && dy < 0)) this.nextCard();
     else this.prevCard();
+  },
+
+  dismissSwipeGuide() {
+    if (!this.data.showSwipeGuide) return;
+    this.setData({ showSwipeGuide: false });
+    try { wx.setStorageSync('kr_daily_sentence_swipe_guide_shown', true); } catch (e) {}
   },
 
   toggleAutoPlay() {
@@ -760,6 +858,18 @@ Page({
         setTimeout(() => this.playCurrentAudio(true), 60);
       }
     });
+  },
+
+  preloadCurrentAudio() {
+    const rawSrc = this.data.currentCard && this.data.currentCard.audio ? String(this.data.currentCard.audio) : '';
+    const audio = rawSrc.replace(/^`+/, '').replace(/`+$/, '').trim();
+    if (!audio) return;
+    try {
+      const context = this.ensureAudio();
+      if (context.src !== audio) context.src = audio;
+    } catch (error) {
+      console.warn('[daily-sentence] audio preload failed', error);
+    }
   },
 
   playCurrentAudio(silent) {

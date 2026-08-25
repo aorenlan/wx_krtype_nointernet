@@ -1307,61 +1307,68 @@
   transform: scale(0.96);
 }
 
-.dual-hide-switch {
-  height: 28px;
-  padding: 0 7px 0 9px;
-  border-radius: 999px;
+.dual-visibility-cycle {
+  height: 30px;
+  min-width: 116px;
+  padding: 0 8px 0 10px;
+  border: 1px solid rgba(15, 23, 42, 0.11);
+  border-radius: 11px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: #f7f8fb;
-  border: 1px solid rgba(15, 23, 42, 0.10);
+  justify-content: space-between;
+  gap: 9px;
+  background: #ffffff;
   flex-shrink: 0;
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
-.dual-hide-switch text {
+.dual-visibility-copy,
+.dual-visibility-action {
+  display: flex;
+  align-items: center;
+}
+
+.dual-visibility-copy {
+  gap: 4px;
+}
+
+.dual-visibility-key {
   font-size: 10px;
-  font-weight: 800;
-  color: #667085;
-  white-space: nowrap;
-  word-break: keep-all;
+  font-weight: 700;
+  color: #98a1af;
 }
 
-.dual-hide-switch.active {
-  background: #ffffff;
-  border-color: rgba(23, 24, 29, 0.16);
-}
-
-.dual-hide-switch.active text {
+.dual-visibility-value {
+  max-width: 52px;
+  overflow: hidden;
   color: #17181d;
+  font-size: 10px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dual-switch-track {
-  width: 28px;
-  height: 16px;
-  padding: 2px;
-  border-radius: 999px;
-  background: #c8d0db;
-  box-sizing: border-box;
-  transition: background 0.18s ease;
+.dual-visibility-action {
+  gap: 2px;
+  color: #a36c11;
+  font-size: 9px;
+  font-weight: 900;
 }
 
-.dual-switch-thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
-  transition: transform 0.18s ease;
+.dual-visibility-cycle-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
-.dual-hide-switch.active .dual-switch-track {
-  background: #17181d;
+.dual-visibility-cycle:active {
+  transform: scale(0.97);
+  background: #f7f8fa;
 }
 
-.dual-hide-switch.active .dual-switch-thumb {
-  transform: translateX(12px);
+.dual-visibility-cycle.mode-3 {
+  border-color: rgba(245, 170, 36, 0.34);
+  background: #fff9ee;
 }
 
 .dual-column-labels {
@@ -1512,6 +1519,12 @@
   color: #d5dbe4;
   letter-spacing: 0;
   font-weight: 900;
+}
+
+.dual-meaning.hidden-meaning {
+  color: #c1c7d0;
+  letter-spacing: 3rpx;
+  user-select: none;
 }
 
 .dual-word-row.completed .dual-word-text {

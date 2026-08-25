@@ -11,7 +11,7 @@ const AUDIO_ORIGIN = 'https://enoss.aorenlan.fun';
 const AUDIO_BASE_PATH = '/kr_word';
 const EDGE_TTS_CACHE_NAMESPACE = 'edge_tts_v1';
 const EDGE_TTS_PRELOAD_AHEAD = 2;
-const EDGE_TTS_BATCH_SIZE = 12;
+const EDGE_TTS_BATCH_SIZE = 4;
 const AUDIO_PRELOAD_DELAY_MS = 280;
 const AUDIO_PRELOAD_QUEUE_GAP_MS = 220;
 const AUDIO_PRELOAD_AHEAD = 2;
@@ -379,7 +379,7 @@ const getSleepSummary = (selectedIds) => {
     return names.length ? names.join(' + ') : '未选择';
 };
 
-const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId, reciteMode = false) => {
+const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, hideMeaning, revealWord, exampleRowId, reciteMode = false) => {
     const list = Array.isArray(words) ? words : [];
     const total = list.length;
     if (!total) return [];
@@ -418,6 +418,8 @@ const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inp
         const completed = !!(completedMap && completedMap[completedKey]);
         const shouldShowWord = !hideKorean || completed || (active && revealWord);
         const hiddenWord = rawWord ? '•'.repeat(Math.max(2, Array.from(rawWord).length)) : '';
+        const rawMeaning = (word && (word.meaning || word.translation || word.definition)) || '';
+        const hiddenMeaning = rawMeaning ? '•'.repeat(Math.max(2, Array.from(String(rawMeaning)).length)) : '';
         const exampleSentence = getDualExampleSentence(word);
         const exampleTranslation = getDualExampleTranslation(word);
         return {
@@ -428,7 +430,9 @@ const buildDualColumnRows = (words, currentIndex, completedMap, typingState, inp
             word: rawWord,
             displayWord: shouldShowWord ? rawWord : hiddenWord,
             wordHidden: !shouldShowWord,
-            meaning: (word && (word.meaning || word.translation || word.definition)) || '',
+            meaning: rawMeaning,
+            displayMeaning: hideMeaning ? hiddenMeaning : rawMeaning,
+            meaningHidden: !!hideMeaning,
             phonetic: (word && word.phonetic) || '',
             active,
             completed,
@@ -580,6 +584,9 @@ Page({
         dualNativeInputFocus: false,
         dualReciteMode: false,
         dualHideKorean: false,
+        dualHideMeaning: false,
+        dualVisibilityMode: 0,
+        dualVisibilityLabel: '全部',
         dualRevealWord: false,
         dualExampleRowId: '',
         dualActionLocked: false,
@@ -3052,9 +3059,10 @@ Page({
             ? false
             : (overrides.inputFocus != null ? overrides.inputFocus : this.data.dualNativeInputFocus);
         const hideKorean = overrides.hideKorean != null ? overrides.hideKorean : this.data.dualHideKorean;
+        const hideMeaning = overrides.hideMeaning != null ? overrides.hideMeaning : this.data.dualHideMeaning;
         const revealWord = overrides.revealWord != null ? overrides.revealWord : this.data.dualRevealWord;
         const exampleRowId = overrides.exampleRowId != null ? overrides.exampleRowId : this.data.dualExampleRowId;
-        const dualColumnRows = buildDualColumnRows(words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, revealWord, exampleRowId, reciteMode);
+        const dualColumnRows = buildDualColumnRows(words, currentIndex, completedMap, typingState, inputMap, shouldFocusInput, hideKorean, hideMeaning, revealWord, exampleRowId, reciteMode);
         this.setData({ dualColumnRows });
     },
 
@@ -3326,12 +3334,23 @@ Page({
         });
     },
 
-    toggleDualHideKorean() {
-        const next = !this.data.dualHideKorean;
+    cycleDualVisibility() {
+        const nextMode = (Number(this.data.dualVisibilityMode) + 1) % 4;
+        const hideKorean = nextMode === 1 || nextMode === 3;
+        const hideMeaning = nextMode === 2 || nextMode === 3;
+        const labels = ['全部', '隐藏韩语', '隐藏中文', '全部隐藏'];
         this.setData({
-            dualHideKorean: next,
+            dualVisibilityMode: nextMode,
+            dualVisibilityLabel: labels[nextMode],
+            dualHideKorean: hideKorean,
+            dualHideMeaning: hideMeaning,
             dualRevealWord: false
-        }, () => this.refreshDualColumnRows({ force: true, hideKorean: next, revealWord: false }));
+        }, () => this.refreshDualColumnRows({
+            force: true,
+            hideKorean,
+            hideMeaning,
+            revealWord: false
+        }));
         this.clearDualRevealTimer();
     },
 
@@ -4727,6 +4746,11 @@ Page({
         return category === PHOTO_RECOGNITION_CATEGORY || category === '拍照识别' || category === PICTURE_WORDS_PRACTICE_CATEGORY;
     },
 
+    isPhotoRecognitionAudioCategory() {
+        const category = (this.data.settings && this.data.settings.category) || '';
+        return category === PHOTO_RECOGNITION_CATEGORY || category === '拍照识别';
+    },
+
     ensureAudioCacheDir() {
         if (!wx.env || !wx.env.USER_DATA_PATH || !wx.getFileSystemManager) return '';
         const dir = `${wx.env.USER_DATA_PATH}/audio_cache`;
@@ -5140,6 +5164,11 @@ Page({
                 if (settled) return;
                 settled = true;
                 cleanup();
+                // A timed-out source can still emit play later on some Android devices.
+                // Stop it after detaching handlers before the fallback source is assigned.
+                if (!ok) {
+                    try { audioCtx.stop && audioCtx.stop(); } catch (e) {}
+                }
                 console.log(logPrefix, 'Settled:', ok ? 'Success' : 'Failed');
                 try {
                     if (audioCtx.__nvPendingSettle === settle) {
@@ -5296,7 +5325,7 @@ Page({
         if (words.length === 0) return;
 
         const currentIndex = Number(this.data.currentIndex || 0);
-        const preloadMeaning = !!s.pronounceMeaning;
+        const preloadMeaning = !this.isPhotoRecognitionAudioCategory() && !!s.pronounceMeaning;
 
         if (preferEdgeTts) {
             this.preloadEdgeTtsWindow(currentIndex, preloadMeaning);
@@ -5514,7 +5543,11 @@ Page({
 
         const wordId = safeWordId(current);
         if (!this.canPlayCurrentWordAudio(playSeq, wordId, options)) return;
-        const playMeaning = !options.skipMeaning && !!(this.data.settings && this.data.settings.pronounceMeaning);
+        // Photo-imported cards only speak Korean. This also prevents a stale global
+        // "pronounce meaning" setting from interleaving Chinese with Korean audio.
+        const playMeaning = !options.skipMeaning
+            && !this.isPhotoRecognitionAudioCategory()
+            && !!(this.data.settings && this.data.settings.pronounceMeaning);
         if (this.shouldPreferEdgeTtsAudio()) {
             this.preloadEdgeTtsWindow(Number(this.data.currentIndex || 0), playMeaning);
         }

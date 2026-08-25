@@ -11,7 +11,8 @@ const { drawPhotoLearnShareCard, safeText } = require('../../utils/share-card');
 const { clearPageTabBarTimer, syncPageTabBar } = require('../../utils/tabbar');
 
 const EDGE_TTS_LANGUAGE = 'ko-KR';
-const EDGE_TTS_BATCH_SIZE = 12;
+const EDGE_TTS_BATCH_SIZE = 4;
+const PREFETCH_CLICK_WAIT_MS = 450;
 const HERO_FINAL_CHARS = Array.from(HERO_FINAL_TEXT).map((char) => {
   if (/[A-Za-z]/.test(char)) {
     return { text: char, tone: 'en' };
@@ -351,6 +352,8 @@ Page({
     sharedWords: [],
     sharedSceneName: '',
 	    isAnalyzing: false,
+	    analysisAdVisible: false,
+	    analysisAdLoaded: false,
 	    analysisStatus: '',
 	    speakingWordIndex: -1,
     audioPrepVisible: false,
@@ -882,18 +885,37 @@ Page({
   },
 
   persistPhoto(tempFilePath, done) {
-    if (!wx.saveFile) {
-      done(tempFilePath);
+    const continueWithPath = (filePath) => {
+      if (!wx.saveFile) {
+        done(filePath);
+        return;
+      }
+
+      wx.saveFile({
+        tempFilePath: filePath,
+        success: (result) => {
+          done(result.savedFilePath || filePath);
+        },
+        fail: () => {
+          done(filePath);
+        }
+      });
+    };
+
+    // DevTools may expose a virtual http://tmp path while getImageInfo returns
+    // the actual readable local path for the same image.
+    if (!wx.getImageInfo) {
+      continueWithPath(tempFilePath);
       return;
     }
 
-    wx.saveFile({
-      tempFilePath,
+    wx.getImageInfo({
+      src: tempFilePath,
       success: (result) => {
-        done(result.savedFilePath || tempFilePath);
+        continueWithPath((result && result.path) || tempFilePath);
       },
       fail: () => {
-        done(tempFilePath);
+        continueWithPath(tempFilePath);
       }
     });
   },
@@ -924,6 +946,8 @@ Page({
       currentRecord: null,
       shareImagePath: '',
       isAnalyzing: true,
+      analysisAdVisible: true,
+      analysisAdLoaded: false,
       analysisStatus: '正在压缩图片',
       audioPrepVisible: false,
       audioPrepRecordId: '',
@@ -945,6 +969,8 @@ Page({
       this.consumePhotoRecognitionQuota();
       this.setData({
         isAnalyzing: false,
+        analysisAdVisible: false,
+        analysisAdLoaded: false,
         analysisStatus: ''
       });
       wx.showToast({
@@ -956,6 +982,8 @@ Page({
       console.error('[photo-learn] analyze failed', error);
       this.setData({
         isAnalyzing: false,
+        analysisAdVisible: false,
+        analysisAdLoaded: false,
         analysisStatus: ''
       });
       wx.showToast({
@@ -964,6 +992,28 @@ Page({
         duration: 2600
       });
     }
+  },
+
+  adLoad() {
+    if (!this.data.isAnalyzing) return;
+    console.log('[photo-learn] 识别页原生模板广告加载成功');
+    this.setData({ analysisAdLoaded: true });
+  },
+
+  adError(err) {
+    console.error('[photo-learn] 识别页原生模板广告加载失败', err);
+    this.setData({
+      analysisAdVisible: false,
+      analysisAdLoaded: false
+    });
+  },
+
+  adClose() {
+    console.log('[photo-learn] 识别页原生模板广告已关闭');
+    this.setData({
+      analysisAdVisible: false,
+      analysisAdLoaded: false
+    });
   },
 
   goCamera() {
@@ -1131,34 +1181,17 @@ Page({
 	    const entry = this.preparedWordAudioContexts[this.getWordAudioCacheKey(word)];
 	    if (!entry || entry.warmed || entry.warming) return;
 
-	    entry.warming = true;
-	    const finishWarm = (markWarmed) => {
-	      this.releaseWordAudioWarm(entry);
-	      entry.warmed = !!markWarmed;
-	      try {
-	        audio.pause();
-	        if (audio.seek) audio.seek(0);
-	      } catch (error) {
-	        // Warmup cleanup is best-effort.
-	      }
-	      audio.volume = 1;
-	    };
-	    const onCanplay = () => finishWarm(true);
-	    const onEnded = () => finishWarm(true);
-	    const onError = () => finishWarm(false);
-
-	    entry.warmHandlers = { onCanplay, onEnded, onError };
-	    if (audio.onCanplay) audio.onCanplay(onCanplay);
-	    audio.onEnded(onEnded);
-	    audio.onError(onError);
-	    entry.warmTimer = setTimeout(() => finishWarm(true), 260);
-
+	    // Prepare the cached file without silent playback. On some devices a delayed
+	    // pause lets multiple warmup contexts leak sound and repeat the same word.
 	    try {
-	      audio.volume = 0;
 	      if (audio.src !== src) audio.src = src;
-	      audio.play();
+	      audio.autoplay = false;
+	      audio.loop = false;
+	      entry.warmed = true;
+	      entry.warming = false;
 	    } catch (error) {
-	      finishWarm(false);
+	      entry.warmed = false;
+	      entry.warming = false;
 	    }
 	  },
 
@@ -1362,7 +1395,10 @@ Page({
 
 	    const prefetchPromise = this.edgeTtsPrefetchByWord && this.edgeTtsPrefetchByWord[word];
 	    if (prefetchPromise) {
-	      const prefetchedPath = await prefetchPromise;
+	      const prefetchedPath = await Promise.race([
+	        prefetchPromise,
+	        new Promise((resolve) => setTimeout(() => resolve(''), PREFETCH_CLICK_WAIT_MS))
+	      ]);
 	      if (prefetchedPath && fileExists(prefetchedPath)) {
 	        return prefetchedPath;
 	      }

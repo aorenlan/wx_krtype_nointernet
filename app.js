@@ -18,9 +18,36 @@ function stashFavoriteFromExtraData(options) {
   } catch (e) {}
 }
 
+function setupMiniProgramUpdate() {
+  if (typeof wx === 'undefined' || typeof wx.getUpdateManager !== 'function') return;
+
+  const updateManager = wx.getUpdateManager();
+  updateManager.onCheckForUpdate((result) => {
+    console.log('[app-update] checked', { hasUpdate: !!(result && result.hasUpdate) });
+  });
+  updateManager.onUpdateReady(() => {
+    wx.showModal({
+      title: '小程序更新',
+      content: '发现新版本，点击确定刷新后即可使用。',
+      confirmText: '刷新',
+      cancelText: '稍后',
+      success(result) {
+        if (result.confirm) updateManager.applyUpdate();
+      }
+    });
+  });
+  updateManager.onUpdateFailed(() => {
+    wx.showToast({
+      title: '更新失败，请稍后重试',
+      icon: 'none'
+    });
+  });
+}
+
 App({
   onLaunch: function (options) {
     stashFavoriteFromExtraData(options);
+    setupMiniProgramUpdate();
 
     if (!wx.cloud) {
       console.error("请使用 2.2.3 或以上的基础库以使用云能力");

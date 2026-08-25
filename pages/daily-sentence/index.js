@@ -45,9 +45,27 @@ const emptyCard = () => ({
   tone: '',
   context: '',
   explanation: '',
+  explanationExpandable: false,
   vocabulary: '',
+  vocabularyItems: [],
   audio: ''
 });
+
+const parseVocabulary = (raw) => {
+  const text = String(raw || '').trim();
+  if (!text) return [];
+  return text
+    .split(/[;；\n]+/)
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .slice(0, 6)
+    .map((part) => {
+      const match = part.match(/^(.{1,24}?)[：:]\s*(.+)$/);
+      return match
+        ? { word: match[1].trim(), meaning: match[2].trim() }
+        : { word: part, meaning: '' };
+    });
+};
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -187,14 +205,21 @@ const normalizeTranslations = (sentence, dateKey) => {
         derivedAudio: audio
       });
     } catch (e) {}
+    const context = (t && (t.context || t.translation || t.chinese || t.meaning || t.cn)) || '';
+    const vocabulary = (t && t.vocabulary) || '';
+    const explanation = (t && t.explanation) || '';
     return {
       id,
       korean,
       romaji: (t && t.romaji) || '',
       tone: (t && t.tone) || '',
-      context: (t && t.context) || '',
-      explanation: (t && t.explanation) || '',
-      vocabulary: (t && t.vocabulary) || '',
+      context,
+      explanation,
+      // Roughly two rendered lines on a phone. Short notes should never show a
+      // misleading disclosure control when all content is already visible.
+      explanationExpandable: String(explanation).trim().length > 52,
+      vocabulary,
+      vocabularyItems: parseVocabulary(vocabulary),
       audio
     };
   });
@@ -258,7 +283,6 @@ let interstitialAttemptAt = 0;
 
 const INTERSTITIAL_AD_UNIT_ID = 'adunit-a53a9f65ac42cc65';
 const INTERSTITIAL_STORE_KEY = 'kr_daily_sentence_interstitial_store_v2';
-const INTERSTITIAL_MIN_INTERVAL_MS = 10 * 1000;
 
 const clearInterstitialWatchdog = () => {
   if (!interstitialWatchdog) return;
@@ -293,20 +317,22 @@ const ensureInterstitialAd = (forceRecreate) => {
 const readInterstitialStore = () => {
   try {
     const raw = wx.getStorageSync(INTERSTITIAL_STORE_KEY);
-    if (!raw || typeof raw !== 'object') return { dayKey: '', lastShownAt: 0, shown: {} };
+    if (!raw || typeof raw !== 'object') return { dayKey: '', lastShownAt: 0, shownToday: false };
     const dayKey = raw.dayKey != null ? String(raw.dayKey) : '';
     const lastShownAt = raw.lastShownAt != null ? Number(raw.lastShownAt) : 0;
+    // `shown` was the old per-sentence map. Treat any entry from today as the
+    // day's single display so existing users are not shown another ad after update.
     const shownRaw = raw.shown && typeof raw.shown === 'object' ? raw.shown : {};
-    const shown = Array.isArray(shownRaw)
-      ? shownRaw.reduce((acc, k) => {
-          const key = k != null ? String(k) : '';
-          if (key) acc[key] = 1;
-          return acc;
-        }, {})
-      : shownRaw;
-    return { dayKey, lastShownAt: Number.isFinite(lastShownAt) ? lastShownAt : 0, shown };
+    const oldStoreHasShown = Array.isArray(shownRaw)
+      ? shownRaw.length > 0
+      : Object.keys(shownRaw).length > 0;
+    return {
+      dayKey,
+      lastShownAt: Number.isFinite(lastShownAt) ? lastShownAt : 0,
+      shownToday: raw.shownToday === true || oldStoreHasShown
+    };
   } catch (e) {
-    return { dayKey: '', lastShownAt: 0, shown: {} };
+    return { dayKey: '', lastShownAt: 0, shownToday: false };
   }
 };
 
@@ -316,18 +342,17 @@ const writeInterstitialStore = (store) => {
   } catch (e) {}
 };
 
-const maybeShowInterstitial = ({ dayKey, contentKey }) => {
+const maybeShowInterstitial = ({ dayKey }) => {
   if (shouldSkipAd('daily-sentence')) return;
 
   const d = String(dayKey || '');
   if (!d) return;
-  const c = String(contentKey || '');
-  if (!c) return;
   const now = Date.now();
   const store = readInterstitialStore();
-  const useStore = store.dayKey === d ? store : { dayKey: d, lastShownAt: 0, shown: {} };
-  if (useStore.shown && useStore.shown[c]) return;
-  if (now - (useStore.lastShownAt || 0) < INTERSTITIAL_MIN_INTERVAL_MS) return;
+  const useStore = store.dayKey === d
+    ? store
+    : { dayKey: d, lastShownAt: 0, shownToday: false };
+  if (useStore.shownToday) return;
 
   if (interstitialShowing) {
     if (interstitialAttemptAt && now - interstitialAttemptAt < 20 * 1000) return;
@@ -370,9 +395,7 @@ const maybeShowInterstitial = ({ dayKey, contentKey }) => {
 
   showWithRetry()
     .then(() => {
-      const nextShown = Object.assign({}, useStore.shown || {});
-      nextShown[c] = 1;
-      writeInterstitialStore({ dayKey: d, lastShownAt: now, shown: nextShown });
+      writeInterstitialStore({ dayKey: d, lastShownAt: Date.now(), shownToday: true });
     })
     .catch(() => {
       interstitialShowing = false;
@@ -401,9 +424,15 @@ Page({
     hasNext: false,
     autoPlay: false,
     loading: false,
+    loadingNextSentence: false,
     animating: false,
     currentAnimClass: '',
-    nextAnimClass: ''
+    nextAnimClass: '',
+    showSwipeGuide: false,
+    showNextSentenceTip: false,
+    dontShowNextSentenceTip: false,
+    detailExpanded: false,
+    audioPlaying: false
   },
 
   ensureAudio() {
@@ -419,22 +448,27 @@ Page({
         try { console.log('[daily-sentence] audio onCanplay', pickMeta()); } catch (e) {}
       });
       a.onPlay(() => {
+        this.setData({ audioPlaying: true });
         try { console.log('[daily-sentence] audio onPlay', pickMeta()); } catch (e) {}
       });
       a.onWaiting(() => {
         try { console.log('[daily-sentence] audio onWaiting', pickMeta()); } catch (e) {}
       });
       a.onPause(() => {
+        this.setData({ audioPlaying: false });
         try { console.log('[daily-sentence] audio onPause', pickMeta()); } catch (e) {}
       });
       a.onStop(() => {
+        this.setData({ audioPlaying: false });
         try { console.log('[daily-sentence] audio onStop', pickMeta()); } catch (e) {}
       });
       a.onEnded(() => {
+        this.setData({ audioPlaying: false });
         try { console.log('[daily-sentence] audio onEnded', pickMeta()); } catch (e) {}
       });
       a.onTimeUpdate(() => {});
       a.onError((err) => {
+        this.setData({ audioPlaying: false });
         try {
           const e = err && typeof err === 'object' ? err : {};
           console.error('[daily-sentence] audio onError', { ...pickMeta(), errCode: e.errCode, errMsg: e.errMsg, err });
@@ -461,7 +495,9 @@ Page({
     this._swipeStartX = 0;
     this._swipeStartY = 0;
     this._swipeStartTime = 0;
+    this._nextTipShownThisSession = false;
     const autoPlay = !!wx.getStorageSync('kr_daily_sentence_autoplay');
+    const showSwipeGuide = !wx.getStorageSync('kr_daily_sentence_swipe_guide_shown');
     const hasShownAutoTip = !!wx.getStorageSync('kr_daily_sentence_autoplay_tip_shown');
 
     const ts = options && options.ts != null ? options.ts : null;
@@ -473,6 +509,7 @@ Page({
       navBarHeight,
       windowHeight,
       autoPlay,
+      showSwipeGuide,
       loading: true
     });
 
@@ -570,7 +607,7 @@ Page({
       loading: false
     });
 
-    maybeShowInterstitial({ dayKey: getTodayKey(), contentKey: toDateKey(normalized.sentence, normalized.resolvedTs) });
+    maybeShowInterstitial({ dayKey: getTodayKey() });
     this.refreshCards();
   },
 
@@ -593,9 +630,7 @@ Page({
     }
 
     if (this.data.loading) return;
-    const contentKey = toDateKey(this.data.sentence, this.data.ts);
-    if (!contentKey) return;
-    maybeShowInterstitial({ dayKey: getTodayKey(), contentKey });
+    maybeShowInterstitial({ dayKey: getTodayKey() });
   },
 
   async loadTarget(targetId, targetTs) {
@@ -658,7 +693,7 @@ Page({
     });
     this.refreshCards();
     
-    maybeShowInterstitial({ dayKey: getTodayKey(), contentKey: toDateKey(normalized.sentence, normalized.resolvedTs) });
+    maybeShowInterstitial({ dayKey: getTodayKey() });
   },
 
   async forceRefreshLatest() {
@@ -689,10 +724,7 @@ Page({
              });
              this.refreshCards();
              
-             const contentKey = toDateKey(normalized.sentence, normalized.resolvedTs);
-             if (contentKey) {
-                 maybeShowInterstitial({ dayKey: getTodayKey(), contentKey });
-             }
+             maybeShowInterstitial({ dayKey: getTodayKey() });
         } else {
             this.setData({ loading: false });
             wx.showToast({ title: '暂无最新数据', icon: 'none' });
@@ -721,9 +753,10 @@ Page({
     }
     const idx = Math.max(0, Math.min(len - 1, Number(this.data.currentIndex) || 0));
     const currentCard = list[idx] || emptyCard();
-    const hasNext = len > 1;
-    const nextCard = hasNext ? (list[(idx + 1) % len] || emptyCard()) : emptyCard();
-    this.setData({ currentIndex: idx, currentCard, nextCard, hasNext, displayCurrentCard: currentCard, displayNextCard: nextCard }, () => {
+    const hasNext = idx < len - 1;
+    const nextCard = hasNext ? (list[idx + 1] || emptyCard()) : emptyCard();
+    this.setData({ currentIndex: idx, currentCard, nextCard, hasNext, displayCurrentCard: currentCard, displayNextCard: nextCard, detailExpanded: false }, () => {
+      this.preloadCurrentAudio();
       if (this.data.autoPlay) {
         setTimeout(() => this.playCurrentAudio(true), 60);
       }
@@ -731,6 +764,10 @@ Page({
   },
 
   preventMove() {},
+
+  toggleCardDetail() {
+    this.setData({ detailExpanded: !this.data.detailExpanded });
+  },
 
   openHistory() {
     wx.navigateTo({ url: '/pages/daily-sentence-history/index' });
@@ -749,12 +786,15 @@ Page({
     if (this.data.animating) return false;
     const list = Array.isArray(this.data.translations) ? this.data.translations : [];
     const len = list.length;
-    if (len <= 1) return false;
+    if (len <= 0) return false;
 
     const idx = Number(this.data.currentIndex) || 0;
-    const nextIndex = direction === 'prev'
-      ? (idx - 1 + len) % len
-      : (idx + 1) % len;
+    if (direction === 'next' && idx >= len - 1) {
+      this.requestNextSentence();
+      return true;
+    }
+    if (direction === 'prev' && idx <= 0) return false;
+    const nextIndex = direction === 'prev' ? idx - 1 : idx + 1;
 
     if (this._transitionTimer) {
       clearTimeout(this._transitionTimer);
@@ -763,7 +803,7 @@ Page({
 
     const isPrev = direction === 'prev';
     const nextCurrentCard = list[nextIndex] || emptyCard();
-    const nextNextCard = list[(nextIndex + 1) % len] || emptyCard();
+    const nextNextCard = list[nextIndex + 1] || emptyCard();
     this.setData({
       animating: true,
       currentAnimClass: isPrev ? 'anim-out-prev' : 'anim-out-next',
@@ -783,8 +823,10 @@ Page({
         nextCard: nextNextCard,
         displayCurrentCard: nextCurrentCard,
         displayNextCard: nextNextCard,
-        hasNext: len > 1
+        hasNext: nextIndex < len - 1,
+        detailExpanded: false
       }, () => {
+        this.preloadCurrentAudio();
         if (this.data.autoPlay) setTimeout(() => this.playCurrentAudio(true), 60);
       });
     }, 240);
@@ -798,6 +840,84 @@ Page({
 
   prevCard() {
     this.startTransition('prev');
+  },
+
+  requestNextSentence() {
+    if (this.data.loadingNextSentence || this.data.showNextSentenceTip) return;
+    const tipDisabled = !!wx.getStorageSync('kr_daily_sentence_next_tip_disabled');
+    if (!tipDisabled && !this._nextTipShownThisSession) {
+      this._nextTipShownThisSession = true;
+      this.setData({ showNextSentenceTip: true, dontShowNextSentenceTip: false });
+      return;
+    }
+    this.loadNextSentence();
+  },
+
+  toggleNextSentenceTipChoice() {
+    this.setData({ dontShowNextSentenceTip: !this.data.dontShowNextSentenceTip });
+  },
+
+  stayOnCurrentSentence() {
+    this.setData({ showNextSentenceTip: false, dontShowNextSentenceTip: false });
+  },
+
+  continueToNextSentence() {
+    if (this.data.dontShowNextSentenceTip) {
+      try { wx.setStorageSync('kr_daily_sentence_next_tip_disabled', true); } catch (e) {}
+    }
+    this.setData({ showNextSentenceTip: false, dontShowNextSentenceTip: false });
+    this.loadNextSentence();
+  },
+
+  async loadNextSentence() {
+    if (this.data.loadingNextSentence) return;
+    this.setData({ loadingNextSentence: true });
+    try {
+      const callRes = await callDailySentence({
+        page: 1,
+        pageSize: 100,
+        orderField: 'batchDate',
+        orderDirection: 'desc',
+        noCache: true
+      });
+      const result = callRes && callRes.result ? callRes.result : null;
+      const list = result && Array.isArray(result.data) ? result.data : [];
+      const currentKey = toDateKey(this.data.sentence, this.data.ts);
+      const currentId = this.data.sentence && this.data.sentence._id ? String(this.data.sentence._id) : '';
+      const currentPos = list.findIndex((item) => {
+        const itemId = item && item._id ? String(item._id) : '';
+        return (currentId && itemId === currentId) || toDateKey(item, resolveTs(item, null)) === currentKey;
+      });
+      const nextSentence = currentPos >= 0 ? list[currentPos + 1] : null;
+      if (!nextSentence) {
+        wx.showToast({ title: '已经是最后一句了', icon: 'none' });
+        return;
+      }
+
+      const normalized = normalizeSentence(nextSentence, resolveTs(nextSentence, null));
+      this.stopCurrentAudio();
+      addDailySentenceHistoryEntry({ ...normalized.sentence, timestamp: normalized.resolvedTs });
+      this.setData({
+        ts: normalized.resolvedTs,
+        sentence: normalized.sentence,
+        translations: normalized.translations,
+        currentIndex: 0,
+        currentAnimClass: '',
+        nextAnimClass: ''
+      });
+      this.refreshCards();
+      maybeShowInterstitial({ dayKey: getTodayKey() });
+    } catch (error) {
+      console.error('[daily-sentence] load next sentence failed', error);
+      wx.showToast({ title: '下一句加载失败', icon: 'none' });
+    } finally {
+      this.setData({ loadingNextSentence: false });
+    }
+  },
+
+  stopCurrentAudio() {
+    if (!this._audio) return;
+    try { this._audio.stop(); } catch (e) {}
   },
 
   onSwipeStart(e) {
@@ -818,10 +938,18 @@ Page({
     const dy = endY - (Number(this._swipeStartY) || 0);
     const dt = Date.now() - (Number(this._swipeStartTime) || 0);
     if (dt > 650) return;
-    if (Math.abs(dx) < 44) return;
-    if (Math.abs(dy) > Math.abs(dx) * 1.1) return;
-    if (dx < 0) this.nextCard();
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const distance = horizontal ? Math.abs(dx) : Math.abs(dy);
+    if (distance < 44) return;
+    this.dismissSwipeGuide();
+    if ((horizontal && dx < 0) || (!horizontal && dy < 0)) this.nextCard();
     else this.prevCard();
+  },
+
+  dismissSwipeGuide() {
+    if (!this.data.showSwipeGuide) return;
+    this.setData({ showSwipeGuide: false });
+    try { wx.setStorageSync('kr_daily_sentence_swipe_guide_shown', true); } catch (e) {}
   },
 
   toggleAutoPlay() {
@@ -834,6 +962,18 @@ Page({
         setTimeout(() => this.playCurrentAudio(true), 60);
       }
     });
+  },
+
+  preloadCurrentAudio() {
+    const rawSrc = this.data.currentCard && this.data.currentCard.audio ? String(this.data.currentCard.audio) : '';
+    const audio = rawSrc.replace(/^`+/, '').replace(/`+$/, '').trim();
+    if (!audio) return;
+    try {
+      const context = this.ensureAudio();
+      if (context.src !== audio) context.src = audio;
+    } catch (error) {
+      console.warn('[daily-sentence] audio preload failed', error);
+    }
   },
 
   playCurrentAudio(silent) {
