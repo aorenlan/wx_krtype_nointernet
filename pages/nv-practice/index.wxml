@@ -147,7 +147,7 @@
   </view>
 
   <view class="practice-top-tools {{practiceToolsOpen ? 'tools-open' : ''}}" wx:if="{{words.length > 0 && currentWord && !loading && !isKeyboardOpen}}">
-    <view class="directory-entry" wx:if="{{!dualColumnMode}}" bindtap="openDirectory">
+    <view class="directory-entry" bindtap="openDirectory">
       <view class="directory-entry-mark">☷</view>
       <text class="directory-entry-title">目录</text>
     </view>

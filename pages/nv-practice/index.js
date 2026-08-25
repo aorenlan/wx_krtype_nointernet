@@ -1769,7 +1769,12 @@ Page({
             progressConfirmAction: '',
             learnedCount: 0,
             currentWordLearned: false,
+            dualCompletedIds: {},
             directoryCourses
+        }, () => {
+            if (this.data.dualColumnMode) {
+                this.refreshDualColumnRows({ force: true, completedMap: {} });
+            }
         });
         wx.showToast({ title: '本课进度已重置', icon: 'success' });
     },
@@ -1783,6 +1788,22 @@ Page({
         return Object.prototype.hasOwnProperty.call(completed, String(wordKey));
     },
 
+    getDualCompletedMapFromProgress(wordsOverride, settingsOverride) {
+        const words = Array.isArray(wordsOverride) ? wordsOverride : (this.data.words || []);
+        const settings = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
+        const progressKey = getLearningContentKey(settings);
+        const bucket = readLearningProgress()[progressKey] || {};
+        const completed = bucket.completed || {};
+        return words.reduce((map, word, index) => {
+            const wordKey = safeWordId(word) || (word && word.word) || `index_${index}`;
+            if (Object.prototype.hasOwnProperty.call(completed, String(wordKey))) {
+                const dualKey = getDualCompletedKey(word, index);
+                if (dualKey) map[dualKey] = true;
+            }
+            return map;
+        }, {});
+    },
+
     setLearningProgressMode(e) {
         const mode = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.mode;
         const nextMode = mode === 'view' ? 'view' : 'input';
@@ -1791,6 +1812,12 @@ Page({
         this.setData({ learningProgressMode: nextMode });
         if (nextMode === 'view' && this.data.currentWord) {
             this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
+            if (this.data.dualColumnMode) {
+                const completedMap = this.getDualCompletedMapFromProgress();
+                this.setData({ dualCompletedIds: completedMap }, () => {
+                    this.refreshDualColumnRows({ force: true, completedMap });
+                });
+            }
         }
     },
 
@@ -1877,7 +1904,17 @@ Page({
     },
 
     async openDirectory() {
-        if (this.data.isKeyboardOpen) return;
+        if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+        this.setData({
+            isKeyboardOpen: false,
+            dualNativeInputFocus: false,
+            showGuideBubble: false,
+            practiceToolsOpen: false
+        }, () => {
+            if (this.data.dualColumnMode) {
+                this.refreshDualColumnRows({ force: true, inputFocus: false });
+            }
+        });
         const current = this.data.settings || DEFAULT_SETTINGS;
         const bookKey = /^Yonsei\s+\d$/.test(current.category) ? 'yonsei' : (current.category === 'TOPIK Vocabulary' ? 'topik' : 'mine');
         syncPageTabBar(this, { selected: 0, hidden: true });
@@ -3998,6 +4035,11 @@ Page({
         const completedMap = this.markDualColumnCompleted(word, index);
         if (!completedMap) return;
 
+        const totalWords = words.length;
+        const wasCourseComplete = totalWords > 0 && Number(this.data.learnedCount || 0) >= totalWords;
+        const learnedCount = this.recordLearningProgress(word, index);
+        const courseJustCompleted = !wasCourseComplete && totalWords > 0 && learnedCount >= totalWords;
+
         if (word && word.id) {
             const wordKey = `${word.sourceCategory || ''}_${word.lessonId || ''}_${word.id}`;
             srs.recordLearned(wordKey, {
@@ -4039,7 +4081,9 @@ Page({
                 this._dualAdvanceTimer = setTimeout(() => {
                     this._dualAdvanceTimer = null;
                     if (nextIndex < 0) {
-                        wx.showToast({ title: '本组已完成', icon: 'success' });
+                        if (!courseJustCompleted) {
+                            wx.showToast({ title: '本组已完成', icon: 'success' });
+                        }
                         return;
                     }
                     this.startWord(nextIndex, prevWordInfo, { dualScrollIndex: index });
@@ -4704,11 +4748,15 @@ Page({
         if (this.data.learningProgressMode === 'view') {
             this.recordLearningProgress(wordObj, safeIndex);
         }
+        const restoredDualCompletedIds = this.data.dualColumnMode
+            ? this.getDualCompletedMapFromProgress(words)
+            : this.data.dualCompletedIds;
 
 	        const nextState = {
 	            currentIndex: safeIndex,
 	            currentWord: wordObj,
 	            currentWordLearned: this.data.learningProgressMode === 'view' || currentWordLearned,
+	            dualCompletedIds: restoredDualCompletedIds,
 	            typingState: initialState,
             isCorrect: false,
             showAnswer: false,
