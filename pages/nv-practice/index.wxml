@@ -101,6 +101,51 @@
     </scroll-view>
   </view>
 
+  <view class="course-complete-mask" wx:if="{{showCourseCompleteModal}}" catchtouchmove="preventScroll">
+    <view class="course-complete-card" catchtap="preventBubble">
+      <view class="course-complete-mark">
+        <view class="course-complete-check">✓</view>
+        <view class="course-complete-ring one"></view>
+        <view class="course-complete-ring two"></view>
+      </view>
+      <text class="course-complete-kicker">COURSE COMPLETE</text>
+      <text class="course-complete-title">这一课全部完成</text>
+      <text class="course-complete-sub">{{displayCategory || settings.category}}</text>
+      <view class="course-complete-stat">
+        <text class="course-complete-number">{{words.length}}</text>
+        <text class="course-complete-unit">个单词已完成</text>
+      </view>
+      <view class="course-complete-actions">
+        <button class="course-complete-btn secondary" bindtap="restartCompletedCourse" hover-class="none">重新开始</button>
+        <button class="course-complete-btn primary" bindtap="closeCourseCompleteModal" hover-class="none">完成</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="progress-confirm-mask" wx:if="{{showProgressConfirmModal}}" catchtouchmove="preventScroll">
+    <view class="progress-confirm-card" catchtap="preventBubble">
+      <view class="progress-confirm-mark">!</view>
+      <text class="progress-confirm-title">{{progressConfirmTitle}}</text>
+      <text class="progress-confirm-content">{{progressConfirmContent}}</text>
+      <view class="progress-confirm-actions">
+        <button class="progress-confirm-btn cancel" bindtap="closeProgressConfirmModal" hover-class="none">取消</button>
+        <button class="progress-confirm-btn danger" bindtap="confirmProgressAction" hover-class="none">{{progressConfirmButton}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="app-confirm-mask" wx:if="{{showAppConfirmModal}}" catchtouchmove="preventScroll">
+    <view class="app-confirm-card {{appConfirmTone}}" catchtap="preventBubble">
+      <view class="app-confirm-mark">{{appConfirmMark}}</view>
+      <text class="app-confirm-title">{{appConfirmTitle}}</text>
+      <text class="app-confirm-content">{{appConfirmContent}}</text>
+      <view class="app-confirm-actions">
+        <button class="app-confirm-btn cancel" bindtap="cancelAppConfirmModal" hover-class="none">{{appConfirmCancelText}}</button>
+        <button class="app-confirm-btn primary" bindtap="confirmAppConfirmModal" hover-class="none">{{appConfirmButtonText}}</button>
+      </view>
+    </view>
+  </view>
+
   <view class="practice-top-tools {{practiceToolsOpen ? 'tools-open' : ''}}" wx:if="{{words.length > 0 && currentWord && !loading && !isKeyboardOpen}}">
     <view class="directory-entry" wx:if="{{!dualColumnMode}}" bindtap="openDirectory">
       <view class="directory-entry-mark">☷</view>
@@ -409,6 +454,7 @@
         <view class="card-top-bar">
             <view class="top-left-group">
                 <view class="focus-mode-btn" bindtap="toggleFocusMode">F</view>
+                <view class="word-progress-state {{currentWordLearned ? 'completed' : 'pending'}}" aria-label="{{currentWordLearned ? '当前单词已完成' : '当前单词未完成'}}"></view>
             </view>
             <view class="card-actions">
                 <view class="action-icon shuffle-action-icon {{isShuffled ? 'shuffle-on' : ''}}" catchtap="toggleShuffle" hover-class="none">

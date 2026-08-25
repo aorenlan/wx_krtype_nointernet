@@ -53,6 +53,7 @@ const TAP_SCENE_AUTO_OPEN_KEY = 'kr_picture_words_open_tap_scene_v1';
 const TAP_SCENE_GUIDE_IMAGE = 'https://enoss.aorenlan.fun/kr_picturebook/point_read/mraibn8j/scene_mrajn319.png';
 const LEARNING_PROGRESS_KEY = 'kr_learning_progress_v1';
 const LEARNING_PROGRESS_MODE_KEY = 'kr_learning_progress_mode_v1';
+const DAILY_ALL_CHAPTERS_UNLOCK_KEY = 'kr_daily_all_chapters_unlock_v1';
 
 function readLearningProgress() {
     try { return wx.getStorageSync(LEARNING_PROGRESS_KEY) || {}; } catch (e) { return {}; }
@@ -160,6 +161,14 @@ const normalizeIndex = (rawIndex, length) => {
     const n = Number(rawIndex);
     const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
     return ((idx % len) + len) % len;
+};
+
+const getLocalDayKey = (timestamp) => {
+    const date = new Date(Number(timestamp) || Date.now());
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 const safeWordId = (w) => {
@@ -703,6 +712,20 @@ Page({
         directorySubcourses: [],
         learnedCount: 0,
         learningProgressMode: 'input',
+        currentWordLearned: false,
+        showCourseCompleteModal: false,
+        showProgressConfirmModal: false,
+        progressConfirmAction: '',
+        progressConfirmTitle: '',
+        progressConfirmContent: '',
+        progressConfirmButton: '',
+        showAppConfirmModal: false,
+        appConfirmTone: 'default',
+        appConfirmMark: '',
+        appConfirmTitle: '',
+        appConfirmContent: '',
+        appConfirmCancelText: '取消',
+        appConfirmButtonText: '确认',
         keyboardOffsetBottom: 280, 
         
         statusBarHeight: 20,
@@ -1072,7 +1095,13 @@ Page({
             // 正常播放结束，可以下发奖励
             if (this.pendingAction) {
                 // 记录解锁时间
-                if (this.pendingContentId) {
+                if (this.pendingUnlockMode === 'daily-all') {
+                    try {
+                        wx.setStorageSync(DAILY_ALL_CHAPTERS_UNLOCK_KEY, Date.now());
+                    } catch (e) {
+                        console.error('Save daily chapters unlock failed', e);
+                    }
+                } else if (this.pendingContentId) {
                     try {
                         const key = `unlock_${this.pendingContentId}`;
                         wx.setStorageSync(key, Date.now());
@@ -1083,6 +1112,7 @@ Page({
                 this.pendingAction();
                 this.pendingAction = null;
                 this.pendingContentId = null;
+                this.pendingUnlockMode = null;
             }
         } else {
             // 播放中途退出，不下发奖励
@@ -1097,6 +1127,9 @@ Page({
                 yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
                 topikLevelPickerIndex: this.data.topikLevelPickerIndex
             });
+            this.pendingAction = null;
+            this.pendingContentId = null;
+            this.pendingUnlockMode = null;
         }
     },
 
@@ -1112,17 +1145,24 @@ Page({
         return;
       }
 
-      // 检查是否在有效期内（7天）
+      // 新权益优先：当天已解锁全部章节时，旧的单章节入口也直接放行。
+      try {
+        const dailyUnlockedAt = wx.getStorageSync(DAILY_ALL_CHAPTERS_UNLOCK_KEY);
+        if (dailyUnlockedAt && getLocalDayKey(dailyUnlockedAt) === getLocalDayKey(Date.now())) {
+          callback && callback();
+          return;
+        }
+      } catch (e) {}
+
+      // 同一章节观看一次广告后，仅在当前自然日内免重复观看。
       if (contentId) {
         try {
           const key = `unlock_${contentId}`;
           const lastUnlock = wx.getStorageSync(key);
           if (lastUnlock) {
             const now = Date.now();
-            const diff = now - Number(lastUnlock);
-            const sevenDays = 60 * 60 * 1000;
-            if (diff < sevenDays) {
-              // 有效期内，直接通过
+            if (getLocalDayKey(lastUnlock) === getLocalDayKey(now)) {
+              // 同一自然日内直接通过；跨过当天 24:00 后重新解锁。
               callback && callback();
               return;
             }
@@ -1140,17 +1180,18 @@ Page({
         return;
       }
   
-      // 显示确认弹窗
-      wx.showModal({
+      this.openAppConfirmModal({
+        tone: 'ad',
+        mark: 'AD',
         title: '解锁章节',
-        content: '解锁该章节需要观看一次广告，解锁后1小时内可自由切换。',
+        content: '观看一次广告即可解锁，今天之内可自由切换这个章节。',
         confirmText: '观看广告',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
+        cancelText: '取消'
+      }, () => {
             // 用户点击确定，展示广告
             this.pendingAction = callback;
             this.pendingContentId = contentId; // 记录待解锁ID
+            this.pendingUnlockMode = 'chapter';
             this.videoAd.show().catch(() => {
               // 失败重试
               this.videoAd.load()
@@ -1162,20 +1203,97 @@ Page({
                     this.pendingAction();
                     this.pendingAction = null;
                     this.pendingContentId = null;
+                    this.pendingUnlockMode = null;
                   }
                 });
             });
-          } else {
-            // 用户点击取消，不进行切换
-            // 恢复Picker的显示
-            this.setData({
-              categoryPickerIndex: this.data.categoryPickerIndex,
-              yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
-              topikLevelPickerIndex: this.data.topikLevelPickerIndex
-            });
-          }
-        }
+      }, () => {
+        this.setData({
+          categoryPickerIndex: this.data.categoryPickerIndex,
+          yonseiLessonPickerIndex: this.data.yonseiLessonPickerIndex,
+          topikLevelPickerIndex: this.data.topikLevelPickerIndex
+        });
       });
+    },
+
+    checkAndShowDailyAllChaptersAd(callback) {
+      if (shouldSkipAd('nv-practice')) {
+        callback && callback();
+        return;
+      }
+
+      try {
+        const unlockedAt = wx.getStorageSync(DAILY_ALL_CHAPTERS_UNLOCK_KEY);
+        if (unlockedAt && getLocalDayKey(unlockedAt) === getLocalDayKey(Date.now())) {
+          callback && callback();
+          return;
+        }
+      } catch (e) {
+        console.error('Check daily chapters unlock failed', e);
+      }
+
+      if (!this.videoAd) this.createVideoAd();
+      if (!this.videoAd) {
+        callback && callback();
+        return;
+      }
+
+      this.openAppConfirmModal({
+        tone: 'ad',
+        mark: 'AD',
+        title: '解锁今日全部章节',
+        content: '完整观看一次广告，今天所有课程和章节都可以自由切换。',
+        confirmText: '观看广告',
+        cancelText: '取消'
+      }, () => {
+        this.pendingAction = callback;
+        this.pendingContentId = null;
+        this.pendingUnlockMode = 'daily-all';
+        this.videoAd.show().catch(() => {
+          this.videoAd.load()
+            .then(() => this.videoAd.show())
+            .catch(err => {
+              console.error('激励视频 广告显示失败', err);
+              if (this.pendingAction) {
+                this.pendingAction();
+                this.pendingAction = null;
+                this.pendingContentId = null;
+                this.pendingUnlockMode = null;
+              }
+            });
+        });
+      });
+    },
+
+    openAppConfirmModal(options, onConfirm, onCancel) {
+      const opts = options || {};
+      this._appConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+      this._appCancelAction = typeof onCancel === 'function' ? onCancel : null;
+      this.setData({
+        showAppConfirmModal: true,
+        appConfirmTone: opts.tone || 'default',
+        appConfirmMark: opts.mark || '✓',
+        appConfirmTitle: opts.title || '请确认',
+        appConfirmContent: opts.content || '',
+        appConfirmCancelText: opts.cancelText || '取消',
+        appConfirmButtonText: opts.confirmText || '确认'
+      });
+    },
+
+    cancelAppConfirmModal() {
+      const cancel = this._appCancelAction;
+      this._appConfirmAction = null;
+      this._appCancelAction = null;
+      this.setData({ showAppConfirmModal: false });
+      if (cancel) cancel();
+    },
+
+    confirmAppConfirmModal() {
+      const confirm = this._appConfirmAction;
+      this._appConfirmAction = null;
+      this._appCancelAction = null;
+      this.setData({ showAppConfirmModal: false });
+      if (confirm) confirm();
     },
 
     destroyAudioContexts() {
@@ -1573,9 +1691,12 @@ Page({
         const progress = readLearningProgress();
         const bucket = progress[progressKey] || { completed: {}, updatedAt: 0 };
         bucket.completed = bucket.completed || {};
+        const previousLearnedCount = Object.keys(bucket.completed).length;
+        const total = (this.data.words || []).length;
+        const wasCourseComplete = total > 0 && previousLearnedCount >= total;
         bucket.completed[String(wordKey)] = Date.now();
         bucket.updatedAt = Date.now();
-        bucket.total = (this.data.words || []).length;
+        bucket.total = total;
         bucket.category = settings.category || '';
         bucket.lessonId = settings.yonseiLessonId || '';
         bucket.topikLevel = settings.topikLevel || '';
@@ -1583,8 +1704,83 @@ Page({
         progress[progressKey] = bucket;
         try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (e) {}
         const learnedCount = Object.keys(bucket.completed).length;
-        if (learnedCount !== this.data.learnedCount) this.setData({ learnedCount });
+        const nextProgressState = { currentWordLearned: true };
+        if (learnedCount !== this.data.learnedCount) nextProgressState.learnedCount = learnedCount;
+        if (!wasCourseComplete && total > 0 && learnedCount >= total) {
+            nextProgressState.showCourseCompleteModal = true;
+        }
+        this.setData(nextProgressState);
         return learnedCount;
+    },
+
+    closeCourseCompleteModal() {
+        this.setData({ showCourseCompleteModal: false });
+    },
+
+    restartCompletedCourse() {
+        this.setData({
+            showProgressConfirmModal: true,
+            progressConfirmAction: 'restart',
+            progressConfirmTitle: '重新开始本课？',
+            progressConfirmContent: '当前课次的完成进度会被清空，并从第一个单词重新开始。',
+            progressConfirmButton: '重新开始'
+        });
+    },
+
+    closeProgressConfirmModal() {
+        this.setData({ showProgressConfirmModal: false, progressConfirmAction: '' });
+    },
+
+    confirmProgressAction() {
+        const action = this.data.progressConfirmAction;
+        const progressKey = getLearningContentKey(this.data.settings || DEFAULT_SETTINGS);
+        const progress = readLearningProgress();
+        delete progress[progressKey];
+        try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (e) {}
+
+        if (action === 'restart') {
+            const originalWords = Array.isArray(this.data.originalWords) ? [...this.data.originalWords] : [...(this.data.words || [])];
+            this.setData({
+                showProgressConfirmModal: false,
+                progressConfirmAction: '',
+                showCourseCompleteModal: false,
+                learnedCount: 0,
+                currentWordLearned: false,
+                words: originalWords,
+                isShuffled: false,
+                currentIndex: 0
+            }, () => {
+                if (originalWords.length) this.startWord(0);
+            });
+            wx.showToast({ title: '已重新开始', icon: 'none' });
+            return;
+        }
+
+        const total = (this.data.words || []).length;
+        const directoryCourses = (this.data.directoryCourses || []).map(item => item.active ? Object.assign({}, item, {
+            progressText: `刚刚开始 · 0/${total}`,
+            progressPercent: 0,
+            progressLabel: '0%',
+            progressVisual: 3,
+            status: 'progress'
+        }) : item);
+        this.setData({
+            showProgressConfirmModal: false,
+            progressConfirmAction: '',
+            learnedCount: 0,
+            currentWordLearned: false,
+            directoryCourses
+        });
+        wx.showToast({ title: '本课进度已重置', icon: 'success' });
+    },
+
+    isWordLearningCompleted(word, index, settingsOverride) {
+        const settings = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
+        const progressKey = getLearningContentKey(settings);
+        const bucket = readLearningProgress()[progressKey] || {};
+        const completed = bucket.completed || {};
+        const wordKey = safeWordId(word) || (word && word.word) || `index_${Number(index) || 0}`;
+        return Object.prototype.hasOwnProperty.call(completed, String(wordKey));
     },
 
     setLearningProgressMode(e) {
@@ -1599,29 +1795,12 @@ Page({
     },
 
     resetCurrentLearningProgress() {
-        const settings = this.data.settings || DEFAULT_SETTINGS;
-        const progressKey = getLearningContentKey(settings);
-        wx.showModal({
-            title: '重置本课进度？',
-            content: '只清除当前课次的已学习记录，其他课程不受影响。',
-            confirmText: '重置',
-            confirmColor: '#d24b4b',
-            success: (res) => {
-                if (!res.confirm) return;
-                const progress = readLearningProgress();
-                delete progress[progressKey];
-                try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (e) {}
-                const total = (this.data.words || []).length;
-                const directoryCourses = (this.data.directoryCourses || []).map(item => item.active ? Object.assign({}, item, {
-                    progressText: `刚刚开始 · 0/${total}`,
-                    progressPercent: 0,
-                    progressLabel: '0%',
-                    progressVisual: 3,
-                    status: 'progress'
-                }) : item);
-                this.setData({ learnedCount: 0, directoryCourses });
-                wx.showToast({ title: '本课进度已重置', icon: 'success' });
-            }
+        this.setData({
+            showProgressConfirmModal: true,
+            progressConfirmAction: 'reset',
+            progressConfirmTitle: '重置本课进度？',
+            progressConfirmContent: '只清除当前课次的已学习记录，其他课程不受影响。',
+            progressConfirmButton: '确认重置'
         });
     },
 
@@ -1777,23 +1956,38 @@ Page({
             });
             return;
         }
-        this.closeDirectory();
+        if (d.active) {
+            this.closeDirectory();
+            return;
+        }
         if (d.category === 'TOPIK Vocabulary') {
-            const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, topikLevel: String(d.level || '1'), topikSession: String(d.session || '') }));
-            wx.setStorageSync('settings', next);
-            this.setData({ settings: next });
-            this.refreshLearnedCount(next);
-            this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            const level = String(d.level || '1');
+            const session = String(d.session || '');
+            const action = () => {
+                const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, topikLevel: level, topikSession: session }));
+                wx.setStorageSync('settings', next);
+                this.closeDirectory();
+                this.setData({ settings: next });
+                this.refreshLearnedCount(next);
+                this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            };
+            this.checkAndShowDailyAllChaptersAd(action);
             return;
         }
         if (/^Yonsei\s+\d$/.test(d.category) && d.lessonId) {
-            const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, yonseiLessonId: String(d.lessonId), yonseiLessonName: String(d.lessonName || '') }));
-            wx.setStorageSync('settings', next);
-            this.setData({ settings: next });
-            this.refreshLearnedCount(next);
-            this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            const lessonId = String(d.lessonId);
+            const action = () => {
+                const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, yonseiLessonId: lessonId, yonseiLessonName: String(d.lessonName || '') }));
+                wx.setStorageSync('settings', next);
+                this.closeDirectory();
+                this.setData({ settings: next });
+                this.refreshLearnedCount(next);
+                this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
+            };
+            this.checkAndShowDailyAllChaptersAd(action);
             return;
         }
+        this.closeDirectory();
         this.applyCategorySelection(d.category, Math.max(0, (this.data.categories || []).indexOf(d.category)));
     },
 
@@ -1956,17 +2150,16 @@ Page({
         }
 
         const addedText = res.added > 0 ? `已收藏 ${res.added} 个新单词` : '单词已在收藏中';
-        wx.showModal({
+        this.openAppConfirmModal({
+            tone: 'success',
+            mark: '✓',
             title: '收藏成功',
             content: `${addedText}（共 ${res.total} 个）。是否切换到「${FAVORITES_LIST_NAME}」开始练习？`,
             confirmText: '去练习',
-            cancelText: '稍后',
-            success: (r) => {
-                if (r.confirm) {
-                    const idx = Math.max(0, (this.data.categories || []).indexOf(FAVORITES_LIST_NAME));
-                    this.applyCategorySelection(FAVORITES_LIST_NAME, idx);
-                }
-            }
+            cancelText: '稍后'
+        }, () => {
+            const idx = Math.max(0, (this.data.categories || []).indexOf(FAVORITES_LIST_NAME));
+            this.applyCategorySelection(FAVORITES_LIST_NAME, idx);
         });
     },
 
@@ -4507,6 +4700,7 @@ Page({
 
         const initialState = this.buildTypingState(word);
         this.persistCurrentProgress(safeIndex);
+        const currentWordLearned = this.isWordLearningCompleted(wordObj, safeIndex);
         if (this.data.learningProgressMode === 'view') {
             this.recordLearningProgress(wordObj, safeIndex);
         }
@@ -4514,6 +4708,7 @@ Page({
 	        const nextState = {
 	            currentIndex: safeIndex,
 	            currentWord: wordObj,
+	            currentWordLearned: this.data.learningProgressMode === 'view' || currentWordLearned,
 	            typingState: initialState,
             isCorrect: false,
             showAnswer: false,
@@ -4801,8 +4996,12 @@ Page({
             this.clearAllTimers();
             if (nextRepeat >= repeatCount) {
                 // 输入模式在完整输入后计入；浏览模式已在单词展示时计入。
+                let courseJustCompleted = false;
                 if (this.data.learningProgressMode === 'input') {
-                    this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
+                    const totalWords = (this.data.words || []).length;
+                    const wasCourseComplete = totalWords > 0 && Number(this.data.learnedCount || 0) >= totalWords;
+                    const learnedCount = this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
+                    courseJustCompleted = !wasCourseComplete && totalWords > 0 && learnedCount >= totalWords;
                 }
                 // 记录 SRS 学习数据
                 const w = this.data.currentWord;
@@ -4817,6 +5016,15 @@ Page({
                     });
                 }
                 const completedMap = this.markDualColumnCompleted(w, this.data.currentIndex);
+                if (courseJustCompleted) {
+                    if (completedMap) {
+                        this.setData({
+                            dualCompletedIds: completedMap,
+                            dualExampleRowId: getDualCompletedKey(w, this.data.currentIndex)
+                        });
+                    }
+                    return;
+                }
                 if (completedMap) {
                     this.setData({
                         dualCompletedIds: completedMap,
