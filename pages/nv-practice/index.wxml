@@ -37,17 +37,8 @@
     </view>
   </view>
 
-  <!-- 目录入口：键盘收起时显示，模拟书籍阅读器的目录抽屉 -->
-  <view class="directory-entry" wx:if="{{!isKeyboardOpen && !loading && !dualColumnMode}}" bindtap="openDirectory">
-    <view class="directory-entry-mark">☷</view>
-    <view class="directory-entry-copy">
-      <text class="directory-entry-title">目录</text>
-    </view>
-    <text class="directory-entry-arrow">›</text>
-  </view>
-
   <view class="directory-mask {{directoryOpen ? 'show' : ''}}" wx:if="{{directoryOpen}}" catchtap="closeDirectory"></view>
-  <view class="directory-drawer {{directoryOpen ? 'show' : ''}}" wx:if="{{directoryOpen}}" catchtap="preventBubble">
+  <view class="directory-drawer {{directoryOpen ? 'show' : ''}}" wx:if="{{directoryOpen}}">
     <view class="directory-drawer-head">
       <view>
         <text class="directory-drawer-kicker">LEARNING SHELF</text>
@@ -60,36 +51,61 @@
       <view class="directory-current-copy">
         <text class="directory-current-label">正在学习</text>
         <text class="directory-current-title">{{displayCategory || settings.category}}</text>
-        <text class="directory-current-progress">第 {{currentIndex + 1}} / {{words.length}} 个词</text>
+        <text class="directory-current-progress">已学习 {{learnedCount}} / {{words.length}} 个词</text>
       </view>
-      <view class="directory-current-bar"><view style="width: {{words.length > 0 ? ((currentIndex + 1) / words.length * 100) : 0}}%;"></view></view>
+      <view class="directory-current-bar"><view style="width: {{words.length > 0 ? (learnedCount / words.length * 100) : 0}}%;"></view></view>
+    </view>
+    <view class="directory-progress-controls">
+      <view class="directory-progress-mode">
+        <text class="directory-progress-label">计入方式</text>
+        <view class="directory-progress-options">
+          <view class="directory-progress-option {{learningProgressMode === 'input' ? 'active' : ''}}" data-mode="input" bindtap="setLearningProgressMode">输入完成</view>
+          <view class="directory-progress-option {{learningProgressMode === 'view' ? 'active' : ''}}" data-mode="view" bindtap="setLearningProgressMode">浏览完成</view>
+        </view>
+      </view>
+      <view class="directory-progress-reset" bindtap="resetCurrentLearningProgress">重置本课</view>
     </view>
     <scroll-view class="directory-body" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
       <text class="directory-section-label">我的书籍</text>
-      <view wx:for="{{directoryBooks}}" wx:key="key" class="directory-book {{directoryActiveBook === item.key ? 'active' : ''}}" data-key="{{item.key}}" catchtap="selectDirectoryBook">
-        <view class="directory-book-icon">{{item.icon}}</view>
-        <view class="directory-book-copy">
+      <view class="directory-books-grid">
+        <button wx:for="{{directoryBooks}}" wx:key="key" class="directory-book {{directoryActiveBook === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="selectDirectoryBook" hover-class="none">
+          <view class="directory-book-icon">{{item.icon}}</view>
           <text class="directory-book-title">{{item.title}}</text>
-          <text class="directory-book-sub">{{item.subtitle}}</text>
-        </view>
-        <text class="directory-book-arrow">{{directoryActiveBook === item.key ? '⌄' : '›'}}</text>
+        </button>
       </view>
 
       <view class="directory-course-list" wx:if="{{directoryActiveBook}}">
-        <text class="directory-section-label course-label">课程</text>
-        <view wx:for="{{directoryCourses}}" wx:key="key" class="directory-course {{item.active ? 'active' : ''}}" data-key="{{item.key}}" data-category="{{item.category}}" data-lesson-id="{{item.lessonId}}" data-lesson-name="{{item.lessonName}}" data-level="{{item.level}}" data-session="{{item.session}}" catchtap="selectDirectoryCourse">
+        <view class="directory-level-head">
+          <text class="directory-level-back" wx:if="{{directoryStage === 'lessons'}}" bindtap="backDirectoryLevel">‹</text>
+          <text class="directory-section-label course-label">{{directoryStage === 'lessons' ? directoryActiveCourse + ' · 课次' : '选择课本'}}</text>
+        </view>
+        <button wx:for="{{directoryCourses}}" wx:key="key" class="directory-course {{item.status}} {{item.active ? 'active' : ''}}" data-index="{{index}}" bindtap="selectDirectoryCourse" hover-class="none">
           <view class="directory-course-dot {{item.status}}"></view>
           <view class="directory-course-copy">
-            <text class="directory-course-title">{{item.title}}</text>
+            <view class="directory-course-title-row">
+              <text class="directory-course-title">{{item.title}}</text>
+              <text class="directory-course-percent" wx:if="{{item.status !== 'idle'}}">{{item.progressLabel}}</text>
+            </view>
             <text class="directory-course-sub">{{item.progressText}}</text>
+            <view class="directory-flow-track {{item.status}}" wx:if="{{item.status !== 'idle'}}">
+              <view class="directory-flow-fill" style="width: {{item.progressVisual}}%;">
+                <view class="directory-flow-shine"></view>
+                <view class="directory-flow-bubble bubble-one"></view>
+                <view class="directory-flow-bubble bubble-two"></view>
+              </view>
+            </view>
           </view>
           <text class="directory-course-mark">{{item.active ? '✓' : '›'}}</text>
-        </view>
+        </button>
       </view>
     </scroll-view>
   </view>
 
   <view class="practice-top-tools {{practiceToolsOpen ? 'tools-open' : ''}}" wx:if="{{words.length > 0 && currentWord && !loading && !isKeyboardOpen}}">
+    <view class="directory-entry" wx:if="{{!dualColumnMode}}" bindtap="openDirectory">
+      <view class="directory-entry-mark">☷</view>
+      <text class="directory-entry-title">目录</text>
+    </view>
     <view class="practice-new-btn {{practiceToolsOpen ? 'active' : ''}}" catchtap="togglePracticeTools" hover-class="none">
       <text>NEW!</text>
       <view class="practice-new-dot"></view>
@@ -580,58 +596,6 @@
       </view>
       
       <scroll-view scroll-y class="modal-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
-        <view class="setting-section">
-          <view class="section-title">词书</view>
-          <picker mode="selector" range="{{categories}}" value="{{categoryPickerIndex}}" bindchange="onCategoryPickerChange">
-            <view class="category-item picker-item">
-              <text class="picker-label">选择词书</text>
-              <view class="picker-right">
-                <text class="picker-value">{{settings.category}}</text>
-                <text class="picker-arrow">›</text>
-              </view>
-            </view>
-          </picker>
-        </view>
-
-        <view class="setting-section" wx:if="{{showTopikSub}}">
-          <view class="section-title">选择二级分类</view>
-          <picker mode="selector" range="{{topikLevels}}" value="{{topikLevelPickerIndex}}" bindchange="onTopikLevelPickerChange">
-            <view class="category-item picker-item">
-              <text class="picker-label">TOPIK 等级</text>
-              <view class="picker-right">
-                <text class="picker-value">TOPIK {{settings.topikLevel}}</text>
-                <text class="picker-arrow">›</text>
-              </view>
-            </view>
-          </picker>
-
-          <view class="topik-session" wx:if="{{topikSessions.length}}">
-            <text class="picker-label">Session</text>
-            <scroll-view scroll-x class="topik-session-scroll" show-scrollbar="{{false}}">
-              <view class="topik-session-row">
-                <block wx:for="{{topikSessions}}" wx:key="*this">
-                  <view class="topik-session-chip {{settings.topikSession === item ? 'active' : ''}}" bindtap="selectTopikSession" data-session="{{item}}">
-                    <text>{{item}}</text>
-                  </view>
-                </block>
-              </view>
-            </scroll-view>
-          </view>
-        </view>
-
-        <view class="setting-section" wx:if="{{showYonseiSub}}">
-          <view class="section-title">选择二级分类</view>
-          <picker mode="selector" range="{{yonseiLessonOptions}}" value="{{yonseiLessonPickerIndex}}" bindchange="onYonseiLessonPickerChange">
-            <view class="category-item picker-item">
-              <text class="picker-label">课次 </text>
-              <view class="picker-right">
-                <text class="picker-value">{{yonseiLessonDisplay}}</text>
-                <text class="picker-arrow">›</text>
-              </view>
-            </view>
-          </picker>
-        </view>
-
         <view class="setting-section">
           <text class="section-title">显示模式</text>
           <view class="mode-toggles">

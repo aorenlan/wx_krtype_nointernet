@@ -13,14 +13,18 @@
   box-sizing: border-box;
   background: transparent;
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
-  transition: none;
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1), visibility 0s linear 0s;
 }
 
 .tab-bar.is-hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, 120%, 0);
   pointer-events: none;
+  transition: opacity 150ms ease, transform 190ms ease, visibility 0s linear 190ms;
 }
 
 .tab-bar-shell {

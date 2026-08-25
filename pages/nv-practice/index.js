@@ -51,6 +51,38 @@ const SLEEP_KOREAN_REPEAT_PICKER_OPTIONS = SLEEP_KOREAN_REPEAT_OPTIONS.map(count
 const TAP_SCENE_GUIDE_STORAGE_KEY = 'kr_tap_scene_intro_seen_v1';
 const TAP_SCENE_AUTO_OPEN_KEY = 'kr_picture_words_open_tap_scene_v1';
 const TAP_SCENE_GUIDE_IMAGE = 'https://enoss.aorenlan.fun/kr_picturebook/point_read/mraibn8j/scene_mrajn319.png';
+const LEARNING_PROGRESS_KEY = 'kr_learning_progress_v1';
+const LEARNING_PROGRESS_MODE_KEY = 'kr_learning_progress_mode_v1';
+
+function readLearningProgress() {
+    try { return wx.getStorageSync(LEARNING_PROGRESS_KEY) || {}; } catch (e) { return {}; }
+}
+
+function countLearnedWords(contentKey) {
+    const item = readLearningProgress()[contentKey];
+    return item && item.completed ? Object.keys(item.completed).length : 0;
+}
+
+function getStoredCourseProgress(filter) {
+    const all = readLearningProgress();
+    let learned = 0;
+    let total = 0;
+    Object.keys(all).forEach(key => {
+        const item = all[key] || {};
+        if (!filter(item, key)) return;
+        learned += item.completed ? Object.keys(item.completed).length : 0;
+        total += Math.max(0, Number(item.total) || 0);
+    });
+    return { learned, total, hasProgress: learned > 0, completed: total > 0 && learned >= total };
+}
+
+function getLearningContentKey(settings) {
+    const s = settings || DEFAULT_SETTINGS;
+    const category = String(s.category || '');
+    if (/^Yonsei\s+\d$/.test(category)) return `yonsei_${category.replace(/\s+/g, '_')}_${s.yonseiLessonId || ''}`;
+    if (category === 'TOPIK Vocabulary') return `topik_${s.topikLevel || ''}_${s.topikSession || ''}`;
+    return `category_${category}`;
+}
 
 const getSleepTimerPickerIndex = (minutes) => {
     const safeMinutes = Number(minutes) || 0;
@@ -664,8 +696,13 @@ Page({
         showSettingsModal: false,
         directoryOpen: false,
         directoryActiveBook: 'yonsei',
+        directoryActiveCourse: '',
+        directoryStage: 'courses',
         directoryBooks: [],
         directoryCourses: [],
+        directorySubcourses: [],
+        learnedCount: 0,
+        learningProgressMode: 'input',
         keyboardOffsetBottom: 280, 
         
         statusBarHeight: 20,
@@ -740,6 +777,10 @@ Page({
         
         const storedSettings = wx.getStorageSync('settings') || {};
         const mergedSettings = sanitizeSettings(storedSettings);
+        let learningProgressMode = 'input';
+        try {
+            learningProgressMode = wx.getStorageSync(LEARNING_PROGRESS_MODE_KEY) === 'view' ? 'view' : 'input';
+        } catch (e) {}
         let sleepState = normalizeSleepState(null);
         try {
             sleepState = normalizeSleepState(wx.getStorageSync(SLEEP_STORAGE_KEY));
@@ -840,6 +881,7 @@ Page({
             navBarHeight: 44, 
             isIPad,
             settings: mergedSettings,
+            learningProgressMode,
             naggingRepeatCountPreview: mergedSettings.naggingRepeatCount,
             isKeyboardOpen: false,
             timeLeft: mergedSettings.timerDuration || DEFAULT_SETTINGS.timerDuration,
@@ -1516,6 +1558,73 @@ Page({
         } catch (e) {}
     },
 
+    refreshLearnedCount(settingsOverride) {
+        const settings = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
+        const key = getLearningContentKey(settings);
+        this.setData({ learnedCount: countLearnedWords(key) });
+    },
+
+    recordLearningProgress(wordOverride, indexOverride) {
+        const settings = this.data.settings || DEFAULT_SETTINGS;
+        const progressKey = getLearningContentKey(settings);
+        const word = wordOverride || this.data.currentWord || {};
+        const index = indexOverride != null ? Number(indexOverride) : Number(this.data.currentIndex || 0);
+        const wordKey = safeWordId(word) || word.word || `index_${index}`;
+        const progress = readLearningProgress();
+        const bucket = progress[progressKey] || { completed: {}, updatedAt: 0 };
+        bucket.completed = bucket.completed || {};
+        bucket.completed[String(wordKey)] = Date.now();
+        bucket.updatedAt = Date.now();
+        bucket.total = (this.data.words || []).length;
+        bucket.category = settings.category || '';
+        bucket.lessonId = settings.yonseiLessonId || '';
+        bucket.topikLevel = settings.topikLevel || '';
+        bucket.topikSession = settings.topikSession || '';
+        progress[progressKey] = bucket;
+        try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (e) {}
+        const learnedCount = Object.keys(bucket.completed).length;
+        if (learnedCount !== this.data.learnedCount) this.setData({ learnedCount });
+        return learnedCount;
+    },
+
+    setLearningProgressMode(e) {
+        const mode = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.mode;
+        const nextMode = mode === 'view' ? 'view' : 'input';
+        if (nextMode === this.data.learningProgressMode) return;
+        try { wx.setStorageSync(LEARNING_PROGRESS_MODE_KEY, nextMode); } catch (err) {}
+        this.setData({ learningProgressMode: nextMode });
+        if (nextMode === 'view' && this.data.currentWord) {
+            this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
+        }
+    },
+
+    resetCurrentLearningProgress() {
+        const settings = this.data.settings || DEFAULT_SETTINGS;
+        const progressKey = getLearningContentKey(settings);
+        wx.showModal({
+            title: '重置本课进度？',
+            content: '只清除当前课次的已学习记录，其他课程不受影响。',
+            confirmText: '重置',
+            confirmColor: '#d24b4b',
+            success: (res) => {
+                if (!res.confirm) return;
+                const progress = readLearningProgress();
+                delete progress[progressKey];
+                try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (e) {}
+                const total = (this.data.words || []).length;
+                const directoryCourses = (this.data.directoryCourses || []).map(item => item.active ? Object.assign({}, item, {
+                    progressText: `刚刚开始 · 0/${total}`,
+                    progressPercent: 0,
+                    progressLabel: '0%',
+                    progressVisual: 3,
+                    status: 'progress'
+                }) : item);
+                this.setData({ learnedCount: 0, directoryCourses });
+                wx.showToast({ title: '本课进度已重置', icon: 'success' });
+            }
+        });
+    },
+
     async loadCategories() {
         const base = await getCategories();
         const categories = Array.isArray(base) ? [...base] : [];
@@ -1534,6 +1643,7 @@ Page({
         const idx = Math.max(0, categories.indexOf(current));
         this.setData({ categories, categoryPickerIndex: idx });
         this.refreshDirectoryBooks(categories);
+        this.refreshLearnedCount();
     },
 
     refreshDirectoryBooks(categories) {
@@ -1553,35 +1663,61 @@ Page({
         if (bookKey === 'yonsei') {
             const books = list.filter(item => /^Yonsei\s+\d$/.test(item));
             const currentCategory = this.data.settings && this.data.settings.category;
-            const category = /^Yonsei\s+\d$/.test(currentCategory) ? currentCategory : (books[0] || 'Yonsei 1');
-            const lessons = category === currentCategory && Array.isArray(this.data.yonseiLessons) && this.data.yonseiLessons.length
-                ? this.data.yonseiLessons
-                : await getYonseiLessons(category);
-            courses = (lessons || []).map(lesson => {
-                const active = currentCategory === category && String(this.data.settings.yonseiLessonId || '') === String(lesson.id);
-                return { key: `yonsei_${category}_${lesson.id}`, category, lessonId: String(lesson.id), lessonName: String(lesson.original || lesson.name || ''), title: `第 ${lesson.id} 课`, progressText: active ? `学习中 · ${this.data.currentIndex + 1} / ${this.data.words.length}` : '未开始', status: active ? 'learning' : 'idle', active };
-            });
-            if (books.length > 1) courses.unshift({ key: `book_${category}`, category, title: category, progressText: '选择教材课本', status: 'book', active: false });
+            courses = await Promise.all(books.map(async category => {
+                const active = currentCategory === category;
+                const progress = getStoredCourseProgress(item => item.category === category);
+                const categoryResult = await getWords(category, 1, 0);
+                const total = Math.max(progress.total, Number(categoryResult && categoryResult.total) || 0);
+                const learned = progress.learned;
+                const hasProgress = progress.hasProgress || learned > 0 || active;
+                const percent = total > 0 ? Math.min(100, Math.round(learned / total * 100)) : 0;
+                const completed = total > 0 && learned >= total;
+                const progressText = completed ? `已完成 · ${learned}/${total}` : (hasProgress ? `${learned === 0 ? '刚刚开始' : '学习中'} · ${learned}/${total}` : `共 ${total} 个词`);
+                return { key: `yonsei_${category}`, category, title: category, progressText, progressPercent: percent, progressLabel: learned > 0 && percent === 0 ? '<1%' : `${percent}%`, progressVisual: hasProgress ? Math.max(3, percent) : 0, status: completed ? 'completed' : (hasProgress ? 'progress' : 'idle'), active };
+            }));
         } else if (bookKey === 'topik') {
             const levels = await getTopikLevels();
             const current = this.data.settings || {};
-            courses = (levels || []).map(level => {
+            courses = await Promise.all((levels || []).map(async level => {
                 const active = current.category === 'TOPIK Vocabulary' && String(current.topikLevel) === String(level);
-                return { key: `topik_${level}`, category: 'TOPIK Vocabulary', level: String(level), session: active ? String(current.topikSession || '') : '', title: `TOPIK ${level}`, progressText: active ? `Session ${current.topikSession || '—'} · ${this.data.currentIndex + 1} / ${this.data.words.length}` : '选择等级后开始', status: active ? 'learning' : 'idle', active };
-            });
+                const progress = getStoredCourseProgress(item => item.category === 'TOPIK Vocabulary' && String(item.topikLevel) === String(level));
+                const levelResult = await getWords('TOPIK Vocabulary', 1, 0, { topikLevel: String(level) });
+                const total = Math.max(progress.total, Number(levelResult && levelResult.total) || 0);
+                const learned = progress.learned;
+                const hasProgress = progress.hasProgress || learned > 0 || active;
+                const percent = total > 0 ? Math.min(100, Math.round(learned / total * 100)) : 0;
+                const completed = total > 0 && learned >= total;
+                const progressText = completed ? `已完成 · ${learned}/${total}` : (hasProgress ? `${learned === 0 ? '刚刚开始' : '学习中'} · ${learned}/${total}` : `共 ${total} 个词`);
+                return { key: `topik_${level}`, category: 'TOPIK Vocabulary', level: String(level), title: `TOPIK ${level}`, progressText, progressPercent: percent, progressLabel: learned > 0 && percent === 0 ? '<1%' : `${percent}%`, progressVisual: hasProgress ? Math.max(3, percent) : 0, status: completed ? 'completed' : (hasProgress ? 'progress' : 'idle'), active };
+            }));
         } else {
             const special = [FAVORITES_LIST_NAME, 'Mistakes (错题本)', PHOTO_RECOGNITION_CATEGORY, PICTURE_WORDS_PRACTICE_CATEGORY];
             courses = list.filter(item => special.includes(item)).map(item => ({ key: `mine_${item}`, category: item, title: item, progressText: item === FAVORITES_LIST_NAME ? `${getFavorites().length} 个单词` : '打开查看', status: 'idle', active: this.data.settings.category === item }));
         }
-        this.setData({ directoryCourses: courses, directoryActiveBook: bookKey });
+        this.setData({ directoryCourses: courses, directorySubcourses: [], directoryActiveCourse: '', directoryStage: 'courses', directoryActiveBook: bookKey });
     },
 
-    openDirectory() {
+    async openDirectory() {
         if (this.data.isKeyboardOpen) return;
-        this.setData({ directoryOpen: true }, () => this.refreshDirectoryCourses(this.data.directoryActiveBook || 'yonsei'));
+        const current = this.data.settings || DEFAULT_SETTINGS;
+        const bookKey = /^Yonsei\s+\d$/.test(current.category) ? 'yonsei' : (current.category === 'TOPIK Vocabulary' ? 'topik' : 'mine');
+        syncPageTabBar(this, { selected: 0, hidden: true });
+        this.setData({ directoryOpen: true, directoryActiveBook: bookKey });
+        await this.refreshDirectoryCourses(bookKey);
+        const courseIndex = (this.data.directoryCourses || []).findIndex(item => {
+            if (bookKey === 'yonsei') return item.category === current.category;
+            if (bookKey === 'topik') return String(item.level) === String(current.topikLevel);
+            return item.category === current.category;
+        });
+        if (courseIndex >= 0 && (bookKey === 'yonsei' || bookKey === 'topik')) {
+            await this.selectDirectoryCourse({ currentTarget: { dataset: { index: courseIndex } } });
+        }
     },
 
-    closeDirectory() { this.setData({ directoryOpen: false }); },
+    closeDirectory() {
+        this.setData({ directoryOpen: false });
+        syncPageTabBar(this, { selected: 0, hidden: false });
+    },
 
     selectDirectoryBook(e) {
         const key = e.currentTarget.dataset.key;
@@ -1589,14 +1725,64 @@ Page({
         this.refreshDirectoryCourses(key);
     },
 
-    selectDirectoryCourse(e) {
-        const d = e.currentTarget.dataset || {};
+    backDirectoryLevel() {
+        this.refreshDirectoryCourses(this.data.directoryActiveBook || 'yonsei');
+    },
+
+    async selectDirectoryCourse(e) {
+        const dataset = e.currentTarget.dataset || {};
+        const d = (this.data.directoryCourses || [])[Number(dataset.index)] || {};
         if (!d.category) return;
+        if (this.data.directoryStage === 'courses' && /^Yonsei\s+\d$/.test(d.category)) {
+            const lessons = await getYonseiLessons(d.category);
+            if (!(lessons || []).length) {
+                wx.showToast({ title: '该课程暂无课次', icon: 'none' });
+                return;
+            }
+            this.setData({
+                directoryStage: 'lessons',
+                directoryActiveCourse: d.category,
+                directoryCourses: await Promise.all(lessons.map(async lesson => {
+                    const active = this.data.settings.category === d.category && String(this.data.settings.yonseiLessonId || '') === String(lesson.id);
+                    const stored = getStoredCourseProgress(item => item.category === d.category && String(item.lessonId) === String(lesson.id));
+                    const hasProgress = stored.hasProgress || active;
+                    const result = await getWords(d.category, 1, 0, { lessonId: String(lesson.id) });
+                    const total = Math.max(stored.total, Number(result && result.total) || 0);
+                    const learned = stored.learned;
+                    const percent = total > 0 ? Math.min(100, Math.round(learned / total * 100)) : 0;
+                    const completed = total > 0 && learned >= total;
+                    const progressText = completed ? `已完成 · ${learned}/${total}` : (hasProgress ? `${learned === 0 ? '刚刚开始' : '学习中'} · ${learned}/${total}` : (lesson.original || lesson.name || `共 ${total} 个词`));
+                    return { key: `lesson_${d.category}_${lesson.id}`, category: d.category, lessonId: String(lesson.id), lessonName: String(lesson.original || lesson.name || ''), title: `第 ${lesson.id} 课`, progressText, progressPercent: percent, progressLabel: learned > 0 && percent === 0 ? '<1%' : `${percent}%`, progressVisual: hasProgress ? Math.max(3, percent) : 0, active, status: completed ? 'completed' : (hasProgress ? 'progress' : 'idle') };
+                }))
+            });
+            return;
+        }
+        if (this.data.directoryStage === 'courses' && d.category === 'TOPIK Vocabulary') {
+            const sessions = await getTopikSessions(String(d.level || '1'));
+            this.setData({
+                directoryStage: 'lessons',
+                directoryActiveCourse: `TOPIK ${d.level}`,
+                directoryCourses: await Promise.all((sessions || []).map(async session => {
+                    const active = this.data.settings.category === 'TOPIK Vocabulary' && String(this.data.settings.topikLevel) === String(d.level) && String(this.data.settings.topikSession) === String(session);
+                    const stored = getStoredCourseProgress(item => item.category === 'TOPIK Vocabulary' && String(item.topikLevel) === String(d.level) && String(item.topikSession) === String(session));
+                    const hasProgress = stored.hasProgress || active;
+                    const result = await getWords('TOPIK Vocabulary', 1, 0, { topikLevel: String(d.level), topikSession: String(session) });
+                    const total = Math.max(stored.total, Number(result && result.total) || 0);
+                    const learned = stored.learned;
+                    const percent = total > 0 ? Math.min(100, Math.round(learned / total * 100)) : 0;
+                    const completed = total > 0 && learned >= total;
+                    const progressText = completed ? `已完成 · ${learned}/${total}` : (hasProgress ? `${learned === 0 ? '刚刚开始' : '学习中'} · ${learned}/${total}` : `共 ${total} 个词`);
+                    return { key: `session_${d.level}_${session}`, category: 'TOPIK Vocabulary', level: String(d.level), session: String(session), title: `Session ${session}`, progressText, progressPercent: percent, progressLabel: learned > 0 && percent === 0 ? '<1%' : `${percent}%`, progressVisual: hasProgress ? Math.max(3, percent) : 0, active, status: completed ? 'completed' : (hasProgress ? 'progress' : 'idle') };
+                }))
+            });
+            return;
+        }
         this.closeDirectory();
         if (d.category === 'TOPIK Vocabulary') {
             const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, topikLevel: String(d.level || '1'), topikSession: String(d.session || '') }));
             wx.setStorageSync('settings', next);
             this.setData({ settings: next });
+            this.refreshLearnedCount(next);
             this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
             return;
         }
@@ -1604,6 +1790,7 @@ Page({
             const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: d.category, yonseiLessonId: String(d.lessonId), yonseiLessonName: String(d.lessonName || '') }));
             wx.setStorageSync('settings', next);
             this.setData({ settings: next });
+            this.refreshLearnedCount(next);
             this.loadSubcategories(next).then(finalSettings => { this.updateDisplayCategory(); this.loadWords(finalSettings); });
             return;
         }
@@ -4320,6 +4507,9 @@ Page({
 
         const initialState = this.buildTypingState(word);
         this.persistCurrentProgress(safeIndex);
+        if (this.data.learningProgressMode === 'view') {
+            this.recordLearningProgress(wordObj, safeIndex);
+        }
 
 	        const nextState = {
 	            currentIndex: safeIndex,
@@ -4610,6 +4800,10 @@ Page({
         this.completeTimer = setTimeout(() => {
             this.clearAllTimers();
             if (nextRepeat >= repeatCount) {
+                // 输入模式在完整输入后计入；浏览模式已在单词展示时计入。
+                if (this.data.learningProgressMode === 'input') {
+                    this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
+                }
                 // 记录 SRS 学习数据
                 const w = this.data.currentWord;
                 if (w && w.id) {
