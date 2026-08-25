@@ -140,28 +140,28 @@
 }
 
 .directory-entry {
-  margin: 0 16px 12px;
-  padding: 11px 14px;
-  min-height: 44px;
+  margin: 0 16px 8px;
+  padding: 7px 11px;
+  min-height: 34px;
   box-sizing: border-box;
   border-radius: 14px;
   background: rgba(255,255,255,.82);
   display: flex;
   align-items: center;
-  gap: 11px;
-  box-shadow: 0 8px 24px rgba(15,23,42,.055);
+  gap: 8px;
+  box-shadow: 0 5px 16px rgba(15,23,42,.045);
   animation: directoryEntryIn .28s ease-out;
 }
 .directory-entry:active { transform: scale(.99); }
 .directory-entry-mark {
-  width: 32px; height: 32px; border-radius: 11px;
+  width: 27px; height: 27px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
-  background: #17181d; color: #fff; font-size: 19px; font-weight: 800;
+  background: #17181d; color: #fff; font-size: 16px; font-weight: 800;
 }
 .directory-entry-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.directory-entry-title { color: #17181d; font-size: 14px; font-weight: 850; }
-.directory-entry-sub { color: #8b929d; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.directory-entry-arrow { color: #b6bdc6; font-size: 25px; line-height: 1; }
+.directory-entry-title { color: #17181d; font-size: 12px; font-weight: 850; }
+.directory-entry-sub { color: #8b929d; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.directory-entry-arrow { color: #b6bdc6; font-size: 20px; line-height: 1; }
 
 .directory-mask {
   position: fixed; inset: 0; z-index: 180;
