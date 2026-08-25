@@ -403,6 +403,7 @@ Page({
     loading: false,
     loadingNextSentence: false,
     animating: false,
+    cardBodyScrollTop: 0,
     currentAnimClass: '',
     nextAnimClass: '',
     showSwipeGuide: false,
@@ -722,6 +723,7 @@ Page({
         displayNextCard: nextNextCard,
         hasNext: nextIndex < len - 1
       }, () => {
+        this.resetCardBodyScroll();
         this.preloadCurrentAudio();
         if (this.data.autoPlay) setTimeout(() => this.playCurrentAudio(true), 60);
       });
@@ -800,7 +802,7 @@ Page({
         currentIndex: 0,
         currentAnimClass: '',
         nextAnimClass: ''
-      });
+      }, () => this.resetCardBodyScroll());
       this.refreshCards();
       maybeShowInterstitial({ dayKey: getTodayKey(), contentKey: toDateKey(normalized.sentence, normalized.resolvedTs) });
     } catch (error) {
@@ -834,12 +836,24 @@ Page({
     const dy = endY - (Number(this._swipeStartY) || 0);
     const dt = Date.now() - (Number(this._swipeStartTime) || 0);
     if (dt > 650) return;
-    const horizontal = Math.abs(dx) >= Math.abs(dy);
-    const distance = horizontal ? Math.abs(dx) : Math.abs(dy);
-    if (distance < 44) return;
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.35;
+    if (!horizontal || Math.abs(dx) < 52) return;
     this.dismissSwipeGuide();
-    if ((horizontal && dx < 0) || (!horizontal && dy < 0)) this.nextCard();
+    if (dx < 0) this.nextCard();
     else this.prevCard();
+  },
+
+  onCardBodyScroll(e) {
+    const top = Number(e && e.detail && e.detail.scrollTop) || 0;
+    this._cardBodyScrollTop = top;
+  },
+
+  resetCardBodyScroll() {
+    const currentTop = Math.max(1, Math.round(Number(this._cardBodyScrollTop) || 1));
+    this.setData({ cardBodyScrollTop: currentTop }, () => {
+      this._cardBodyScrollTop = 0;
+      this.setData({ cardBodyScrollTop: 0 });
+    });
   },
 
   dismissSwipeGuide() {

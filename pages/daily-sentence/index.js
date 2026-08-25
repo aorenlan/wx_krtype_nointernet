@@ -52,19 +52,34 @@ const emptyCard = () => ({
 });
 
 const parseVocabulary = (raw) => {
-  const text = String(raw || '').trim();
-  if (!text) return [];
-  return text
-    .split(/[;；\n]+/)
-    .map((part) => String(part || '').trim())
-    .filter(Boolean)
-    .slice(0, 6)
+  const source = Array.isArray(raw)
+    ? raw
+    : (raw && typeof raw === 'object'
+      ? Object.keys(raw).map((word) => ({ word, meaning: raw[word] }))
+      : [raw]);
+  return source
+    .reduce((items, entry) => {
+      if (entry && typeof entry === 'object') {
+        const word = entry.word || entry.korean || entry.term || entry.name || '';
+        const meaning = entry.meaning || entry.chinese || entry.translation || entry.cn || '';
+        if (word) items.push({ word: String(word).trim(), meaning: String(meaning || '').trim() });
+        return items;
+      }
+      const text = String(entry || '').trim();
+      if (!text) return items;
+      return items.concat(text.split(/[;；\n]+|[,，]\s*(?=[^,，;；\n:：]{1,24}[：:])/));
+    }, [])
     .map((part) => {
-      const match = part.match(/^(.{1,24}?)[：:]\s*(.+)$/);
+      if (part && typeof part === 'object') return part;
+      const text = String(part || '').trim();
+      if (!text) return null;
+      const match = text.match(/^(.{1,24}?)[：:]\s*(.+)$/);
       return match
         ? { word: match[1].trim(), meaning: match[2].trim() }
-        : { word: part, meaning: '' };
-    });
+        : { word: text, meaning: '' };
+    })
+    .filter((item) => item && item.word)
+    .slice(0, 6)
 };
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -426,6 +441,7 @@ Page({
     loading: false,
     loadingNextSentence: false,
     animating: false,
+    cardBodyScrollTop: 0,
     currentAnimClass: '',
     nextAnimClass: '',
     showSwipeGuide: false,
@@ -826,6 +842,7 @@ Page({
         hasNext: nextIndex < len - 1,
         detailExpanded: false
       }, () => {
+        this.resetCardBodyScroll();
         this.preloadCurrentAudio();
         if (this.data.autoPlay) setTimeout(() => this.playCurrentAudio(true), 60);
       });
@@ -904,7 +921,7 @@ Page({
         currentIndex: 0,
         currentAnimClass: '',
         nextAnimClass: ''
-      });
+      }, () => this.resetCardBodyScroll());
       this.refreshCards();
       maybeShowInterstitial({ dayKey: getTodayKey() });
     } catch (error) {
@@ -938,12 +955,28 @@ Page({
     const dy = endY - (Number(this._swipeStartY) || 0);
     const dt = Date.now() - (Number(this._swipeStartTime) || 0);
     if (dt > 650) return;
-    const horizontal = Math.abs(dx) >= Math.abs(dy);
-    const distance = horizontal ? Math.abs(dx) : Math.abs(dy);
-    if (distance < 44) return;
+    // Vertical gestures belong exclusively to the content scroll-view. Requiring
+    // a clearly horizontal gesture prevents reading scrolls from changing cards.
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.35;
+    if (!horizontal || Math.abs(dx) < 52) return;
     this.dismissSwipeGuide();
-    if ((horizontal && dx < 0) || (!horizontal && dy < 0)) this.nextCard();
+    if (dx < 0) this.nextCard();
     else this.prevCard();
+  },
+
+  onCardBodyScroll(e) {
+    const top = Number(e && e.detail && e.detail.scrollTop) || 0;
+    this._cardBodyScrollTop = top;
+  },
+
+  resetCardBodyScroll() {
+    // First mirror the native position, then move to zero so scroll-view receives
+    // a real value change even when the bound data previously remained at zero.
+    const currentTop = Math.max(1, Math.round(Number(this._cardBodyScrollTop) || 1));
+    this.setData({ cardBodyScrollTop: currentTop }, () => {
+      this._cardBodyScrollTop = 0;
+      this.setData({ cardBodyScrollTop: 0 });
+    });
   },
 
   dismissSwipeGuide() {

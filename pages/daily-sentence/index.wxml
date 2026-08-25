@@ -16,8 +16,8 @@
   <text class="loading-text">加载中...</text>
 </view>
 
-<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;" catchtouchmove="preventMove">
-  <view class="stage" catchtouchmove="preventMove">
+<view class="page" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <view class="stage">
     <image class="bg" src="{{sentence.backgroundImage}}" mode="aspectFill" />
 
     <view class="cn-top">
@@ -38,7 +38,7 @@
       <text class="hero-context">{{displayCurrentCard.context}}</text>
     </view>
 
-    <view class="card-stage" catchtouchmove="preventMove" bindtouchstart="onSwipeStart" bindtouchend="onSwipeEnd">
+    <view class="card-stage" bindtouchstart="onSwipeStart" bindtouchend="onSwipeEnd">
       <view class="card next {{nextAnimClass}}" hidden="{{!hasNext}}">
         <view class="card-top">
           <view class="tone-pill">{{displayNextCard.tone}}</view>
@@ -66,7 +66,7 @@
           <text class="kr-tap-hint">轻触朗读</text>
         </view>
 
-        <scroll-view scroll-y class="card-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}">
+        <scroll-view scroll-y class="card-body" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}" scroll-top="{{cardBodyScrollTop}}" bindscroll="onCardBodyScroll">
           <view class="translation-line" wx:if="{{displayCurrentCard.context}}">
             <view class="translation-mark"></view>
             <text class="desc-text">{{displayCurrentCard.context}}</text>
@@ -103,10 +103,10 @@
     </view>
     <view wx:if="{{showSwipeGuide}}" class="swipe-guide">
       <view class="swipe-guide-arrows">
-        <text>↑</text><text>↓</text><text>←</text><text>→</text>
+        <text>←</text><text>→</text>
       </view>
-      <text class="swipe-guide-title">滑动切换内容</text>
-      <text class="swipe-guide-copy">上下或左右滑动都可以</text>
+      <text class="swipe-guide-title">左右切换表达</text>
+      <text class="swipe-guide-copy">左右切换，上下查看内容</text>
     </view>
   </view>
 
@@ -117,7 +117,7 @@
     <view class="next-sheet-handle"></view>
     <text class="next-sheet-eyebrow">学习进度</text>
     <text class="next-sheet-title">本句已经学完</text>
-    <text class="next-sheet-copy">继续向上滑，可以学习下一句。</text>
+    <text class="next-sheet-copy">点击继续，进入下一句学习。</text>
     <view class="next-tip-choice" bindtap="toggleNextSentenceTipChoice">
       <view class="next-tip-checkbox {{dontShowNextSentenceTip ? 'is-checked' : ''}}">
         <text wx:if="{{dontShowNextSentenceTip}}">✓</text>
