@@ -1296,9 +1296,9 @@ Page({
       ...settings,
       category: PHOTO_RECOGNITION_CATEGORY
     };
-    delete nextSettings.photoPracticeId;
+    nextSettings.photoPracticeId = String(record.id || '');
     wx.setStorageSync('settings', nextSettings);
-    saveProgressV2(PHOTO_RECOGNITION_CATEGORY, 'photo_recognition', 0);
+    saveProgressV2(PHOTO_RECOGNITION_CATEGORY, `photo_record_${nextSettings.photoPracticeId}`, 0);
 
     this.cancelPracticeConfirm();
     const mergedCount = Number(result.merged || result.added || result.updated || words.length);

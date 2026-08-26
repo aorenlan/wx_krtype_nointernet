@@ -55,16 +55,6 @@
       </view>
       <view class="directory-current-bar"><view style="width: {{words.length > 0 ? (learnedCount / words.length * 100) : 0}}%;"></view></view>
     </view>
-    <view class="directory-progress-controls">
-      <view class="directory-progress-mode">
-        <text class="directory-progress-label">计入方式</text>
-        <view class="directory-progress-options">
-          <view class="directory-progress-option {{learningProgressMode === 'input' ? 'active' : ''}}" data-mode="input" bindtap="setLearningProgressMode">输入完成</view>
-          <view class="directory-progress-option {{learningProgressMode === 'view' ? 'active' : ''}}" data-mode="view" bindtap="setLearningProgressMode">浏览完成</view>
-        </view>
-      </view>
-      <view class="directory-progress-reset" bindtap="resetCurrentLearningProgress">重置本课</view>
-    </view>
     <scroll-view class="directory-body" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
       <text class="directory-section-label">我的书籍</text>
       <view class="directory-books-grid">
@@ -74,13 +64,27 @@
         </button>
       </view>
 
+      <view class="directory-progress-controls" wx:if="{{directoryActiveBook === 'yonsei' || directoryActiveBook === 'topik'}}">
+        <view class="directory-progress-mode">
+          <text class="directory-progress-label">进度计入</text>
+          <view class="directory-progress-options">
+            <view class="directory-progress-option {{learningProgressMode === 'input' ? 'active' : ''}}" data-mode="input" bindtap="setLearningProgressMode">{{dualColumnMode ? '拼写完成' : '输入完成'}}</view>
+            <view class="directory-progress-option {{learningProgressMode === 'view' ? 'active' : ''}}" data-mode="view" bindtap="setLearningProgressMode">{{dualColumnMode ? '试听完成' : '浏览完成'}}</view>
+          </view>
+        </view>
+        <view class="directory-progress-reset" bindtap="resetCurrentLearningProgress">重置本课</view>
+        <text class="directory-progress-help" wx:if="{{dualColumnMode}}">{{learningProgressMode === 'input' ? '韩语拼写正确后计入；点击对勾可移除' : '主动试听成功后计入；点击“已听”可移除'}}</text>
+        <text class="directory-progress-help" wx:else>{{learningProgressMode === 'input' ? '完整输入正确后，计入已学习进度' : '单词展示后，计入已学习进度'}}</text>
+      </view>
+
       <view class="directory-course-list" wx:if="{{directoryActiveBook}}">
         <view class="directory-level-head">
           <text class="directory-level-back" wx:if="{{directoryStage === 'lessons'}}" bindtap="backDirectoryLevel">‹</text>
-          <text class="directory-section-label course-label">{{directoryStage === 'lessons' ? directoryActiveCourse + ' · 课次' : '选择课本'}}</text>
+          <text class="directory-section-label course-label">{{directoryStage === 'lessons' ? (directoryActiveCourse === '拍照学习' ? '拍照历史 · 选择记录' : directoryActiveCourse + ' · 课次') : '选择课本'}}</text>
         </view>
-        <button wx:for="{{directoryCourses}}" wx:key="key" class="directory-course {{item.status}} {{item.active ? 'active' : ''}}" data-index="{{index}}" bindtap="selectDirectoryCourse" hover-class="none">
-          <view class="directory-course-dot {{item.status}}"></view>
+        <button wx:for="{{directoryCourses}}" wx:key="key" class="directory-course {{item.status}} {{item.image ? 'photo-history-course' : ''}} {{item.active ? 'active' : ''}}" data-index="{{index}}" bindtap="selectDirectoryCourse" hover-class="none">
+          <image wx:if="{{item.image}}" class="directory-course-avatar" src="{{item.image}}" mode="aspectFill"></image>
+          <view wx:else class="directory-course-dot {{item.status}}"></view>
           <view class="directory-course-copy">
             <view class="directory-course-title-row">
               <text class="directory-course-title">{{item.title}}</text>
@@ -385,7 +389,7 @@
           <view class="dual-word-cell dual-word-left">
             <text class="dual-index">{{item.indexLabel}}</text>
             <view class="dual-word-main">
-              <view wx:if="{{item.active && !item.completed && !dualReciteMode}}" class="dual-input-row">
+              <view wx:if="{{item.active && !item.completed && !dualReciteMode && !dualRevealWord}}" class="dual-input-row">
                 <input
                   class="dual-native-input"
                   value="{{item.inputValue}}"
@@ -417,9 +421,16 @@
               <text class="dual-meaning {{item.meaningHidden ? 'hidden-meaning' : ''}}">{{item.displayMeaning}}</text>
               <text class="dual-phonetic" wx:if="{{item.phonetic}}">{{item.phonetic}}</text>
             </view>
-            <view wx:if="{{dualReciteMode}}" class="dual-status dual-status-listen {{item.active ? 'active' : ''}}">听</view>
+            <view wx:if="{{dualReciteMode && item.completed}}" class="dual-status dual-status-learned listened" catchtap="removeDualWordProgress" data-index="{{item.index}}" aria-label="已听，点击移除进度">
+              <view class="dual-audio-glyph heard"><view></view><view></view><view></view></view>
+              <text class="dual-audio-check">✓</text>
+            </view>
+            <view wx:elif="{{dualReciteMode}}" class="dual-status dual-status-listen {{item.active ? 'active' : ''}}" aria-label="试听">
+              <view class="dual-audio-glyph"><view></view><view></view><view></view></view>
+            </view>
             <view wx:elif="{{item.active && !item.completed}}" class="dual-status dual-status-hint {{dualRevealWord ? 'active' : ''}}" catchtap="revealDualKoreanWord">提示</view>
-            <text wx:else class="dual-status">{{item.completed ? '✓' : ''}}</text>
+            <view wx:elif="{{item.completed}}" class="dual-status dual-status-learned spelled" catchtap="removeDualWordProgress" data-index="{{item.index}}">✓</view>
+            <text wx:else class="dual-status"></text>
           </view>
         </view>
 
@@ -547,7 +558,7 @@
         <text class="empty-subtitle">可能是词书还在同步，或这个分类暂时没有内容。</text>
         <view class="empty-actions">
           <button bindtap="loadWords" class="empty-action primary">重新加载</button>
-          <button bindtap="openSettings" class="empty-action secondary">切换词书</button>
+          <button bindtap="openDirectory" class="empty-action secondary">打开目录</button>
         </view>
       </view>
   </view>

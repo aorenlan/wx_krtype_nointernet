@@ -1045,9 +1045,9 @@ Page({
       ...settings,
       category: PHOTO_RECOGNITION_CATEGORY
     };
-    delete nextSettings.photoPracticeId;
+    nextSettings.photoPracticeId = String(currentRecord.id || '');
 	    wx.setStorageSync('settings', nextSettings);
-	    saveProgressV2(PHOTO_RECOGNITION_CATEGORY, 'photo_recognition', 0);
+    saveProgressV2(PHOTO_RECOGNITION_CATEGORY, `photo_record_${nextSettings.photoPracticeId}`, 0);
 	    wx.setStorageSync('nv_practice_force_reload', {
 	      category: PHOTO_RECOGNITION_CATEGORY,
 	      reason: 'photo_recognition_added',

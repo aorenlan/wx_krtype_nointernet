@@ -97,6 +97,7 @@ Page({
     groupDone: false,
     readTipText: '看图想韩语',
     showRetryButton: false,
+    showSkipButton: false,
     retryStepIndex: 0,
     cardKoreanText: '?',
     cardKoreanClass: '',
@@ -1529,6 +1530,7 @@ Page({
         readDone: false,
         readTipText: stepTip,
         showRetryButton: false,
+        showSkipButton: false,
         retryStepIndex: i,
         ...this._getRevealCardState(word),
         showNextButton: false,
@@ -1561,6 +1563,7 @@ Page({
         this.setData({
           autoPaused: true,
           showRetryButton: true,
+          showSkipButton: true,
           retryStepIndex: i,
           showNextButton: false,
           readTipText: '朗读未完成，请重试',
@@ -1586,6 +1589,7 @@ Page({
         koReadIndex: 3,
         readTipText: '',
         showRetryButton: false,
+        showSkipButton: false,
         retryStepIndex: 0,
         ...this._getRevealCardState(this.data.word),
         answerPanelClass: ANSWER_PANEL_VISIBLE,
@@ -1917,6 +1921,7 @@ Page({
     this.setData({
       autoPaused: false,
       showRetryButton: false,
+      showSkipButton: false,
       showNextButton: false,
       readDone: false,
       readTipText: '准备重试',
@@ -1925,6 +1930,11 @@ Page({
       this._syncTabBarVisibility();
       this._runReadPlan(stepIndex);
     });
+  },
+
+  skipCurrentRead() {
+    if (this.data.phase !== 'reveal' || !this.data.word) return;
+    this._goNext({ autoContinue: !!this.data.autoMode });
   },
 
   // 手动模式：输入韩文原词，正确才进下一个
@@ -1963,6 +1973,7 @@ Page({
         koReadIndex: 3,
         readTipText: '',
         showRetryButton: false,
+        showSkipButton: false,
         retryStepIndex: 0,
         ...this._getRevealCardState(this.data.word),
         answerPanelClass: ANSWER_PANEL_VISIBLE,
@@ -1993,6 +2004,7 @@ Page({
       readLabel: '', readIndex: 0, readTotal: 0, readType: '', koReadIndex: 0, readDone: false, groupDone: false,
       readTipText: '看图想韩语',
       showRetryButton: false,
+      showSkipButton: false,
       retryStepIndex: 0,
       ...questionState,
       answerPanelClass: ANSWER_PANEL_HIDDEN,

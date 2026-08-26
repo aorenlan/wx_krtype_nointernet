@@ -91,7 +91,8 @@
         <view class="answer-en {{readType === 'en' ? 'hl' : ''}} {{cardEnglishClass}}">{{cardEnglishText}}</view>
 
         <view class="reveal-actions">
-          <view wx:if="{{!groupDone && showRetryButton}}" class="ghost-btn warn" catchtap="retryCurrentRead">重试朗读</view>
+          <view wx:if="{{!groupDone && showRetryButton}}" class="ghost-btn warn" catchtap="retryCurrentRead">重读</view>
+          <view wx:if="{{!groupDone && showSkipButton}}" class="ghost-btn" catchtap="skipCurrentRead">跳过 ›</view>
           <view wx:if="{{!groupDone && showNextButton}}" class="ghost-btn" catchtap="goNext">{{nextButtonText}}</view>
           <view wx:if="{{groupDone}}" class="ghost-btn" catchtap="restart">再来一组</view>
         </view>

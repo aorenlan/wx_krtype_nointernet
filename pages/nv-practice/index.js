@@ -82,6 +82,10 @@ function getLearningContentKey(settings) {
     const category = String(s.category || '');
     if (/^Yonsei\s+\d$/.test(category)) return `yonsei_${category.replace(/\s+/g, '_')}_${s.yonseiLessonId || ''}`;
     if (category === 'TOPIK Vocabulary') return `topik_${s.topikLevel || ''}_${s.topikSession || ''}`;
+    // 每条拍照记录必须独立计进度，不能把不同照片合并到一个“拍照练习”桶里。
+    if (category === PHOTO_RECOGNITION_CATEGORY) {
+        return `category_${category}_${s.photoPracticeId || 'unselected'}`;
+    }
     return `category_${category}`;
 }
 
@@ -562,7 +566,6 @@ const sanitizeSettings = (raw) => {
     const merged = Object.assign({}, DEFAULT_SETTINGS, raw || {});
     delete merged.darkMode;
     delete merged.showHint;
-    delete merged.photoPracticeId;
     if (merged.category === '拍照识别') {
         merged.category = PHOTO_RECOGNITION_CATEGORY;
     }
@@ -1637,7 +1640,8 @@ Page({
             return `yonsei_${lessonId}`;
         }
         if (category === PHOTO_RECOGNITION_CATEGORY) {
-            return 'photo_recognition';
+            const photoPracticeId = s.photoPracticeId != null ? String(s.photoPracticeId) : '';
+            return photoPracticeId ? `photo_record_${photoPracticeId}` : 'photo_recognition';
         }
         if (category === PICTURE_WORDS_PRACTICE_CATEGORY) {
             return 'picture_words_practice';
@@ -1656,7 +1660,7 @@ Page({
         if (category === PHOTO_RECOGNITION_CATEGORY) {
             const photoWords = getPhotoRecognitionWords();
             const latestId = photoWords[0] && photoWords[0].id != null ? String(photoWords[0].id) : '';
-            return `${category}__${photoWords.length}__${latestId}`;
+            return `${category}__${s.photoPracticeId || 'all'}__${photoWords.length}__${latestId}`;
         }
         if (category === PICTURE_WORDS_PRACTICE_CATEGORY) {
             const pictureWords = getPictureWordsPracticeWords();
@@ -1698,6 +1702,7 @@ Page({
         bucket.updatedAt = Date.now();
         bucket.total = total;
         bucket.category = settings.category || '';
+        bucket.photoPracticeId = settings.photoPracticeId || '';
         bucket.lessonId = settings.yonseiLessonId || '';
         bucket.topikLevel = settings.topikLevel || '';
         bucket.topikSession = settings.topikSession || '';
@@ -1810,15 +1815,46 @@ Page({
         if (nextMode === this.data.learningProgressMode) return;
         try { wx.setStorageSync(LEARNING_PROGRESS_MODE_KEY, nextMode); } catch (err) {}
         this.setData({ learningProgressMode: nextMode });
-        if (nextMode === 'view' && this.data.currentWord) {
+        if (nextMode === 'view' && this.data.currentWord && !this.data.dualColumnMode) {
             this.recordLearningProgress(this.data.currentWord, this.data.currentIndex);
-            if (this.data.dualColumnMode) {
-                const completedMap = this.getDualCompletedMapFromProgress();
-                this.setData({ dualCompletedIds: completedMap }, () => {
-                    this.refreshDualColumnRows({ force: true, completedMap });
-                });
-            }
         }
+    },
+
+    removeDualWordProgress(e) {
+        const index = Number(e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.index);
+        const words = this.data.words || [];
+        const word = words[index];
+        if (!word || !Number.isFinite(index)) return;
+        this.openAppConfirmModal({
+            mark: '−',
+            title: '移除这条学习进度？',
+            content: `“${word.word || '这个单词'}”会恢复为未学习状态，其他单词不受影响。`,
+            confirmText: '移除进度',
+            cancelText: '取消'
+        }, () => {
+            const settings = this.data.settings || DEFAULT_SETTINGS;
+            const progressKey = getLearningContentKey(settings);
+            const progress = readLearningProgress();
+            const bucket = progress[progressKey] || {};
+            const completed = Object.assign({}, bucket.completed || {});
+            const wordKey = safeWordId(word) || word.word || `index_${index}`;
+            delete completed[String(wordKey)];
+            if (Object.keys(completed).length) {
+                progress[progressKey] = Object.assign({}, bucket, { completed, updatedAt: Date.now() });
+            } else {
+                delete progress[progressKey];
+            }
+            try { wx.setStorageSync(LEARNING_PROGRESS_KEY, progress); } catch (err) {}
+            const completedMap = this.getDualCompletedMapFromProgress(words, settings);
+            const currentWordLearned = this.isWordLearningCompleted(this.data.currentWord, this.data.currentIndex, settings);
+            this.setData({
+                learnedCount: Object.keys(completed).length,
+                currentWordLearned,
+                dualCompletedIds: completedMap,
+                showCourseCompleteModal: false
+            }, () => this.refreshDualColumnRows({ force: true, completedMap }));
+            wx.showToast({ title: '已移除进度', icon: 'none' });
+        });
     },
 
     resetCurrentLearningProgress() {
@@ -1864,6 +1900,8 @@ Page({
     },
 
     async refreshDirectoryCourses(bookKey, categories) {
+        const refreshId = (this._directoryRefreshRequestId || 0) + 1;
+        this._directoryRefreshRequestId = refreshId;
         const list = Array.isArray(categories) ? categories : (this.data.categories || []);
         let courses = [];
         if (bookKey === 'yonsei') {
@@ -1898,8 +1936,18 @@ Page({
             }));
         } else {
             const special = [FAVORITES_LIST_NAME, 'Mistakes (错题本)', PHOTO_RECOGNITION_CATEGORY, PICTURE_WORDS_PRACTICE_CATEGORY];
-            courses = list.filter(item => special.includes(item)).map(item => ({ key: `mine_${item}`, category: item, title: item, progressText: item === FAVORITES_LIST_NAME ? `${getFavorites().length} 个单词` : '打开查看', status: 'idle', active: this.data.settings.category === item }));
+            courses = list.filter(item => special.includes(item)).flatMap(item => {
+                if (item !== PHOTO_RECOGNITION_CATEGORY) {
+                    return [{ key: `mine_${item}`, category: item, title: item, progressText: item === FAVORITES_LIST_NAME ? `${getFavorites().length} 个单词` : '打开查看', status: 'idle', active: this.data.settings.category === item }];
+                }
+                let records = [];
+                try { records = wx.getStorageSync('photoLearnHistoryRecords') || []; } catch (e) {}
+                const count = Array.isArray(records) ? records.length : 0;
+                return [{ key: 'mine_photo', category: item, title: item, progressText: count ? `${count} 张照片 · 点击选择` : '暂无拍照记录', status: 'idle', active: this.data.settings.category === item }];
+            });
         }
+        // 用户快速切换书籍时，丢弃较早请求，避免旧数据覆盖最新选择。
+        if (refreshId !== this._directoryRefreshRequestId) return;
         this.setData({ directoryCourses: courses, directorySubcourses: [], directoryActiveCourse: '', directoryStage: 'courses', directoryActiveBook: bookKey });
     },
 
@@ -1938,6 +1986,7 @@ Page({
     selectDirectoryBook(e) {
         const key = e.currentTarget.dataset.key;
         if (!key) return;
+        this.setData({ directoryActiveBook: key, directoryStage: 'courses', directoryActiveCourse: '' });
         this.refreshDirectoryCourses(key);
     },
 
@@ -1993,8 +2042,28 @@ Page({
             });
             return;
         }
-        if (d.active) {
+        if (d.active && !(d.category === PHOTO_RECOGNITION_CATEGORY && !d.photoPracticeId)) {
             this.closeDirectory();
+            return;
+        }
+        if (d.category === PHOTO_RECOGNITION_CATEGORY && d.photoPracticeId) {
+            const next = sanitizeSettings(Object.assign({}, this.data.settings, { category: PHOTO_RECOGNITION_CATEGORY, photoPracticeId: String(d.photoPracticeId) }));
+            wx.setStorageSync('settings', next);
+            this.closeDirectory();
+            this.setData({ settings: next });
+            this.loadWords(next);
+            return;
+        }
+        if (d.category === PHOTO_RECOGNITION_CATEGORY) {
+            let records = [];
+            try { records = wx.getStorageSync('photoLearnHistoryRecords') || []; } catch (e) {}
+            const photoCourses = (Array.isArray(records) ? records : []).map(record => {
+                const words = Array.isArray(record.words) ? record.words : [];
+                const total = words.length;
+                const active = this.data.settings.category === PHOTO_RECOGNITION_CATEGORY && String(this.data.settings.photoPracticeId || '') === String(record.id);
+                return { key: `photo_${record.id}`, category: PHOTO_RECOGNITION_CATEGORY, photoPracticeId: String(record.id), title: record.title || '拍照记录', image: record.imagePath || record.image || '', progressText: `${total} 个词 · 点击选择`, status: 'idle', active };
+            });
+            this.setData({ directoryStage: 'lessons', directoryActiveCourse: '拍照学习', directoryCourses: photoCourses });
             return;
         }
         if (d.category === 'TOPIK Vocabulary') {
@@ -2055,7 +2124,13 @@ Page({
             liveCategories.push(FAVORITES_LIST_NAME);
             categoriesChanged = true;
         }
-        const photoRecognitionCount = getPhotoRecognitionWords().length;
+        let photoRecognitionCount = getPhotoRecognitionWords().length;
+        if (!photoRecognitionCount) {
+            try {
+                const photoHistory = wx.getStorageSync('photoLearnHistoryRecords') || [];
+                photoRecognitionCount = Array.isArray(photoHistory) ? photoHistory.reduce((sum, record) => sum + (Array.isArray(record.words) ? record.words.length : 0), 0) : 0;
+            } catch (e) {}
+        }
         if (photoRecognitionCount > 0 && !liveCategories.includes(PHOTO_RECOGNITION_CATEGORY)) {
             liveCategories.push(PHOTO_RECOGNITION_CATEGORY);
             categoriesChanged = true;
@@ -2938,8 +3013,8 @@ Page({
             if (preferEdgeTts) {
                 edgeRequests.push(...this.buildEdgeTtsPreloadItems(wordInfo, includeMeaning));
             } else {
-                this._preloadSingleAudio(word, false);
-                if (includeMeaning) this._preloadSingleAudio(word, true);
+                this._preloadSingleAudio(word, false, wordInfo.meaning);
+                if (includeMeaning) this._preloadSingleAudio(word, true, wordInfo.meaning);
             }
         }
 
@@ -2957,7 +3032,7 @@ Page({
         const word = String(wordInfo.word || '').trim();
         const audioText = isChinese ? String(wordInfo.meaning || '').trim() : word;
         if (!word || !audioText) return false;
-        const cacheKey = this.getAudioCacheKey(word, isChinese);
+        const cacheKey = this.getAudioCacheKey(word, isChinese, audioText);
         const lang = isChinese ? 'zh-CN' : 'ko-KR';
         const stillRunning = () => !!this._sleepWordLoopRunning
             && (!playToken || this._sleepWordPlayToken === playToken);
@@ -2970,7 +3045,9 @@ Page({
             this.removeCachedEdgeTtsFile(cacheKey, audioText, lang);
         }
 
-        if (this.shouldPreferEdgeTtsAudio()) {
+        // Chinese audio must be synthesized from the current meaning. Static files
+        // are keyed by Korean word only, so polysemes could reuse the wrong meaning.
+        if (isChinese || this.shouldPreferEdgeTtsAudio()) {
             let src = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang);
             if (!stillRunning()) return null;
             if (!src) src = await this.fetchEdgeTtsToLRU(cacheKey, audioText, lang, true);
@@ -3342,7 +3419,7 @@ Page({
             }
             setTimeout(() => {
                 this._sleepBackgroundRestarting = false;
-            }, 120);
+            }, 1200);
         };
 
         try { bg.offEnded && bg.offEnded(); } catch (e) {}
@@ -3648,17 +3725,29 @@ Page({
         const word = words[safeIndex];
         if (!word || !word.word) return;
         const completedKey = getDualCompletedKey(word, safeIndex);
+        this.persistCurrentProgress(safeIndex);
         this.setData({
+            currentIndex: safeIndex,
+            currentWord: word,
+            currentWordLearned: true,
             dualExampleRowId: completedKey,
             dualNativeInputFocus: false,
             dualRevealWord: false
         }, () => {
             this.refreshDualColumnRows({
                 force: true,
+                currentIndex: safeIndex,
                 inputFocus: false,
                 exampleRowId: completedKey,
                 revealWord: false
             });
+        });
+
+        // 背诵模式以“点击试听”为完成条件，不等待音频请求或播放结束。
+        this.recordLearningProgress(word, safeIndex);
+        const completedMap = this.getDualCompletedMapFromProgress(words);
+        this.setData({ dualCompletedIds: completedMap }, () => {
+            this.refreshDualColumnRows({ force: true, completedMap, inputFocus: false });
         });
 
         this._hasUserGesture = true;
@@ -3666,11 +3755,12 @@ Page({
         this._hasPlayedAudioOnce = true;
         const playSeq = this.cancelCurrentAudioPlayback();
         const wordId = safeWordId(word) || getDualWordKey(word, safeIndex);
-        await this.playAudioPartWithFallback(this.wordAudio, word, false, playSeq, wordId, {
+        const played = await this.playAudioPartWithFallback(this.wordAudio, word, false, playSeq, wordId, {
             allowInDual: true,
             wordIdOverride: wordId,
             skipCurrentCheck: true
         });
+        // 播放失败也不撤销完成状态；用户可以点击“已听”移除进度。
     },
 
     toggleDualReciteMode(e) {
@@ -3781,19 +3871,28 @@ Page({
         if (this._dualActionLocked && !this.data.dualColumnMode) return;
         const nextMode = !this.data.dualColumnMode;
         this._dualWordAudioBlocked = nextMode;
+        const restoredDualCompletedIds = nextMode
+            ? this.getDualCompletedMapFromProgress(this.data.words || [], this.data.settings || DEFAULT_SETTINGS)
+            : this.data.dualCompletedIds;
         if (nextMode) {
             this.cancelCurrentAudioPlayback();
         }
         this.setData({
             dualColumnMode: nextMode,
+            dualCompletedIds: restoredDualCompletedIds,
             isKeyboardOpen: nextMode ? false : this.data.isKeyboardOpen,
             showGuideBubble: false,
             practiceToolsOpen: false,
             dualNativeInputFocus: nextMode && !this.data.dualReciteMode,
-            dualScrollIntoView: `dual-row-${normalizeIndex(this.data.currentIndex || 0, (this.data.words || []).length)}`
+            dualScrollIntoView: nextMode ? '' : 'dual-row-0'
         }, () => {
             if (nextMode) {
-                this.refreshDualColumnRows({ force: true });
+                const currentIndex = normalizeIndex(this.data.currentIndex || 0, (this.data.words || []).length);
+                this.refreshDualColumnRows({ force: true, currentIndex });
+                setTimeout(() => {
+                    if (!this.data.dualColumnMode) return;
+                    this.setData({ dualScrollIntoView: `dual-row-${currentIndex}` });
+                }, 40);
             } else {
                 this._dualWordAudioBlocked = false;
                 this.clearDualRevealTimer();
@@ -3896,31 +3995,32 @@ Page({
         const title = word && word.word ? String(word.word) : '';
         if (!title) return;
 
-        const completedKey = getDualCompletedKey(word, index);
-        const nextInputs = Object.assign({}, this.data.dualNativeInputs || {}, {
-            [completedKey]: title
-        });
         this.setData({
-            dualNativeInputs: nextInputs,
-            dualNativeInputFocus: true,
+            dualNativeInputFocus: false,
             dualRevealWord: true,
             isKeyboardOpen: false,
             showGuideBubble: false
         }, () => {
             this.refreshDualColumnRows({
                 force: true,
-                inputMap: nextInputs,
-                inputFocus: true,
+                inputMap: this.data.dualNativeInputs || {},
+                inputFocus: false,
                 revealWord: true
             });
-            this._dualHintAdvanceTimer = setTimeout(() => {
-                this._dualHintAdvanceTimer = null;
-                const latestWords = this.data.words || [];
-                const latestWord = latestWords[index];
-                if (!latestWord || getDualCompletedKey(latestWord, index) !== completedKey) return;
-                if ((this.data.dualCompletedIds || {})[completedKey]) return;
-                this.completeDualNativeWord(latestWord, index, nextInputs);
-            }, 120);
+            this._dualRevealTimer = setTimeout(() => {
+                this._dualRevealTimer = null;
+                this.setData({
+                    dualRevealWord: false,
+                    dualNativeInputFocus: true
+                }, () => {
+                    this.refreshDualColumnRows({
+                        force: true,
+                        inputMap: this.data.dualNativeInputs || {},
+                        inputFocus: true,
+                        revealWord: false
+                    });
+                });
+            }, 1200);
         });
     },
 
@@ -4032,13 +4132,19 @@ Page({
         const completedKey = getDualCompletedKey(word, index);
         if ((this.data.dualCompletedIds || {})[completedKey]) return;
         this.lockDualColumnActions(260);
-        const completedMap = this.markDualColumnCompleted(word, index);
-        if (!completedMap) return;
+        const sessionCompletedMap = this.markDualColumnCompleted(word, index);
+        if (!sessionCompletedMap) return;
 
         const totalWords = words.length;
         const wasCourseComplete = totalWords > 0 && Number(this.data.learnedCount || 0) >= totalWords;
-        const learnedCount = this.recordLearningProgress(word, index);
-        const courseJustCompleted = !wasCourseComplete && totalWords > 0 && learnedCount >= totalWords;
+        const learnedCount = this.data.learningProgressMode === 'input'
+            ? this.recordLearningProgress(word, index)
+            : Number(this.data.learnedCount || 0);
+        const courseJustCompleted = this.data.learningProgressMode === 'input'
+            && !wasCourseComplete
+            && totalWords > 0
+            && learnedCount >= totalWords;
+        const completedMap = this.getDualCompletedMapFromProgress(words);
 
         if (word && word.id) {
             const wordKey = `${word.sourceCategory || ''}_${word.lessonId || ''}_${word.id}`;
@@ -4051,7 +4157,8 @@ Page({
             });
         }
 
-        const nextIndex = findNextDualIncompleteIndex(words, index, completedMap);
+        const navigationMap = Object.assign({}, sessionCompletedMap, completedMap);
+        const nextIndex = findNextDualIncompleteIndex(words, index, navigationMap);
         const prevWordInfo = word ? {
             word: word.word,
             meaning: word.meaning,
@@ -4116,6 +4223,9 @@ Page({
     },
 
     async loadWords(settingsOverride) {
+        // 词库请求可能跨越分类切换返回。每次加载递增版本号，旧请求完成后不得覆盖当前分类。
+        const loadRequestId = (this._loadWordsRequestId || 0) + 1;
+        this._loadWordsRequestId = loadRequestId;
         this.clearAllTimers();
         this.cancelAudioPreload();
         this.cancelCurrentAudioPlayback();
@@ -4137,6 +4247,9 @@ Page({
         });
         const s = settingsOverride || this.data.settings || DEFAULT_SETTINGS;
         const category = s.category || 'TOPIK Vocabulary';
+        const isCurrentLoad = () => {
+            return this._loadWordsRequestId === loadRequestId;
+        };
         
         const subKey = this.getProgressSubKey(s);
         
@@ -4189,7 +4302,18 @@ Page({
         }
 
         if (category === PHOTO_RECOGNITION_CATEGORY) {
-            const photoWords = getPhotoRecognitionWords();
+            let photoWords = getPhotoRecognitionWords();
+            if (s.photoPracticeId) {
+                try {
+                    const records = wx.getStorageSync('photoLearnHistoryRecords') || [];
+                    const record = records.find(item => String(item.id) === String(s.photoPracticeId));
+                    if (record && Array.isArray(record.words)) {
+                        photoWords = record.words.map(item => ({ word: item.text || item.korean || item.word || '', meaning: item.meaning || item.cn || '', scene: item.scene || '' })).filter(item => item.word);
+                    }
+                } catch (e) {}
+            }
+            // 未选择具体照片时不加载聚合词，必须先从目录选择一条拍照记录，避免显示混合后的虚假总数。
+            if (!s.photoPracticeId) photoWords = [];
             const savedIndex = Number(getProgress(category, subKey) || 0);
             const startIndex = normalizeIndex(savedIndex, photoWords.length);
             return this.setData(
@@ -4243,7 +4367,21 @@ Page({
         if (s.wordLengthFilter) filters.minLength = s.wordLengthFilter;
         if (s.wordStartFilter) filters.firstLetter = s.wordStartFilter;
         
-        const res = await getWords(category, 2000, 0, filters);
+        let res;
+        try {
+            res = await getWords(category, 2000, 0, filters);
+        } catch (error) {
+            if (isCurrentLoad()) {
+                console.error('[nv-practice] load words failed', category, error);
+                this.setData({ loading: false, words: [], originalWords: [], currentWord: null, prevWordInfo: null });
+                wx.showToast({ title: '词库加载失败，请重试', icon: 'none' });
+            }
+            return;
+        }
+
+        if (!isCurrentLoad()) {
+            return;
+        }
         
         if (res && res.words) {
             const savedIndex = Number(getProgress(category, subKey) || 0);
@@ -4258,7 +4396,7 @@ Page({
                     currentWord: null
                 },
                 () => {
-                    if (res.words.length > 0) {
+                    if (isCurrentLoad() && res.words.length > 0) {
                         this.startWord(startIndex);
                     }
                 }
@@ -4342,6 +4480,10 @@ Page({
         this.loadSubcategories(sanitized).then((finalSettings) => {
             this.updateDisplayCategory();
             this.loadWords(finalSettings);
+        }).catch((error) => {
+            console.error('[nv-practice] switch category failed', category, error);
+            this.setData({ loading: false, words: [], originalWords: [], currentWord: null, prevWordInfo: null });
+            wx.showToast({ title: '切换失败，请重试', icon: 'none' });
         });
     },
 
@@ -4745,7 +4887,7 @@ Page({
         const initialState = this.buildTypingState(word);
         this.persistCurrentProgress(safeIndex);
         const currentWordLearned = this.isWordLearningCompleted(wordObj, safeIndex);
-        if (this.data.learningProgressMode === 'view') {
+        if (this.data.learningProgressMode === 'view' && !this.data.dualColumnMode) {
             this.recordLearningProgress(wordObj, safeIndex);
         }
         const restoredDualCompletedIds = this.data.dualColumnMode
@@ -4755,7 +4897,7 @@ Page({
 	        const nextState = {
 	            currentIndex: safeIndex,
 	            currentWord: wordObj,
-	            currentWordLearned: this.data.learningProgressMode === 'view' || currentWordLearned,
+	            currentWordLearned: (!this.data.dualColumnMode && this.data.learningProgressMode === 'view') || currentWordLearned,
 	            dualCompletedIds: restoredDualCompletedIds,
 	            typingState: initialState,
             isCorrect: false,
@@ -5263,11 +5405,12 @@ Page({
         return 'yansei';
     },
 
-    getAudioCacheKey(rawWord, isChinese) {
+    getAudioCacheKey(rawWord, isChinese, meaning = '') {
         const w0 = String(rawWord || '').trim().replace(/\s+/g, '_');
         const folder = this.getAudioFolder();
         const suffix = isChinese ? '_cn' : '';
-        return `${folder}__${w0}__${suffix}`;
+        const meaningPart = isChinese && meaning ? `__${String(meaning).trim().replace(/\s+/g, '_')}` : '';
+        return `${folder}__${w0}${meaningPart}__${suffix}`;
     },
 
     shouldPreferEdgeTtsAudio() {
@@ -5871,11 +6014,11 @@ Page({
             if (!next || !next.word) continue;
 
             // Preload Korean
-            this._preloadSingleAudio(next.word, false);
+            this._preloadSingleAudio(next.word, false, next.meaning);
 
             // Preload Chinese if needed
             if (preloadMeaning) {
-                this._preloadSingleAudio(next.word, true);
+                this._preloadSingleAudio(next.word, true, next.meaning);
             }
         }
     },
@@ -5886,14 +6029,14 @@ Page({
         if (!word) return [];
 
         const requests = [{
-            cacheKey: this.getAudioCacheKey(word, false),
+            cacheKey: this.getAudioCacheKey(word, false, item.meaning),
             text: word,
             lang: 'ko-KR'
         }];
 
         if (includeMeaning && item && item.meaning) {
             requests.push({
-                cacheKey: this.getAudioCacheKey(word, true),
+                cacheKey: this.getAudioCacheKey(word, true, item.meaning),
                 text: String(item.meaning || '').trim(),
                 lang: 'zh-CN'
             });
@@ -5954,9 +6097,9 @@ Page({
         this.preloadEdgeTtsRequests(this.buildEdgeTtsPreloadItems(wordInfo, includeMeaning));
     },
 
-    _preloadSingleAudio(word, isChinese) {
+    _preloadSingleAudio(word, isChinese, meaning = '') {
         if (!word) return;
-        const cacheKey = this.getAudioCacheKey(word, isChinese);
+        const cacheKey = this.getAudioCacheKey(word, isChinese, meaning);
         // Check if already in LRU
         if (this.getAudioFileFromLRU(cacheKey)) return;
 
@@ -6010,7 +6153,7 @@ Page({
         const lang = isChinese ? 'zh-CN' : 'ko-KR';
         if (!word || !edgeText) return false;
 
-	        const cacheKey = this.getAudioCacheKey(word, isChinese);
+	        const cacheKey = this.getAudioCacheKey(word, isChinese, isChinese ? current.meaning : '');
 	        const edgeCached = this.getCachedEdgeTtsFile(cacheKey, edgeText, lang);
 	        if (edgeCached) {
 	            const ok = await this.playCurrentWordSrcOnce(audioCtx, edgeCached, playSeq, wordId, null, null, options);
@@ -6019,7 +6162,9 @@ Page({
 	            this.removeCachedEdgeTtsFile(cacheKey, edgeText, lang);
 	        }
 
-	        if (this.shouldPreferEdgeTtsAudio()) {
+	        // Never use word-only static Chinese audio: the same Korean word may
+	        // have different meanings in another textbook.
+	        if (isChinese || this.shouldPreferEdgeTtsAudio()) {
 	            const ok = await this.playEdgeTtsFallback(audioCtx, cacheKey, edgeText, lang, playSeq, wordId);
 	            return this.canPlayCurrentWordAudio(playSeq, wordId, options) ? ok : null;
 	        }
@@ -6077,7 +6222,7 @@ Page({
         const playMeaning = !options.skipMeaning
             && !this.isPhotoRecognitionAudioCategory()
             && !!(this.data.settings && this.data.settings.pronounceMeaning);
-        if (this.shouldPreferEdgeTtsAudio()) {
+        if (playMeaning || this.shouldPreferEdgeTtsAudio()) {
             this.preloadEdgeTtsWindow(Number(this.data.currentIndex || 0), playMeaning);
         }
 
@@ -6128,7 +6273,6 @@ Page({
 
         this.setData({ showDetailModal: true });
         
-        // Auto play when opened if enabled
         if (this.data.settings && this.data.settings.autoPlaySentence) {
             this.playSentenceAudio();
         }
